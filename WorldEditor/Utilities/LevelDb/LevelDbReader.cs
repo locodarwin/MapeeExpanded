@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Collections.Concurrent;
 
 namespace WorldEditor
 {
@@ -8,7 +9,8 @@ namespace WorldEditor
     {
         public string Directory { get; }
 
-        private readonly LevelDbTable[] _tables;
+        // Tables open on first use, so a lookup touching a few of them doesn't open them all
+        private readonly Lazy<LevelDbTable>[] _tables;
         private readonly LevelDbManifest.FileEntry[] _tableEntries;
         private readonly SortedList<byte[], (ulong Sequence, byte[]? Value)> _memory = new(ByteArrayComparer.Instance);
 
@@ -18,11 +20,12 @@ namespace WorldEditor
 
             LevelDbManifest manifest = LevelDbManifest.Read(directory);
             _tableEntries = [.. manifest.Files];
-            _tables = new LevelDbTable[_tableEntries.Length];
+            _tables = new Lazy<LevelDbTable>[_tableEntries.Length];
 
             for (int i = 0; i < _tableEntries.Length; i++)
             {
-                _tables[i] = new LevelDbTable(FindTableFile(directory, _tableEntries[i].Number), _tableEntries[i].Number);
+                ulong number = _tableEntries[i].Number;
+                _tables[i] = new Lazy<LevelDbTable>(() => new LevelDbTable(FindTableFile(directory, number), number));
             }
 
             ulong firstLog = manifest.PrevLogNumber != 0 ? Math.Min(manifest.PrevLogNumber, manifest.LogNumber) : manifest.LogNumber;
@@ -45,7 +48,7 @@ namespace WorldEditor
                 if (LevelDbUtilities.ComparePrefix(_tableEntries[i].SmallestUserKey, prefix) > 0) continue;
                 if (LevelDbUtilities.ComparePrefix(_tableEntries[i].LargestUserKey, prefix) < 0) continue;
 
-                _tables[i].ScanPrefix(prefix, (key, sequence, isDeletion, value) => Keep(found, key.ToArray(), sequence, isDeletion ? null : value));
+                _tables[i].Value.ScanPrefix(prefix, (key, sequence, isDeletion, value) => Keep(found, key.ToArray(), sequence, isDeletion ? null : value));
             }
 
             foreach (var entry in MemoryWithPrefix(prefix))
@@ -66,22 +69,33 @@ namespace WorldEditor
             return found.TryGetValue(key, out value);
         }
 
-        // Visits every live key once. Keys are passed without values to keep a full scan cheap
-        public void ForEachKey(Action<byte[]> body)
+        // Visits every live key accepted by filter once, without reading values. Tables are scanned
+        // in parallel; only keys passing the filter are copied, so a filter that picks out few keys keeps this cheap
+        public void ForEachKey(LevelDbKeyFilter filter, Action<byte[]> body)
         {
-            Dictionary<byte[], (ulong Sequence, byte[]? Value)> found = new(ByteArrayComparer.Instance);
             byte[] present = [];
+            ConcurrentBag<Dictionary<byte[], (ulong Sequence, byte[]? Value)>> partials = [];
 
-            foreach (LevelDbTable table in _tables)
+            Parallel.For(0, _tables.Length, () => new Dictionary<byte[], (ulong, byte[]?)>(ByteArrayComparer.Instance), (i, _, found) =>
             {
-                table.ScanAll((key, sequence, isDeletion, value) => Keep(found, key.ToArray(), sequence, isDeletion ? null : present));
+                _tables[i].Value.ScanKeys((key, sequence, isDeletion) =>
+                {
+                    if (filter(key)) Keep(found, key.ToArray(), sequence, isDeletion ? null : present);
+                });
+                return found;
+            }, partials.Add);
+
+            Dictionary<byte[], (ulong Sequence, byte[]? Value)> merged = new(ByteArrayComparer.Instance);
+            foreach (var partial in partials)
+            {
+                foreach (var entry in partial) Keep(merged, entry.Key, entry.Value.Sequence, entry.Value.Value);
             }
             foreach (var entry in _memory)
             {
-                Keep(found, entry.Key, entry.Value.Sequence, entry.Value.Value is null ? null : present);
+                if (filter(entry.Key)) Keep(merged, entry.Key, entry.Value.Sequence, entry.Value.Value is null ? null : present);
             }
 
-            foreach (var entry in found)
+            foreach (var entry in merged)
             {
                 if (entry.Value.Value is not null) body(entry.Key);
             }
@@ -149,9 +163,14 @@ namespace WorldEditor
 
         public void Dispose()
         {
-            foreach (LevelDbTable table in _tables) table.Dispose();
+            foreach (Lazy<LevelDbTable> table in _tables)
+            {
+                if (table.IsValueCreated) table.Value.Dispose();
+            }
         }
     }
+
+    public delegate bool LevelDbKeyFilter(ReadOnlySpan<byte> userKey);
 
     public sealed class ByteArrayComparer : IComparer<byte[]>, IEqualityComparer<byte[]>
     {

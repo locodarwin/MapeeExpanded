@@ -16,8 +16,6 @@ namespace Mapper.Gui
             AppDomain.CurrentDomain.UnhandledException += UnhandledExceptions;
             InitializeBackgroundWork();
 
-            UpdateChecker.Check();
-
             Controller.Controller controller = new Controller.Controller();
             controller.MainWindow.ShowDialog();
         }

@@ -17,6 +17,8 @@ namespace WorldEditor
         private readonly (byte[] LastKey, long Offset, int Size)[] _index;
         private readonly ConcurrentDictionary<long, byte[]> _cache = new();
 
+        private delegate bool EntryVisitor(ReadOnlySpan<byte> internalKey, ReadOnlySpan<byte> value);
+
         public LevelDbTable(string file, ulong number)
         {
             Number = number;
@@ -38,13 +40,14 @@ namespace WorldEditor
             int indexSize = (int)LevelDbUtilities.ReadVarint64(footer, ref position);
 
             List<(byte[], long, int)> index = [];
-            foreach (var (key, value) in ReadEntries(ReadBlock(indexOffset, indexSize)))
+            VisitEntries(ReadBlock(indexOffset, indexSize), (key, value) =>
             {
                 int valuePosition = 0;
                 long offset = (long)LevelDbUtilities.ReadVarint64(value, ref valuePosition);
                 int size = (int)LevelDbUtilities.ReadVarint64(value, ref valuePosition);
-                index.Add((key, offset, size));
-            }
+                index.Add((key.ToArray(), offset, size));
+                return true;
+            });
             _index = [.. index];
         }
 
@@ -59,29 +62,40 @@ namespace WorldEditor
                 else hi = mid;
             }
 
-            for (int i = lo; i < _index.Length; i++)
+            byte[] prefixCopy = prefix.ToArray();
+            bool done = false;
+            for (int i = lo; i < _index.Length && !done; i++)
             {
-                foreach (var (key, value) in ReadEntries(GetBlock(i)))
+                VisitEntries(GetBlock(i), (key, value) =>
                 {
                     ReadOnlySpan<byte> userKey = LevelDbUtilities.UserKey(key);
-                    int comparison = LevelDbUtilities.ComparePrefix(userKey, prefix);
-                    if (comparison < 0) continue;
-                    if (comparison > 0) return;
+                    int comparison = LevelDbUtilities.ComparePrefix(userKey, prefixCopy);
+                    if (comparison < 0) return true;
+                    if (comparison > 0)
+                    {
+                        done = true;
+                        return false;
+                    }
 
                     LevelDbUtilities.ParseTrailer(key, out ulong sequence, out bool isDeletion);
-                    body(userKey, sequence, isDeletion, value);
-                }
+                    body(userKey, sequence, isDeletion, value.ToArray());
+                    return true;
+                });
             }
         }
-        public void ScanAll(LevelDbEntryHandler body)
+
+        // Visits every key in the table without copying values. Blocks read this way skip the cache,
+        // since a full scan would only push out the blocks chunk reads are using
+        public void ScanKeys(LevelDbKeyHandler body)
         {
             for (int i = 0; i < _index.Length; i++)
             {
-                foreach (var (key, value) in ReadEntries(ReadBlock(_index[i].Offset, _index[i].Size)))
+                VisitEntries(ReadBlock(_index[i].Offset, _index[i].Size), (key, value) =>
                 {
                     LevelDbUtilities.ParseTrailer(key, out ulong sequence, out bool isDeletion);
-                    body(LevelDbUtilities.UserKey(key), sequence, isDeletion, value);
-                }
+                    body(LevelDbUtilities.UserKey(key), sequence, isDeletion);
+                    return true;
+                });
             }
         }
 
@@ -103,15 +117,15 @@ namespace WorldEditor
             return LevelDbUtilities.Decompress(raw, 0, size, raw[size]);
         }
 
-        private static List<(byte[] Key, byte[] Value)> ReadEntries(byte[] block)
+        // Entries are prefix-compressed against the previous key: shared length, unshared length,
+        // value length, the unshared key bytes, then the value
+        private static void VisitEntries(byte[] block, EntryVisitor visitor)
         {
             ReadOnlySpan<byte> data = block;
             int restartCount = BinaryPrimitives.ReadInt32LittleEndian(data[^4..]);
             int end = data.Length - 4 - restartCount * 4;
 
-            List<(byte[], byte[])> output = [];
-            byte[] lastKey = [];
-
+            byte[] key = new byte[64];
             int position = 0;
             while (position < end)
             {
@@ -119,17 +133,13 @@ namespace WorldEditor
                 int nonShared = LevelDbUtilities.ReadVarint32(data, ref position);
                 int valueLength = LevelDbUtilities.ReadVarint32(data, ref position);
 
-                byte[] key = new byte[shared + nonShared];
-                lastKey.AsSpan(0, shared).CopyTo(key);
+                if (shared + nonShared > key.Length) Array.Resize(ref key, Math.Max(key.Length * 2, shared + nonShared));
                 data.Slice(position, nonShared).CopyTo(key.AsSpan(shared));
                 position += nonShared;
 
-                output.Add((key, data.Slice(position, valueLength).ToArray()));
+                if (!visitor(key.AsSpan(0, shared + nonShared), data.Slice(position, valueLength))) return;
                 position += valueLength;
-                lastKey = key;
             }
-
-            return output;
         }
 
         public void Dispose()
@@ -139,4 +149,5 @@ namespace WorldEditor
     }
 
     public delegate void LevelDbEntryHandler(ReadOnlySpan<byte> userKey, ulong sequence, bool isDeletion, byte[] value);
+    public delegate void LevelDbKeyHandler(ReadOnlySpan<byte> userKey, ulong sequence, bool isDeletion);
 }

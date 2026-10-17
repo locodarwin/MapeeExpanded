@@ -1,50 +1,40 @@
 namespace WorldEditor
 {
-    // Bedrock has no region files. Chunks are found by scanning the world database once,
+    // Bedrock has no region files. Chunks are found by indexing the world database in the background,
     // then grouped into the same 32x32 regions Java uses so the rest of Mapee can treat them alike
-    public class BedrockRegionStore : IChunkSourceRegionStore, IDisposable
+    public class BedrockRegionStore : IChunkSourceRegionStore, IBackgroundRegionStore
     {
         public int Dimension { get; }
-        public int Count => _regions.Count;
+        public int Count => Regions.Count;
+        public Task Ready => _world?.Indexed ?? Task.CompletedTask;
 
         public BedrockChunkReader ChunkReader { get; set; } = new();
         public ILogger<ChunkError> ErrorLogger { get; set; } = new ConsoleWriteLogger<ChunkError>();
 
-        private LevelDbReader? _db;
-        private readonly Dictionary<Coords, List<Coords>> _regions = [];
+        private BedrockWorld? _world;
+
+        private IReadOnlyDictionary<Coords, List<Coords>> Regions => _world?.GetRegions(Dimension) ?? new Dictionary<Coords, List<Coords>>();
 
         public BedrockRegionStore(int dimension)
         {
             Dimension = dimension;
         }
 
-        // directory is the world folder, the one holding level.dat and db
+        // directory is the world folder, the one holding level.dat and db. Returns at once;
+        // the returned regions wait for indexing when enumerated
         public IEnumerable<Coords> Itemize(string directory)
         {
-            _regions.Clear();
-            _db?.Dispose();
-            _db = null;
-
-            string dbDirectory = Path.Combine(directory, "db");
-            if (!File.Exists(Path.Combine(dbDirectory, "CURRENT"))) return [];
-
-            _db = new LevelDbReader(dbDirectory);
-            _db.ForEachKey(key =>
-            {
-                if (!BedrockKey.TryParse(key, out BedrockKey parsed) || parsed.Dimension != Dimension) return;
-                if (parsed.Tag != BedrockChunkTag.Version && parsed.Tag != BedrockChunkTag.LegacyVersion) return;
-
-                Coords region = new(parsed.X >> 5, parsed.Z >> 5);
-                if (!_regions.TryGetValue(region, out List<Coords>? chunks)) _regions[region] = chunks = [];
-                chunks.Add(new Coords(parsed.X, parsed.Z));
-            });
-
-            return _regions.Keys;
+            _world = File.Exists(Path.Combine(directory, "db", "CURRENT")) ? BedrockWorld.Open(directory) : null;
+            return ItemizeWhenReady();
+        }
+        private IEnumerable<Coords> ItemizeWhenReady()
+        {
+            foreach (Coords region in Regions.Keys) yield return region;
         }
 
         public bool Exists(Coords coords)
         {
-            return _regions.ContainsKey(coords);
+            return Regions.ContainsKey(coords);
         }
 
         public bool GetData(Coords coords, out byte[]? buffer, out StorageFormat format)
@@ -56,8 +46,8 @@ namespace WorldEditor
 
         public void EnumerateChunks(Coords region, int tasks, Action<int, IChunk> body)
         {
-            if (_db is null || !_regions.TryGetValue(region, out List<Coords>? chunks)) return;
-            LevelDbReader db = _db;
+            if (_world is null || !Regions.TryGetValue(region, out List<Coords>? chunks)) return;
+            LevelDbReader db = _world.Database;
 
             ParallelUtilities.BufferedFor(0, chunks.Count, tasks, (index, r) =>
             {
@@ -73,13 +63,6 @@ namespace WorldEditor
                     ErrorLogger.Log(new ChunkError(e, coords));
                 }
             });
-        }
-
-        public void Dispose()
-        {
-            _db?.Dispose();
-            _db = null;
-            GC.SuppressFinalize(this);
         }
     }
 }

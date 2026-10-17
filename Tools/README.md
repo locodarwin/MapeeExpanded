@@ -11,7 +11,10 @@ macOS as well as Windows, so the reader can be tested without the WPF GUI.
 
 Run it from the repository root so `Resources/` resolves:
 
-    dotnet run --project Tools/BedrockProbe -- <world folder> [overworld.png] [nether.png]
+    dotnet run --project Tools/BedrockProbe -- <world folder or .mcworld> [overworld.png] [nether.png]
+
+A `.mcworld` is extracted to the same cache Mapee uses (`Mapee/mcworld` under the local
+application data folder).
 
 ## BedrockMappings
 

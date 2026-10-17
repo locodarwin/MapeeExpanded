@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using WorldEditor;
 
@@ -145,16 +146,34 @@ namespace Mapper.Gui
             Close();
         }
 
+        private static string? ExtractArchive(string file)
+        {
+            Mouse.OverrideCursor = Cursors.Wait;
+            try
+            {
+                return McWorldArchive.Extract(file);
+            }
+            catch (Exception e)
+            {
+                MessageBox.Show($"Couldn't open {Path.GetFileName(file)}: {e.Message}", "Mapee", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return null;
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
+        }
+
         private void Button_Click(object sender, RoutedEventArgs e)
         {
             Microsoft.Win32.OpenFileDialog dialog = new()
             {
-                Filter = "Dat files|*.dat;"
+                Filter = "Minecraft worlds (level.dat, .mcworld)|*.dat;*.mcworld"
             };
             bool? result = dialog.ShowDialog();
-            if (result is null) return;
+            if (result != true) return;
 
-            string? directory = Path.GetDirectoryName(dialog.FileName);
+            string? directory = McWorldArchive.IsArchive(dialog.FileName) ? ExtractArchive(dialog.FileName) : Path.GetDirectoryName(dialog.FileName);
             if (directory is null || !TryLoadEntry(directory, out WorldPanelEntry entry)) return;
 
             Selected = entry;

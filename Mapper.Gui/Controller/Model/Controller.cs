@@ -165,6 +165,17 @@ namespace Mapper.Gui.Controller
                 return;
             }
 
+            // Bedrock worlds index in the background; check again once that's done
+            if (current.Scene.SceneParameter.RegionStore is IBackgroundRegionStore { Ready.IsCompleted: false } background)
+            {
+                TextPainter.SetText(new Text("Reading world. This may take a moment"));
+                background.Ready.ContinueWith(_ => GraphicsCanvas.Dispatcher.BeginInvoke(() =>
+                {
+                    if (ImplementedScene.Domain.CurrentWorld?.CurrentDimension == current) CheckDimensionIsEmpty(current);
+                }));
+                return;
+            }
+
             IText? text = null;
             int count = current.Scene.SceneParameter.RegionStore.Count;
             if (count < 1)

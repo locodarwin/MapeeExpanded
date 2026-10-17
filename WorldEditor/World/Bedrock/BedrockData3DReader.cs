@@ -6,7 +6,12 @@ namespace WorldEditor
     // first air block like Java's WORLD_SURFACE), then one paletted biome storage per section from the bottom up
     public class BedrockData3DReader
     {
-        public BedrockBiomeTranslator Translator { get; set; } = BedrockBiomeTranslator.Default;
+        public BedrockBiomeTranslator Translator
+        {
+            get => _translator ??= BedrockBiomeTranslator.Default;
+            set => _translator = value;
+        }
+        private BedrockBiomeTranslator? _translator;
 
         public HeightmapCollection ReadHeightmap(byte[] data, int dimension)
         {

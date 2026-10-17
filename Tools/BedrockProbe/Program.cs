@@ -3,8 +3,9 @@ using WorldEditor;
 
 // Loads a Bedrock world through the same path Mapee uses (level reader, region store, chunk enumerator,
 // version converter) and reports what came out. Run from the repository root so Resources/ resolves.
-//   BedrockProbe <world folder> [overworld.png] [nether.png]
-string world = args.Length > 0 ? args[0] : throw new ArgumentException("Usage: BedrockProbe <world folder> [overworld.png] [nether.png]");
+//   BedrockProbe <world folder or .mcworld> [overworld.png] [nether.png]
+string world = args.Length > 0 ? args[0] : throw new ArgumentException("Usage: BedrockProbe <world folder or .mcworld> [overworld.png] [nether.png]");
+if (McWorldArchive.IsArchive(world)) world = McWorldArchive.Extract(world);
 
 Level level = new AnyEditionLevelReader().Read(Path.Combine(world, "level.dat")) ?? throw new InvalidDataException("No level.dat");
 Console.WriteLine($"{level.WorldName}: {level.Edition}, {level.Version.VersionName}, {level.GameType}, last played {level.LastPlayed:u}");

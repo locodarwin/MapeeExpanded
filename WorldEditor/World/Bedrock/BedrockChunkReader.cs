@@ -6,7 +6,14 @@ namespace WorldEditor
     {
         public BedrockSubChunkReader SubChunkReader { get; set; } = new();
         public BedrockData3DReader Data3DReader { get; set; } = new();
-        public BedrockBlockTranslator BlockTranslator { get; set; } = BedrockBlockTranslator.Default;
+
+        // The default table is a few megabytes, so it's loaded on the first chunk rather than when the reader is made
+        public BedrockBlockTranslator BlockTranslator
+        {
+            get => _blockTranslator ??= BedrockBlockTranslator.Default;
+            set => _blockTranslator = value;
+        }
+        private BedrockBlockTranslator? _blockTranslator;
 
         public bool RemoveEmptyAirSections { get; set; } = true;
         public bool ComputeSkyLight { get; set; } = true;

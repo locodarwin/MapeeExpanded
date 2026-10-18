@@ -7,6 +7,7 @@ namespace WorldEditor
         Data3D = 43,
         Version = 44,
         Data2D = 45,
+        Data2DLegacy = 46,
         SubChunkPrefix = 47,
         LegacyTerrain = 48,
         BlockEntity = 49,

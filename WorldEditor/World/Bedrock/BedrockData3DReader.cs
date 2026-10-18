@@ -15,8 +15,17 @@ namespace WorldEditor
 
         public HeightmapCollection ReadHeightmap(byte[] data, int dimension)
         {
-            short floorY = BedrockDimension.FloorY(dimension);
+            return ReadHeightmapFrom(data, BedrockDimension.FloorY(dimension));
+        }
 
+        // Data2D's heightmap has the same layout, counted from 0, the floor before 1.18
+        public HeightmapCollection ReadColumnHeightmap(byte[] data)
+        {
+            return ReadHeightmapFrom(data, 0);
+        }
+
+        private static HeightmapCollection ReadHeightmapFrom(byte[] data, short floorY)
+        {
             short[] values = new short[256];
             for (int i = 0; i < values.Length; i++)
             {
@@ -48,6 +57,42 @@ namespace WorldEditor
                 y++;
             }
 
+            return output;
+        }
+
+        // Before 1.18 biomes were per column: one ID per column in the heightmap's x + z * 16 order, every stride
+        // bytes (Data2D has just the ID, older records an ID and a colour). Every section gets the same cells
+        public BiomeChunk ReadColumnBiomes(ReadOnlySpan<byte> columns, int stride, IEnumerable<sbyte> sectionYs)
+        {
+            Dictionary<byte, int> paletteIndexes = [];
+            List<string> palette = [];
+            long[] cells = new long[64];
+
+            for (int cz = 0; cz < 4; cz++)
+            {
+                for (int cx = 0; cx < 4; cx++)
+                {
+                    byte id = columns[(cz * 4 * 16 + cx * 4) * stride];
+                    if (!paletteIndexes.TryGetValue(id, out int index))
+                    {
+                        paletteIndexes[id] = index = palette.Count;
+                        palette.Add(Translator.Translate(id));
+                    }
+                    for (int cy = 0; cy < 4; cy++)
+                    {
+                        cells[cy * 16 + cz * 4 + cx] = index;
+                    }
+                }
+            }
+
+            BiomeChunk output = new();
+            string[] paletteArray = [.. palette];
+            foreach (sbyte y in sectionYs.Distinct().Order())
+            {
+                output.Sections.Add(paletteArray.Length == 1
+                    ? new PaletteSection<string>(paletteArray, []) { Y = y, Locker = new BedrockBiomeLocker() }
+                    : new PaletteSection<string>(paletteArray, cells) { Y = y, Locker = new BedrockBiomeLocker() });
+            }
             return output;
         }
 

@@ -6,12 +6,16 @@ Biomes.json  Bedrock numeric biome ID -> Java biome name, from GeyserMC/mappings
              plus legacy IDs that older Bedrock worlds still contain
 Light.json   Java block name -> [light emitted, light filtered], from minecraft-data (MIT), used to
              compute the light Bedrock doesn't save
+LegacyBlocks.json  Java state for block states, data values and numeric IDs older worlds still contain,
+             from pmmp/BedrockBlockUpgradeSchema and pmmp/BedrockBlockPaletteArchive (CC0); see legacy_blocks.py
 
 Usage: python3 Tools/BedrockMappings/generate.py [minecraft-data bedrock version] [minecraft-data java version]
 """
 import json
 import sys
 import urllib.request
+
+import legacy_blocks
 from pathlib import Path
 
 MCDATA_VERSION = sys.argv[1] if len(sys.argv) > 1 else "1.26.30"
@@ -65,6 +69,11 @@ def main():
     with open(OUTPUT / "Blocks.json", "w", encoding="utf-8") as f:
         json.dump(blocks, f, indent=0, separators=(",", ":"), sort_keys=True)
     print(f"Blocks.json: {len(blocks)} states from minecraft-data bedrock/{MCDATA_VERSION}")
+
+    legacy, palettes = legacy_blocks.build(blocks, MCDATA_VERSION)
+    with open(OUTPUT / "LegacyBlocks.json", "w", encoding="utf-8") as f:
+        json.dump(legacy, f, indent=0, separators=(",", ":"))
+    print(f"LegacyBlocks.json: {len(legacy['States'])} old states from {palettes} palettes, {len(legacy['Values'])} data values, {len(legacy['Ids'])} numeric IDs")
 
     biomes = {}
     for java, entry in fetch(BIOMES_URL).items():

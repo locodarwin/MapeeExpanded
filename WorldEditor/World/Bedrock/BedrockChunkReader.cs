@@ -30,9 +30,17 @@ namespace WorldEditor
             }
             else
             {
-                // A copy of the list, since Mapee clears a chunk's sections once it has drawn them
+                // The cached blocks are shared with neighbours' light, so the chunk handed to Mapee gets its own
+                // list and palettes: Mapee clears the list once drawn, and its block renamer edits palettes in place
                 blockState = new BlockStateChunk(blocks.Sections.Count);
-                foreach (PaletteSection<Block> section in blocks.Sections) blockState.Sections.Add(section);
+                foreach (PaletteSection<Block> section in blocks.Sections)
+                {
+                    blockState.Sections.Add(new PaletteSection<Block>((Block[])section.Palette.Clone(), section.Indexes)
+                    {
+                        Y = section.Y,
+                        Locker = section.Locker
+                    });
+                }
                 data3D = records.FirstOrDefault(r => BedrockKey.TryParse(r.Key, out BedrockKey key) && key.Tag == BedrockChunkTag.Data3D && key.Dimension == dimension && key.X == x && key.Z == z).Value;
             }
             if (blockState is null) return null;
@@ -43,7 +51,7 @@ namespace WorldEditor
                 Z = z,
                 Version = Version.Newest,
                 BlockState = blockState,
-                SkyLight = ComputeSkyLight ? BedrockLight.SkyLight(blockState, dimension) : null
+                SkyLight = ComputeSkyLight ? BedrockLight.SkyLight(x, z, dimension, blockState, neighbors) : null
             };
 
             if (ComputeBlockLight)

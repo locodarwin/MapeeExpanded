@@ -94,11 +94,11 @@ namespace CommonUtilities.Collections.Simple
         }
         public void CopyTo(T[] array, int arrayIndex)
         {
-            _internalArray.CopyTo(array, arrayIndex);
+            Array.Copy(_internalArray, 0, array, arrayIndex, _count);
         }
         public void CopyTo(Array array, int index)
         {
-            _internalArray.CopyTo(array, 0);
+            Array.Copy(_internalArray, 0, array, index, _count);
         }
 
         IEnumerator IEnumerable.GetEnumerator()

@@ -10,11 +10,11 @@ Upstream website: [mapee.net](https://www.mapee.net/home)
 **Version 1.4.0**
 - Opens Bedrock Edition worlds: the world browser lists them next to Java worlds, and the open button takes a `level.dat` or a `.mcworld` file
 - Bedrock block states and biomes are translated to Java's, so every style, filter and render setting works as it does for Java worlds
-- Light is computed for Bedrock worlds, which don't save it, so night mode and cave views work
+- Light is computed for Bedrock worlds, which don't save it, so night mode and cave views work; sky light spreads sideways into cave entrances and under overhangs as in Java
 - Large worlds are indexed in the background; the map shows "Reading world" until it can draw
 - No update check: the upstream updater would replace this fork with upstream Mapee
 
-Bedrock limitations: worlds last saved before 1.18 aren't supported yet, and sky light only falls straight down, so cave entrances come out a little darker than in a Java world.
+Bedrock limitations: worlds last saved before 1.18 aren't supported yet.
 
 **Version 1.2.0** (upstream)
 - Added Alpha support

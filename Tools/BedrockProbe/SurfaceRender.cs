@@ -73,6 +73,7 @@ static partial class SurfaceRender
                 columns++;
 
                 uint color = ColorOf(colors, ground, missing);
+                uint nightColor = surface == "minecraft:water" ? Blend(color, colors["minecraft:water"], 0.55f) : color;
                 float shade = Math.Clamp(0.55f + (groundY - 62) / 160f, 0.3f, 1.2f);
                 if (surface == "minecraft:water")
                 {
@@ -86,7 +87,7 @@ static partial class SurfaceRender
 
                 const float ambient = 0.125f;
                 byte lit = LightAt(blockLight, x, groundY + 1, z);
-                nightPixels[pz * width + px] = Scale(color, ambient + (1 - ambient) * lit / 15f);
+                nightPixels[pz * width + px] = Scale(nightColor, ambient + (1 - ambient) * lit / 15f);
 
                 string biome = BiomeAt(biomeSections, x, groundY, z);
                 biomes[biome] = biomes.GetValueOrDefault(biome) + 1;

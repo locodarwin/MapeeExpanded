@@ -1,12 +1,22 @@
-# Mapee
+# Mapee Expanded
 
-A simple, yet powerful Minecraft mapper & filter.<br>Can load worlds from Alpha to the newest release.<br>
-Website: [mapee.net](https://www.mapee.net/home)
+A fork of [Mapee](https://github.com/Voxelview/Mapee), the simple, yet powerful Minecraft mapper & filter, that adds **Bedrock Edition** worlds.<br>
+Loads Java worlds from Alpha to the newest release, and Bedrock worlds from 1.18 on.<br>
+Upstream website: [mapee.net](https://www.mapee.net/home)
 
-[Newest release](https://github.com/GoldenTadpole/Mapee/releases/tag/1.2.0)
+[Download the latest release](https://github.com/locodarwin/MapeeExpanded/releases/latest) (Windows, x64, no install needed: unzip and run `Mapee.exe`)
 
 # What's New?
-**Version 1.2.0**
+**Version 1.4.0**
+- Opens Bedrock Edition worlds: the world browser lists them next to Java worlds, and the open button takes a `level.dat` or a `.mcworld` file
+- Bedrock block states and biomes are translated to Java's, so every style, filter and render setting works as it does for Java worlds
+- Light is computed for Bedrock worlds, which don't save it, so night mode and cave views work
+- Large worlds are indexed in the background; the map shows "Reading world" until it can draw
+- No update check: the upstream updater would replace this fork with upstream Mapee
+
+Bedrock limitations: worlds last saved before 1.18 aren't supported yet, and sky light only falls straight down, so cave entrances come out a little darker than in a Java world.
+
+**Version 1.2.0** (upstream)
 - Added Alpha support
 - Added new blocks in 26.2
 

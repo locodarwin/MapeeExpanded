@@ -13,7 +13,7 @@
         Background="Transparent"
         WindowStartupLocation="CenterScreen"
         Icon="/Resources/Image/Logo/LogoIcon_48px.ico"
-        Title="Mapee" Height="800" Width="1250" Loaded="Window_Loaded">
+        Title="Mapee Expanded" Height="800" Width="1250" Loaded="Window_Loaded">
 
     <WindowChrome.WindowChrome>
         <WindowChrome GlassFrameThickness="0" CornerRadius="0" CaptionHeight="0" UseAeroCaptionButtons="False" ResizeBorderThickness="7"/>

@@ -10,12 +10,13 @@ namespace WorldEditor
             return File.Exists(path) && (McWorldArchive.IsArchive(path) || string.Equals(Path.GetFileName(path), "level.dat", StringComparison.OrdinalIgnoreCase));
         }
 
-        // The folder holding the world's level.dat, extracting a .mcworld first; null if path isn't a world
-        public static string? FindDirectory(string path)
+        // The folder holding the world's level.dat, extracting a .mcworld first (into McWorldArchive's cache
+        // unless cacheDirectory says otherwise); null if path isn't a world
+        public static string? FindDirectory(string path, string? cacheDirectory = null)
         {
             if (!IsWorld(path)) return null;
             if (Directory.Exists(path)) return Path.GetFullPath(path);
-            if (McWorldArchive.IsArchive(path)) return McWorldArchive.Extract(path);
+            if (McWorldArchive.IsArchive(path)) return McWorldArchive.Extract(path, cacheDirectory);
             return Path.GetDirectoryName(Path.GetFullPath(path));
         }
 

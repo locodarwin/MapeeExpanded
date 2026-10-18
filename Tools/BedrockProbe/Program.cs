@@ -44,7 +44,7 @@ class CollectingBody : IEnumerationBody
     public ConcurrentDictionary<Coords, ConvertedApiChunk> Chunks { get; } = new();
 
     private readonly ApiChunkVersionConverter _converter = new();
-    private int _withBiomes, _withHeightmap, _withSkyLight, _sections;
+    private int _withBiomes, _withHeightmap, _withSkyLight, _withBlockLight, _sections;
 
     public void BeginCycle() { }
     public void EndCycle() { }
@@ -60,11 +60,12 @@ class CollectingBody : IEnumerationBody
         if (converted.Biome?.Sections.Count > 0) Interlocked.Increment(ref _withBiomes);
         if (converted.Heightmap?.Heightmaps.ContainsKey("WORLD_SURFACE") == true) Interlocked.Increment(ref _withHeightmap);
         if (converted.SkyLight?.Sections.Count > 0) Interlocked.Increment(ref _withSkyLight);
+        if (converted.BlockLight?.Sections.Count > 0) Interlocked.Increment(ref _withBlockLight);
         Interlocked.Add(ref _sections, converted.BlockState?.Sections.Count ?? 0);
     }
 
     public void Report()
     {
-        Console.WriteLine($"  after conversion: {_sections} block sections, biomes in {_withBiomes}, heightmaps in {_withHeightmap}, sky light in {_withSkyLight}");
+        Console.WriteLine($"  after conversion: {_sections} block sections, biomes in {_withBiomes}, heightmaps in {_withHeightmap}, sky light in {_withSkyLight}, block light in {_withBlockLight}");
     }
 }

@@ -9,7 +9,11 @@ namespace WorldEditor
         public LevelDbReader Database { get; }
         public Task Indexed { get; }
 
+        // Which sections of each chunk hold light sources, filled in as chunks are read; see BedrockLight
+        public System.Collections.Concurrent.ConcurrentDictionary<(int Dimension, int X, int Z), ulong> EmitterMasks { get; } = new();
+
         private readonly Dictionary<int, Dictionary<Coords, List<Coords>>> _regions = [];
+        private readonly HashSet<(int Dimension, int X, int Z)> _chunks = [];
 
         private static readonly Dictionary<string, WeakReference<BedrockWorld>> _open = [];
 
@@ -49,6 +53,12 @@ namespace WorldEditor
             return _regions.TryGetValue(dimension, out var regions) ? regions : new Dictionary<Coords, List<Coords>>();
         }
 
+        public bool ChunkExists(int dimension, int x, int z)
+        {
+            Indexed.Wait();
+            return _chunks.Contains((dimension, x, z));
+        }
+
         private void Index()
         {
             try
@@ -63,6 +73,7 @@ namespace WorldEditor
                     Coords region = new(parsed.X >> 5, parsed.Z >> 5);
                     if (!regions.TryGetValue(region, out List<Coords>? chunks)) regions[region] = chunks = [];
                     chunks.Add(new Coords(parsed.X, parsed.Z));
+                    _chunks.Add((parsed.Dimension, parsed.X, parsed.Z));
                 });
             }
             catch (Exception e)

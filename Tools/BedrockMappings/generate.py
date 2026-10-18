@@ -4,8 +4,10 @@
 Blocks.json  Bedrock block state -> Java block state, from PrismarineJS/minecraft-data (MIT)
 Biomes.json  Bedrock numeric biome ID -> Java biome name, from GeyserMC/mappings (MIT),
              plus legacy IDs that older Bedrock worlds still contain
+Light.json   Java block name -> [light emitted, light filtered], from minecraft-data (MIT), used to
+             compute the light Bedrock doesn't save
 
-Usage: python3 Tools/BedrockMappings/generate.py [minecraft-data bedrock version]
+Usage: python3 Tools/BedrockMappings/generate.py [minecraft-data bedrock version] [minecraft-data java version]
 """
 import json
 import sys
@@ -15,6 +17,8 @@ from pathlib import Path
 MCDATA_VERSION = sys.argv[1] if len(sys.argv) > 1 else "1.26.30"
 BLOCKS_URL = f"https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data/bedrock/{MCDATA_VERSION}/blocksB2J.json"
 BIOMES_URL = "https://raw.githubusercontent.com/GeyserMC/mappings/master/biomes.json"
+JAVA_VERSION = sys.argv[2] if len(sys.argv) > 2 else "26.1"
+LIGHT_URL = f"https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data/pc/{JAVA_VERSION}/blocks.json"
 
 OUTPUT = Path(__file__).resolve().parents[2] / "Resources" / "WorldEditor" / "Translators" / "Bedrock"
 
@@ -74,6 +78,11 @@ def main():
     with open(OUTPUT / "Biomes.json", "w", encoding="utf-8") as f:
         json.dump({str(k): biomes[k] for k in sorted(biomes)}, f, indent=2)
     print(f"Biomes.json: {len(biomes)} IDs ({added} legacy)")
+
+    light = {f"minecraft:{b['name']}": [b["emitLight"], b["filterLight"]] for b in fetch(LIGHT_URL)}
+    with open(OUTPUT / "Light.json", "w", encoding="utf-8") as f:
+        f.write("{\n" + ",\n".join(f"  {json.dumps(k)}: {json.dumps(v)}" for k, v in sorted(light.items())) + "\n}\n")
+    print(f"Light.json: {len(light)} blocks from minecraft-data pc/{JAVA_VERSION}")
 
 
 if __name__ == "__main__":

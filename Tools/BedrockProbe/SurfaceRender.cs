@@ -6,7 +6,8 @@ using WorldEditor;
 // A rough top-down render from the converted chunks Mapee's renderer would receive. It isn't Mapee's
 // renderer, just enough to check blocks, heightmaps, sky light and biomes line up. Water is drawn over
 // the block beneath it, shaded by that block's sky light. Names with no colour are magenta and counted.
-// A second image, <name>-biomes.png, colours each column by its biome
+// Two more images: <name>-biomes.png colours each column by its biome, and <name>-night.png shades each
+// block by block light alone, the way Mapee's light painter does with the sun's intensity at zero
 static partial class SurfaceRender
 {
     public static void Render(ICollection<ConvertedApiChunk> chunks, short startY, string colorDirectory, string output)
@@ -16,7 +17,7 @@ static partial class SurfaceRender
         int minX = chunks.Min(c => c.X), maxX = chunks.Max(c => c.X);
         int minZ = chunks.Min(c => c.Z), maxZ = chunks.Max(c => c.Z);
         int width = (maxX - minX + 1) * 16, height = (maxZ - minZ + 1) * 16;
-        uint[] pixels = new uint[width * height], biomePixels = new uint[width * height];
+        uint[] pixels = new uint[width * height], biomePixels = new uint[width * height], nightPixels = new uint[width * height];
 
         Dictionary<string, int> missing = [], biomes = [];
         int columns = 0;
@@ -33,6 +34,7 @@ static partial class SurfaceRender
                 sections[section.Y] = (section, indexes);
             }
             Dictionary<int, LightChunk.Section> light = chunk.SkyLight?.Sections.ToDictionary(x => (int)x.Y) ?? [];
+            Dictionary<int, LightChunk.Section> blockLight = chunk.BlockLight?.Sections.ToDictionary(x => (int)x.Y) ?? [];
             Dictionary<int, (PaletteSection<string> Section, short[] Indexes)> biomeSections = [];
             foreach (var section in chunk.Biome?.Sections ?? [])
             {
@@ -82,6 +84,10 @@ static partial class SurfaceRender
                 int px = (chunk.X - minX) * 16 + x, pz = (chunk.Z - minZ) * 16 + z;
                 pixels[pz * width + px] = Scale(color, shade);
 
+                const float ambient = 0.125f;
+                byte lit = LightAt(blockLight, x, groundY + 1, z);
+                nightPixels[pz * width + px] = Scale(color, ambient + (1 - ambient) * lit / 15f);
+
                 string biome = BiomeAt(biomeSections, x, groundY, z);
                 biomes[biome] = biomes.GetValueOrDefault(biome) + 1;
                 biomePixels[pz * width + px] = 0xFF000000 | (uint)biome.GetHashCode() & 0xFFFFFF;
@@ -90,6 +96,7 @@ static partial class SurfaceRender
 
         WritePng(output, width, height, pixels);
         WritePng(Path.ChangeExtension(output, null) + "-biomes.png", width, height, biomePixels);
+        WritePng(Path.ChangeExtension(output, null) + "-night.png", width, height, nightPixels);
 
         int missed = missing.Values.Sum();
         Console.WriteLine($"  rendered {width}x{height} to {output}; {missed} of {columns} columns ({100.0 * missed / Math.Max(1, columns):F2}%) had no colour");

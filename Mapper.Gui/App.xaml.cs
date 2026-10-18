@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Windows;
 
@@ -13,10 +14,17 @@ namespace Mapper.Gui
         [STAThread]
         protected override void OnStartup(StartupEventArgs e)
         {
+            // A world can be named on the command line, which is also how Explorer opens a .mcworld with Mapee or a
+            // world dropped on Mapee.exe. Explorer may start Mapee in that file's folder, so the path is made whole
+            // before moving to the app's folder, where Resources are
+            string? world = e.Args.FirstOrDefault(arg => !arg.StartsWith('-'));
+            if (world is not null) world = Path.GetFullPath(world);
+            Directory.SetCurrentDirectory(AppContext.BaseDirectory);
+
             AppDomain.CurrentDomain.UnhandledException += UnhandledExceptions;
             InitializeBackgroundWork();
 
-            Controller.Controller controller = new Controller.Controller();
+            Controller.Controller controller = new Controller.Controller(startupWorld: world);
             controller.MainWindow.ShowDialog();
         }
 

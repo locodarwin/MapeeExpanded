@@ -29,14 +29,20 @@ namespace Mapper.Gui
 
         private bool _wasDown = false;
 
-        public WorldBrowser(IList<string> baseDirectories, IObjectReader<string, Level?> levelReader)
+        // recentWorlds, most recent first, are listed ahead of the worlds found in baseDirectories
+        public WorldBrowser(IList<string> baseDirectories, IObjectReader<string, Level?> levelReader, IList<string>? recentWorlds = null)
         {
             InitializeComponent();
 
             BaseDirectories = baseDirectories;
             LevelReader = levelReader;
 
-            _entries = BaseDirectories.SelectMany(LoadEntries).OrderByDescending(x => x.Level.LastPlayed).ToList();
+            List<WorldPanelEntry> recent = LoadRecent(recentWorlds ?? []);
+            HashSet<string> listed = recent.Select(x => WorldLocation.Key(x.Level.Directory ?? x.Source)).ToHashSet();
+
+            _entries = recent.Concat(BaseDirectories.SelectMany(LoadEntries)
+                .Where(x => !listed.Contains(WorldLocation.Key(x.Level.Directory ?? x.Source)))
+                .OrderByDescending(x => x.Level.LastPlayed)).ToList();
             foreach (WorldPanelEntry entry in _entries)
             {
                 AddWorld(entry);
@@ -58,13 +64,31 @@ namespace Mapper.Gui
 
             Parallel.ForEach(worlds, world =>
             {
-                if (!TryLoadEntry(world, out WorldPanelEntry entry)) return;
+                if (!TryLoadEntry(world, world, out WorldPanelEntry entry)) return;
                 output.Add(entry);
             });
 
             return output.OrderByDescending(x => x.Level.LastPlayed);
         }
-        private bool TryLoadEntry(string world, out WorldPanelEntry entry)
+        // Worlds that have since been moved or deleted are left out
+        private List<WorldPanelEntry> LoadRecent(IList<string> sources)
+        {
+            WorldPanelEntry?[] output = new WorldPanelEntry?[sources.Count];
+            Parallel.For(0, sources.Count, i =>
+            {
+                try
+                {
+                    string? world = WorldLocation.FindDirectory(sources[i]);
+                    if (world is not null && TryLoadEntry(world, sources[i], out WorldPanelEntry entry)) output[i] = entry;
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                }
+            });
+            return [.. output.OfType<WorldPanelEntry>()];
+        }
+        private bool TryLoadEntry(string world, string source, out WorldPanelEntry entry)
         {
             try
             {
@@ -91,7 +115,7 @@ namespace Mapper.Gui
                     icon = _default;
                 }
 
-                entry = new WorldPanelEntry(level, icon);
+                entry = new WorldPanelEntry(level, icon, source);
                 return true;
             }
             catch(Exception e)
@@ -163,7 +187,7 @@ namespace Mapper.Gui
             if (fileName is null) return;
 
             string? directory = McWorldArchive.IsArchive(fileName) ? await ExtractArchive(fileName) : Path.GetDirectoryName(fileName);
-            if (directory is null || !TryLoadEntry(directory, out WorldPanelEntry entry)) return;
+            if (directory is null || !TryLoadEntry(directory, McWorldArchive.IsArchive(fileName) ? fileName : directory, out WorldPanelEntry entry)) return;
 
             Selected = entry;
             WorldSelected?.Invoke(this, EventArgs.Empty);

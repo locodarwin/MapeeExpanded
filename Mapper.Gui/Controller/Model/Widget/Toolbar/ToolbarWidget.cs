@@ -10,15 +10,20 @@ namespace Mapper.Gui.Controller
     {
         public IList<IToolButtonSegment> ToolButtonSegments { get; } = new List<IToolButtonSegment>();
 
+        // The tools that draw over the map and stay on until turned off, by the name the settings keep them under
+        public IDictionary<string, IToggleableTool> Overlays { get; } = new Dictionary<string, IToggleableTool>();
+        public WorldOpener WorldOpener { get; }
+
         public MapViewer MainWindow { get; }
         public Renderer Renderer { get; }
         public ToolScene ToolScene { get; }
         public IRenderInvoker RenderInvoker { get; }
 
-        public ToolbarWidget(MapViewer mainWindow, Renderer renderer) 
+        public ToolbarWidget(MapViewer mainWindow, Renderer renderer, WorldOpener worldOpener) 
         {
             MainWindow = mainWindow;
             Renderer = renderer;
+            WorldOpener = worldOpener;
             ToolScene = new ToolScene(Renderer.Scene);
             RenderInvoker = new RenderInvoker(Renderer);
 
@@ -48,24 +53,28 @@ namespace Mapper.Gui.Controller
         private ToolButton CreateGridToolButton() 
         {
             GridTool tool = new(ToolScene);
+            Overlays["grid"] = tool;
             Renderer.AddPainter(tool);
             return CreateButton(tool, "Grid_22px.png", "Grid lines");
         }
         private ToolButton CreateSlimeChunkButton() 
         {
             SlimeChunkTool tool = new(ToolScene, new SlimeChunkChecker(Renderer.Scene.Domain));
+            Overlays["slime_chunks"] = tool;
             Renderer.AddPainter(tool);
             return CreateButton(tool, "Slime_22px.png", "Slime chunk viewer");
         }
         private ToolButton CreateAxisButton() 
         {
             AxisTool tool = new(ToolScene);
+            Overlays["axes"] = tool;
             Renderer.AddPainter(tool);
             return CreateButton(tool, "Axis_22px.png", "Cardinal (x; z) axes");
         }
         private ToolButton CreateChunkHighlightsButton()
         {
             HighlightChunkTool tool = new(ToolScene, RenderInvoker, Renderer.GraphicsCanvas);
+            Overlays["chunk_highlight"] = tool;
             Renderer.AddPainter(tool);
             return CreateButton(tool, "ChunkHighlight_22px.png", "Chunk cursor highlighter");
         }
@@ -136,7 +145,7 @@ namespace Mapper.Gui.Controller
         }
         private ToolButton CreateBrowseButton()
         {
-            BrowseTool tool = new(Renderer.Scene, MainWindow);
+            BrowseTool tool = new(Renderer.Scene, MainWindow, WorldOpener);
             ToolButton output = new(tool)
             {
                 Icon = new BitmapImage(new Uri("/Resources/Image/ToolButton/LoadWorld_22px.png", UriKind.Relative)),

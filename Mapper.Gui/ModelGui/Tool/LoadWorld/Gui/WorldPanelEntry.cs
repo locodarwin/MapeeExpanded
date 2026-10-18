@@ -8,10 +8,14 @@ namespace Mapper.Gui
         public Level Level { get; }
         public ImageSource Icon { get; }
 
-        public WorldPanelEntry(Level level, ImageSource icon)
+        // What to open the world from again: its folder, or the .mcworld file it came from
+        public string Source { get; }
+
+        public WorldPanelEntry(Level level, ImageSource icon, string source)
         {
             Level = level;
             Icon = icon;
+            Source = source;
         }
     }
 }

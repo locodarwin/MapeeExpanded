@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Threading;
+using System.Linq;
 using WorldEditor;
 
 namespace Mapper.Gui.Controller
@@ -27,13 +28,21 @@ namespace Mapper.Gui.Controller
 
         public MapViewer MainWindow { get; }
 
-        public Controller() 
+        public AppSettings Settings { get; }
+        public WorldOpener WorldOpener { get; }
+
+        private bool _automaticStyle;
+
+        // startupWorld, if given, opens in place of the world browser
+        public Controller(AppSettings? settings = null, string? startupWorld = null) 
         {
+            Settings = settings ?? AppSettings.Load();
             GraphicsCanvas = new CanvasControl();
 
             Domain = new ProgramDomain();
             ImplementedScene = new Scene(GraphicsCanvas, Domain);
             ImplementedRenderer = new Renderer(ImplementedScene, GraphicsCanvas);
+            WorldOpener = new WorldOpener(ImplementedScene, Settings) { StartupWorld = startupWorld };
 
             InformationWidget = new InformationWidget(ImplementedScene, ImplementedRenderer);
             HorizontalScrollbarWidget = new ScrollbarWidget(ImplementedScene, ImplementedRenderer, Orientation.Horizontal);
@@ -43,6 +52,8 @@ namespace Mapper.Gui.Controller
 
             MainWindow = new MapViewer();
             MainWindow.Initialize(CreateMainWindowArgs());
+            MainWindow.ApplySettings(Settings.Window);
+            WorldOpener.DimensionWidget = DimensionWidget;
 
             TextPainter = new TextPainter(new RenderInvoker(ImplementedRenderer), GraphicsCanvas);
             ImplementedRenderer.AddPainter(TextPainter);
@@ -51,6 +62,41 @@ namespace Mapper.Gui.Controller
             ImplementedScene.WorldChanged += Scene_WorldChanged;
             ImplementedScene.DimensionBeginChange += Scene_DimensionBeginChange;
             ImplementedScene.StyleBeginReset += Scene_StyleReset;
+
+            ApplySettings();
+        }
+
+        // The last style and overlays come back, and every change is saved as it happens, so a crash loses nothing
+        private void ApplySettings()
+        {
+            if (Settings.Style is string style && Domain.Styles.Any(s => s.Metadata.Id == style))
+            {
+                StylebarWidget.SelectedStyleId = style;
+            }
+            // The style bar reports a change even with no world open, unlike the scene
+            StylebarWidget.StyleCollectionChanged += (sender, style) =>
+            {
+                if (_automaticStyle) return;
+                Settings.Style = style.Id;
+                Settings.Save();
+            };
+
+            foreach (var (name, tool) in ToolbarWidget.Overlays)
+            {
+                tool.IsTurnedOn = Settings.IsOverlayOn(name);
+                tool.OnTurnedOn += isTurnedOn =>
+                {
+                    Settings.SetOverlay(name, isTurnedOn);
+                    Settings.Save();
+                };
+            }
+
+            MainWindow.Closing += (sender, e) =>
+            {
+                WorldOpener.RememberView();
+                MainWindow.SaveSettings(Settings.Window);
+                Settings.Save();
+            };
         }
 
         private MapViewerArgs CreateMainWindowArgs() 
@@ -94,7 +140,7 @@ namespace Mapper.Gui.Controller
         }
         private Control CreateToolbarControl() 
         {
-            ToolbarWidget = new ToolbarWidget(MainWindow, ImplementedRenderer);
+            ToolbarWidget = new ToolbarWidget(MainWindow, ImplementedRenderer, WorldOpener);
 
             return new ToolbarControl(ToolbarWidget)
             {
@@ -124,7 +170,10 @@ namespace Mapper.Gui.Controller
         {
             if (current.Level.Version.Version == Version.Pre_Beta_1_2)
             {
+                // Alpha worlds need their own style; that's not the user's choice, so it isn't remembered
+                _automaticStyle = true;
                 StylebarWidget?.SelectedStyleId = "alpha";
+                _automaticStyle = false;
             }
         }
 

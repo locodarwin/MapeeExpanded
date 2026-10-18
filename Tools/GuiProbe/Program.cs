@@ -1,8 +1,12 @@
 // Runs the Avalonia GUI on Avalonia's headless platform with Skia drawing and acts out a list of steps, saving
 // screenshots of every open window along the way.
 //   GuiProbe <output folder> <step>...
+// Settings are kept in <output folder>/Settings.json, not the user's.
 // Steps:
-//   load:<world folder or .mcworld>   open a world, as the world browser would
+//   load:<world folder or .mcworld>   open a world straight into the scene
+//   open:<world, level.dat or .mcworld>  open a world as the browser and command line do, remembering it
+//   restart[:<world>]                 close the app and start it again, optionally naming a world as on the command line
+//   state                             print the style, overlays, dimension and view
 //   wait:<ms>                         let the app run (regions render in the background)
 //   settle                            wait until no new regions have rendered for a second
 //   shot:<name>                       save <name>-<n>.png for each open window, main window first
@@ -22,6 +26,7 @@ using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using Mapper;
 using Mapper.Gui;
 using Mapper.Gui.Controller;
 using Mapper.Gui.Model;
@@ -47,12 +52,10 @@ List<Window> windows = [];
 Window.WindowOpenedEvent.AddClassHandler<Window>((window, e) => { if (!windows.Contains(window)) windows.Add(window); });
 Window.WindowClosedEvent.AddClassHandler<Window>((window, e) => windows.Remove(window));
 
-Controller controller = new();
-MapViewer main = controller.MainWindow;
-main.Width = 1250;
-main.Height = 800;
-main.Show();
-Pump(1500);
+string settingsFile = Path.Combine(output, "Settings.json");
+Controller controller = null!;
+MapViewer main = null!;
+Start(null);
 
 foreach (string step in args.Skip(1))
 {
@@ -68,6 +71,25 @@ foreach (string step in args.Skip(1))
             Level level = new AnyEditionLevelReader().Read(Path.Combine(folder, "level.dat")) ?? throw new InvalidOperationException($"No world at {value}");
             controller.ImplementedScene.SetWorld(level);
             Pump(500);
+            break;
+        case "open":
+            CloseOthers();
+            Task<bool> opening = controller.WorldOpener.TryOpen(value);
+            while (!opening.IsCompleted) Pump(50);
+            Console.WriteLine($"  opened: {opening.Result}");
+            Pump(500);
+            break;
+        case "restart":
+            CloseOthers();
+            main.Close();
+            Pump(300);
+            Start(value.Length > 0 ? value : null);
+            break;
+        case "state":
+            var world = controller.Domain.CurrentWorld;
+            Console.WriteLine($"  style {controller.Domain.CurrentStyle.Metadata.Id}; overlays on: {string.Join(",", controller.ToolbarWidget.Overlays.Where(o => o.Value.IsTurnedOn).Select(o => o.Key))}; window {main.Width}x{main.Height}");
+            Console.WriteLine(world is null ? "  no world" : $"  world {world.Level.WorldName}, {world.CurrentDimension.Dimension.Name}, centre {world.CurrentDimension.Scaling.CenterPoint}, zoom {world.CurrentDimension.Scaling.ZoomLevel}");
+            Console.WriteLine($"  recent: {string.Join(" | ", controller.Settings.RecentWorlds.Select(w => Path.GetFileName(w.Path)))}");
             break;
         case "wait":
             Pump(int.Parse(value));
@@ -148,6 +170,19 @@ foreach (string step in args.Skip(1))
 }
 
 return 0;
+
+void Start(string? startupWorld)
+{
+    controller = new Controller(AppSettings.Load(settingsFile), startupWorld);
+    main = controller.MainWindow;
+    if (!File.Exists(settingsFile))
+    {
+        main.Width = 1250;
+        main.Height = 800;
+    }
+    main.Show();
+    Pump(1500);
+}
 
 void Pump(int milliseconds)
 {

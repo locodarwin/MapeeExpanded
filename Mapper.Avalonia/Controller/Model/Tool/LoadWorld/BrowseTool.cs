@@ -1,6 +1,8 @@
 ﻿using Mapper.Gui.Logic;
 using Mapper.Gui.Model;
 using System;
+using System.IO;
+using System.Linq;
 using WorldEditor;
 
 namespace Mapper.Gui.Controller
@@ -9,18 +11,35 @@ namespace Mapper.Gui.Controller
     {
         public Scene Scene { get; }
         public MapViewer MapViewer { get; }
+        public WorldOpener Opener { get; }
 
         private bool _isActive = false;
 
-        public BrowseTool(Scene scene, MapViewer mapViewer)
+        public BrowseTool(Scene scene, MapViewer mapViewer, WorldOpener opener)
         {
             Scene = scene;
             MapViewer = mapViewer;
+            Opener = opener;
 
-            if (MapViewer.HasBeenShown) IsTurnedOn = true;
-            else MapViewer.Shown += (sender, e) => IsTurnedOn = true;
+            if (MapViewer.HasBeenShown) Start();
+            else MapViewer.Shown += (sender, e) => Start();
 
             OnTurnedOn += TurnedOn;
+        }
+
+        // The browser opens at startup unless a world was named on the command line
+        private async void Start()
+        {
+            string? startup = Opener.StartupWorld;
+            Opener.StartupWorld = null;
+
+            if (startup is not null)
+            {
+                if (await Opener.TryOpen(startup)) return;
+                await MessageWindow.Show($"Couldn't open {Path.GetFileName(startup)} as a Minecraft world.", "Mapee", MapViewer);
+            }
+
+            IsTurnedOn = true;
         }
 
         private void TurnedOn(bool isTurnedOn)
@@ -37,13 +56,13 @@ namespace Mapper.Gui.Controller
         {
             _isActive = true;
 
-            WorldBrowser browser = new(AnyEditionLevelReader.DefaultWorldDirectories(), new AnyEditionLevelReader());
+            WorldBrowser browser = new(AnyEditionLevelReader.DefaultWorldDirectories(), new AnyEditionLevelReader(), Opener.Settings.RecentWorlds.Select(w => w.Path).ToList());
             await browser.ShowDialog(MapViewer);
 
             _isActive = false;
 
             if (browser.DialogClosed) return;
-            Scene.SetWorld(browser.Selected.Level);
+            Opener.Open(browser.Selected.Source, browser.Selected.Level);
         }
     }
 }

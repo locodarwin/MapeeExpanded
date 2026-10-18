@@ -44,13 +44,27 @@ cat > "$APP_DIR/mapee.desktop" <<'DESKTOP'
 Type=Application
 Name=Mapee Expanded
 Comment=Map viewer for Minecraft Java and Bedrock worlds
-Exec=Mapee
+Exec=Mapee %f
 Icon=mapee
 Terminal=false
 Categories=Game;Graphics;
+MimeType=application/x-mcworld;
 StartupWMClass=mapee
 DESKTOP
 cp "$APP_DIR/mapee.desktop" "$APP_DIR/usr/share/applications/mapee.desktop"
+
+# .mcworld has no registered type; this one lets desktops that integrate AppImages open them with Mapee
+mkdir -p "$APP_DIR/usr/share/mime/packages"
+cat > "$APP_DIR/usr/share/mime/packages/mapee.xml" <<'MIME'
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-mcworld">
+    <comment>Minecraft Bedrock world</comment>
+    <sub-class-of type="application/zip"/>
+    <glob pattern="*.mcworld"/>
+  </mime-type>
+</mime-info>
+MIME
 
 ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 "$APPIMAGETOOL" --no-appstream "$APP_DIR" "$OUTPUT"
 echo "Created $OUTPUT"

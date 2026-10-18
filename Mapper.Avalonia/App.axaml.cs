@@ -3,6 +3,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using System;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace Mapper.Gui
@@ -21,7 +22,9 @@ namespace Mapper.Gui
 
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
-                Controller.Controller controller = new Controller.Controller();
+                // A world can be named on the command line, which is also how file managers open a .mcworld with Mapee
+                string? world = desktop.Args?.FirstOrDefault(arg => !arg.StartsWith('-'));
+                Controller.Controller controller = new Controller.Controller(startupWorld: world);
                 desktop.MainWindow = controller.MainWindow;
             }
 

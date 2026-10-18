@@ -10,11 +10,21 @@ namespace Mapper.Gui
         [STAThread]
         public static void Main(string[] args)
         {
+            // A world named on the command line is relative to where the user is, so it's resolved before moving
+            args = Array.ConvertAll(args, FullPath);
+
             // Resources are read relative to the working directory, as in the WPF GUI, and an AppImage starts wherever the user is
             Directory.SetCurrentDirectory(AppContext.BaseDirectory);
             UseGtkScaleOnX11();
 
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        }
+
+        private static string FullPath(string arg)
+        {
+            if (arg.StartsWith('-')) return arg;
+            if (Uri.TryCreate(arg, UriKind.Absolute, out Uri? uri) && uri.IsFile) return uri.LocalPath;
+            return Path.GetFullPath(arg);
         }
 
         // Native Wayland where there is a compositor, which hands over the monitor's scale (fractional ones too);

@@ -46,7 +46,7 @@ namespace Mapper.Gui
             IngameNameLabel.Text = Entry.Level.WorldName;
 
             DateTime lastPlayed = Entry.Level.LastPlayed;
-            DirectoryNameLabel.Text = $"{Path.GetFileName(Entry.Level.Directory)} ({lastPlayed:dd.MM.yyyy HH:mm})";
+            DirectoryNameLabel.Text = $"{Path.GetFileName(Entry.Source.TrimEnd(Path.DirectorySeparatorChar))} ({lastPlayed:dd.MM.yyyy HH:mm})";
 
             if (!Entry.Level.IsHardcode)
             {

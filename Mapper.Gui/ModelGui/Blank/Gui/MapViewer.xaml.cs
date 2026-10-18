@@ -47,6 +47,40 @@ namespace Mapper.Gui
             }
         }
 
+        // The size and place it had when last closed, as long as that's still on a screen
+        public void ApplySettings(WindowSettings settings)
+        {
+            if (settings.Width is double width && settings.Height is double height && width >= 400 && height >= 300)
+            {
+                Width = Math.Min(width, SystemParameters.VirtualScreenWidth);
+                Height = Math.Min(height, SystemParameters.VirtualScreenHeight);
+            }
+            if (settings.Left is double left && settings.Top is double top &&
+                left >= SystemParameters.VirtualScreenLeft && top >= SystemParameters.VirtualScreenTop &&
+                left + 100 <= SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth &&
+                top + 50 <= SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight)
+            {
+                WindowStartupLocation = WindowStartupLocation.Manual;
+                Left = left;
+                Top = top;
+            }
+            if (settings.Maximized) WindowState = WindowState.Maximized;
+        }
+
+        public void SaveSettings(WindowSettings settings)
+        {
+            // RestoreBounds is the normal size and place, also while maximized
+            Rect bounds = WindowState == WindowState.Normal ? new Rect(Left, Top, ActualWidth, ActualHeight) : RestoreBounds;
+            settings.Maximized = WindowState == WindowState.Maximized;
+            if (!bounds.IsEmpty)
+            {
+                settings.Left = bounds.Left;
+                settings.Top = bounds.Top;
+                settings.Width = bounds.Width;
+                settings.Height = bounds.Height;
+            }
+        }
+
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             CustomFrameWindowInitializer frameInitializer = new(this, Template);

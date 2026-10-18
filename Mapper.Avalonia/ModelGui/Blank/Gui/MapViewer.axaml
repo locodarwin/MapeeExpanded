@@ -1,0 +1,19 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Mapper.Gui.MapViewer"
+        Background="Black"
+        UseLayoutRounding="True"
+        WindowStartupLocation="CenterScreen"
+        Icon="avares://Mapee/Resources/Image/Logo/LogoIcon_48px.ico"
+        Title="Mapee Expanded" Height="800" Width="1250">
+
+    <Grid x:Name="GlobalContainer" Background="Black" ColumnDefinitions="*,17" RowDefinitions="*,18,Auto">
+        <DockPanel x:Name="CanvasContainer" LastChildFill="True" Background="Black" Grid.Row="0" />
+        <DockPanel x:Name="HorizontalScrollBarContainer" LastChildFill="True" Grid.Row="1" />
+        <DockPanel x:Name="VerticalScrollBarContainer" LastChildFill="True" Grid.Row="0" Grid.Column="1" />
+        <DockPanel x:Name="FooterGrid" LastChildFill="True" Grid.Row="2" Grid.Column="0" />
+
+        <DockPanel LastChildFill="True" Background="#FF141414" Grid.Row="1" Grid.Column="1" />
+        <DockPanel LastChildFill="True" Background="#FF1C1C1C" Grid.Row="2" Grid.Column="1" />
+    </Grid>
+</Window>

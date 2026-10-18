@@ -1,0 +1,15 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Mapper.Gui.ToolbarControl"
+             UseLayoutRounding="True"
+             BorderBrush="#FF3F3F3F" BorderThickness="1"
+             Background="#FF1C1C1C"
+             HorizontalAlignment="Center"
+             Height="35">
+
+    <UserControl.Effect>
+        <DropShadowDirectionEffect Direction="-75" ShadowDepth="2" Opacity="1" BlurRadius="6" Color="Black"/>
+    </UserControl.Effect>
+
+    <Grid x:Name="ButtonContainer" />
+</UserControl>

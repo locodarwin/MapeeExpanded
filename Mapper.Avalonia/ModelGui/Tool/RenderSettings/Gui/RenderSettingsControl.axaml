@@ -1,0 +1,49 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Mapper.Gui.RenderSettingsControl"
+        Icon="avares://Mapee/Resources/Icon/ToolButton/RenderSettings_64px.ico"
+        UseLayoutRounding="True"
+        Title="Render settings" Height="360" Width="450" Background="#FF232323" WindowStartupLocation="CenterOwner">
+
+    <Grid Margin="15,0,15,15" RowDefinitions="Auto,*,Auto">
+        <StackPanel Grid.Row="0">
+            <TextBlock Text="Miscellaneous settings" Classes="heading" Margin="0,12,0,4" />
+            <Border BorderBrush="#FF606060" BorderThickness="0,1,0,0" HorizontalAlignment="Stretch"/>
+
+            <Grid Margin="0,7,0,0" ColumnDefinitions="Auto,25,*" RowDefinitions="29,29,29,29">
+                <TextBlock Text="Sky light (0.00 to 1.00):" Classes="label" FontSize="12" Grid.Column="0" Grid.Row="0" />
+                <TextBox x:Name="SkyLightTextBox" FontSize="14" Height="25" Padding="4,1,0,0" Grid.Column="2" Grid.Row="0" />
+
+                <TextBlock Text="Ambient light (0.00 to 1.00):" Classes="label" FontSize="12" Grid.Column="0" Grid.Row="1" />
+                <TextBox x:Name="AmbientLightTextBox" FontSize="14" Height="25" Padding="4,1,0,0" Grid.Column="2" Grid.Row="1" />
+
+                <TextBlock Text="Altitude Y offset:" Classes="label" FontSize="12" Grid.Column="0" Grid.Row="2" />
+                <TextBox x:Name="AltitudeTextBox" FontSize="14" Height="25" Padding="4,1,0,0" Grid.Column="2" Grid.Row="2" />
+
+                <TextBlock Text="Transparent block step intensity:" Classes="label" FontSize="12" Grid.Column="0" Grid.Row="3" />
+                <TextBox x:Name="StepIntensityTextBox" FontSize="14" Height="25" Padding="4,1,0,0" Grid.Column="2" Grid.Row="3" />
+            </Grid>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1">
+            <TextBlock Text="Background" Classes="heading" Margin="0,14,0,4" />
+            <Border BorderBrush="#FF606060" BorderThickness="0,1,0,0" HorizontalAlignment="Stretch"/>
+
+            <StackPanel Orientation="Horizontal" Margin="0,6,0,0" Spacing="15">
+                <RadioButton x:Name="CheckerBackgroundRadioBox" GroupName="Background" Content="Checker pattern" FontSize="12" Margin="2,0,0,0" />
+                <RadioButton x:Name="SolidBackgroundRadioBox" GroupName="Background" Content="Black" FontSize="12" />
+            </StackPanel>
+        </StackPanel>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal">
+            <Button Classes="dialog" BorderBrush="#FF528753" Background="#FF303030" Width="90" Height="26" Click="Render_Click" HorizontalContentAlignment="Center">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <Image Source="avares://Mapee/Resources/Image/Misc/Render_32px.png" VerticalAlignment="Center" Stretch="Fill" Width="15" Height="15" />
+                    <TextBlock VerticalAlignment="Center" Foreground="White" Text="Render" />
+                </StackPanel>
+            </Button>
+
+            <CheckBox x:Name="CloseWindowCheckBox" IsChecked="True" Margin="10,0,0,0" VerticalAlignment="Center" Content="Close this window automatically"/>
+        </StackPanel>
+    </Grid>
+</Window>

@@ -1,0 +1,43 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Mapper.Gui.InformationControl"
+             Background="#FF1C1C1C" Height="25">
+
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="LabelColor">#FFAFAFAF</SolidColorBrush>
+        <SolidColorBrush x:Key="LabelSeperatorColor">#FF808080</SolidColorBrush>
+        <SolidColorBrush x:Key="LabelInformationColor">White</SolidColorBrush>
+        <SolidColorBrush x:Key="LabelNumberColor">#FF95ECF9</SolidColorBrush>
+        <SolidColorBrush x:Key="LabelCoordsColor">#FFB2FFB6</SolidColorBrush>
+        <SolidColorBrush x:Key="LabelSizeColor">#FFFFDEAA</SolidColorBrush>
+    </UserControl.Resources>
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid ColumnDefinitions="Auto,30,Auto,30,Auto,*,Auto">
+        <TextBlock Margin="10,0,0,0" Grid.Column="0">
+            <Run Text="Loaded regions: " Foreground="{StaticResource LabelColor}"/><Run x:Name="LoadedRegionsLabel" Text="0" FontWeight="SemiBold" Foreground="{StaticResource LabelNumberColor}"/><Run Text="; Size: " Foreground="{StaticResource LabelColor}"/><Run x:Name="LoadedSizeLabel" Text="Empty" Foreground="{StaticResource LabelSizeColor}"/>
+        </TextBlock>
+
+        <TextBlock Text="|" FontSize="13" Foreground="{StaticResource LabelSeperatorColor}" Grid.Column="1" HorizontalAlignment="Center" />
+
+        <TextBlock Grid.Column="2">
+            <Run Text="Visible area: (" Foreground="{StaticResource LabelColor}"/><Run x:Name="VisibleAreaTopLeftLabel" Text="0; 0" Foreground="{StaticResource LabelCoordsColor}"/><Run Text=") to (" Foreground="{StaticResource LabelColor}"/><Run x:Name="VisibleAreaBottomRightLabel" Text="0; 0" Foreground="{StaticResource LabelCoordsColor}"/><Run Text="); Size: " Foreground="{StaticResource LabelColor}"/><Run x:Name="VisibleAreaSizeLabel" Text="0x0" Foreground="{StaticResource LabelSizeColor}"/>
+        </TextBlock>
+
+        <TextBlock Text="|" FontSize="13" Foreground="{StaticResource LabelSeperatorColor}" Grid.Column="3" HorizontalAlignment="Center" />
+
+        <TextBlock Grid.Column="4">
+            <Run Text="Cursor over block:" Foreground="{StaticResource LabelColor}"/><Run x:Name="CursorHiddenLabel" Text=" None" Foreground="{StaticResource LabelInformationColor}"/><Run x:Name="CursorBeginLabel" Text="" Foreground="{StaticResource LabelColor}"/><Run x:Name="CursorOverBlockLabel" Foreground="{StaticResource LabelCoordsColor}"/><Run x:Name="CursorMiddleLabel" Foreground="{StaticResource LabelColor}"/><Run x:Name="CursorOverChunkLabel" Foreground="{StaticResource LabelCoordsColor}"/><Run x:Name="CursorEndLabel" Foreground="{StaticResource LabelColor}"/>
+        </TextBlock>
+
+        <TextBlock x:Name="WorldTextBlock" Margin="0,0,10,0" Grid.Column="6">
+            <Run Text="World name: " Foreground="{StaticResource LabelColor}"/><Run x:Name="WorldNameLabel" Foreground="{StaticResource LabelInformationColor}"/><Run Text="; Version: " Foreground="{StaticResource LabelColor}"/><Run x:Name="WorldVersionLabel" Foreground="{StaticResource LabelInformationColor}"/>
+        </TextBlock>
+    </Grid>
+</UserControl>

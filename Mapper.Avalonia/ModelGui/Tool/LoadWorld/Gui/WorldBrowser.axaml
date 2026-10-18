@@ -1,0 +1,19 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Mapper.Gui.WorldBrowser"
+        WindowStartupLocation="CenterOwner"
+        Background="#FF232323"
+        UseLayoutRounding="True"
+        Icon="avares://Mapee/Resources/Icon/ToolButton/LoadWorld_64px.ico"
+        Title="Select a world" Height="500" Width="495">
+
+    <Grid RowDefinitions="*,Auto">
+        <Border BorderBrush="#FF424242" BorderThickness="1" Margin="10,10,10,0" Grid.Row="0" Background="#FF191919">
+            <ScrollViewer>
+                <StackPanel x:Name="WorldPanelContainer" />
+            </ScrollViewer>
+        </Border>
+        <TextBlock x:Name="EmptyLabel" Grid.Row="0" IsVisible="False" Margin="30" TextWrapping="Wrap" Foreground="#FFA5A5A5" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" />
+        <Button Content="Browse" Classes="dialog" Grid.Row="1" Margin="0,10,0,10" Width="100" Height="26" HorizontalAlignment="Center" HorizontalContentAlignment="Center" Click="Button_Click" />
+    </Grid>
+</Window>

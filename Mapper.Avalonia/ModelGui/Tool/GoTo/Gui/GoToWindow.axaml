@@ -1,0 +1,30 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Mapper.Gui.GoToWindow"
+             Background="#FF232323"
+             Width="240">
+
+    <UserControl.Styles>
+        <Style Selector="Button.goto">
+            <Setter Property="Background" Value="#FF232323" />
+            <Setter Property="BorderBrush" Value="#FF707070" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="Height" Value="25" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+    </UserControl.Styles>
+
+    <Border BorderBrush="#FF707070" BorderThickness="1">
+        <Grid RowDefinitions="31,25,25,25">
+            <Grid Margin="3,0,3,0" Grid.Row="0" ColumnDefinitions="*,86">
+                <TextBox x:Name="CoordinateTextBox" Text="0; 0" FontSize="15" Height="25" Padding="3,1,0,0" Margin="0,0,3,0" Grid.Column="0" />
+                <Button Content="Go to point" Classes="flat goto" Grid.Column="1" Click="GoToButton_Click" />
+            </Grid>
+
+            <Button x:Name="PlayerPositionButton" Content="Player position" Classes="flat goto" Grid.Row="1" Click="PlayerPositionButton_Click" />
+            <Button x:Name="PlayerSpawnButton" Content="Player spawn" Classes="flat goto" Grid.Row="2" Click="PlayerSpawnButton_Click" />
+            <Button x:Name="WorldSpawnButton" Content="World spawn" Classes="flat goto" Grid.Row="3" Click="WorldSpawnButton_Click" />
+        </Grid>
+    </Border>
+</UserControl>

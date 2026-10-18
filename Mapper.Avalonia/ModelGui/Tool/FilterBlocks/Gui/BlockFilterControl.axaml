@@ -1,0 +1,111 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Mapper.Gui.BlockFilterControl"
+        UseLayoutRounding="True"
+        Icon="avares://Mapee/Resources/Icon/ToolButton/Filter_64px.ico"
+        Title="Block filter" Height="600" Width="805" Background="#FF232323" WindowStartupLocation="CenterOwner">
+
+    <Window.Styles>
+        <Style Selector="ListBox.blocks">
+            <Setter Property="Background" Value="#FF191919" />
+            <Setter Property="SelectionMode" Value="Multiple" />
+        </Style>
+        <Style Selector="ListBox.blocks ListBoxItem">
+            <Setter Property="Padding" Value="8,3" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Foreground" Value="#FFEEEEEE" />
+        </Style>
+        <Style Selector="Button.square">
+            <Setter Property="Width" Value="25" />
+            <Setter Property="Height" Value="25" />
+            <Setter Property="Margin" Value="3,0,0,0" />
+            <Setter Property="Padding" Value="4" />
+        </Style>
+        <Style Selector="TextBlock.listHeader">
+            <Setter Property="Foreground" Value="#FFEEEEEE" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Margin" Value="8,0,0,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </Window.Styles>
+
+    <Grid Margin="15,0,15,15" RowDefinitions="*,Auto,Auto,Auto,50">
+        <Grid Grid.Row="0" ColumnDefinitions="*,15,*">
+            <Grid Grid.Column="0" RowDefinitions="Auto,30,*,Auto">
+                <TextBlock Text="Solid blocks" Classes="heading" Margin="0,8,0,4" Grid.Row="0" />
+                <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto,Auto">
+                    <TextBox x:Name="SolidBlockSearch" Watermark="Search" FontSize="14" Height="25" Padding="4,1,0,0" Grid.Column="0" />
+                    <Button x:Name="SolidBlockAddButton" Classes="dialog square" Grid.Column="1" ToolTip.Tip="Add a block" Click="SolidBlockAddButton_Click">
+                        <Image Source="avares://Mapee/Resources/Image/Scanner/Add_64px.png" Stretch="Fill" />
+                    </Button>
+                    <Button x:Name="SolidBlockRemoveButton" Classes="dialog square" Grid.Column="2" ToolTip.Tip="Remove the selected blocks" Click="SolidBlockRemoveButton_Click">
+                        <Image Source="avares://Mapee/Resources/Image/Scanner/Trash_64px.png" Stretch="Fill" RenderOptions.BitmapInterpolationMode="HighQuality" />
+                    </Button>
+                    <Button x:Name="ClearSolidBlocksButton" Content="Clear everything" Classes="dialog" Grid.Column="3" Margin="3,0,0,0" Width="120" Height="25" FontSize="12" HorizontalContentAlignment="Center" Click="ClearSolidBlocksButton_Click" />
+                </Grid>
+
+                <Border BorderBrush="#FF404040" BorderThickness="1" Grid.Row="2">
+                    <DockPanel>
+                        <Border DockPanel.Dock="Top" Background="#FF262626" Height="25">
+                            <TextBlock Text="Block name" Classes="listHeader" />
+                        </Border>
+                        <ListBox x:Name="SolidBlockView" Classes="blocks" />
+                    </DockPanel>
+                </Border>
+
+                <Button x:Name="SolidBlocksResetToDefault" Content="Reset to default" Classes="dialog" Grid.Row="3" Margin="0,3,0,0" Width="110" Height="25" FontSize="12" HorizontalAlignment="Right" HorizontalContentAlignment="Center" Click="SolidBlocksResetToDefault_Click" />
+            </Grid>
+
+            <Grid Grid.Column="2" RowDefinitions="Auto,30,*,Auto">
+                <TextBlock Text="Transparent blocks" Classes="heading" Margin="0,8,0,4" Grid.Row="0" />
+                <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto,Auto">
+                    <TextBox x:Name="TransparentBlockSearch" Watermark="Search" FontSize="14" Height="25" Padding="4,1,0,0" Grid.Column="0" />
+                    <Button x:Name="TransparentBlockAddButton" Classes="dialog square" Grid.Column="1" ToolTip.Tip="Add a block" Click="TransparentBlockAddButton_Click">
+                        <Image Source="avares://Mapee/Resources/Image/Scanner/Add_64px.png" Stretch="Fill" />
+                    </Button>
+                    <Button x:Name="TransparentBlockRemoveButton" Classes="dialog square" Grid.Column="2" ToolTip.Tip="Remove the selected blocks" Click="TransparentBlockRemoveButton_Click">
+                        <Image Source="avares://Mapee/Resources/Image/Scanner/Trash_64px.png" Stretch="Fill" RenderOptions.BitmapInterpolationMode="HighQuality" />
+                    </Button>
+                    <Button x:Name="ClearTransparntBlocksButton" Content="Clear everything" Classes="dialog" Grid.Column="3" Margin="3,0,0,0" Width="120" Height="25" FontSize="12" HorizontalContentAlignment="Center" Click="ClearTransparntBlocksButton_Click" />
+                </Grid>
+
+                <Border BorderBrush="#FF404040" BorderThickness="1" Grid.Row="2">
+                    <DockPanel>
+                        <Border DockPanel.Dock="Top" Background="#FF262626" Height="25">
+                            <TextBlock Text="Block name" Classes="listHeader" />
+                        </Border>
+                        <ListBox x:Name="TransparentBlockView" Classes="blocks" />
+                    </DockPanel>
+                </Border>
+
+                <Button x:Name="TransparentBlocksResetToDefault" Content="Reset to default" Classes="dialog" Grid.Row="3" Margin="0,3,0,0" Width="110" Height="25" FontSize="12" HorizontalAlignment="Right" HorizontalContentAlignment="Center" Click="TransparentBlocksResetToDefault_Click" />
+            </Grid>
+        </Grid>
+
+        <TextBlock Text="Y level settings" Classes="heading" Margin="0,12,0,4" Grid.Row="1" />
+        <Border BorderBrush="#FF606060" BorderThickness="0,1,0,0" Grid.Row="2" HorizontalAlignment="Stretch"/>
+
+        <Grid Grid.Row="3" Margin="0,10,0,10" ColumnDefinitions="200,Auto">
+            <StackPanel Grid.Column="0" Spacing="4">
+                <RadioButton x:Name="HeightmapRadioButton" GroupName="YLevel" Content="Heightmap" IsChecked="True" />
+                <ComboBox x:Name="HeightmapComboBox" Height="27" HorizontalAlignment="Stretch" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Margin="10,0,0,0" Spacing="4">
+                <RadioButton x:Name="SetYRadioButton" GroupName="YLevel" Content="Set Y" />
+                <TextBox x:Name="SetYTextBox" Height="27" Width="60" Text="319" HorizontalAlignment="Left" />
+            </StackPanel>
+        </Grid>
+
+        <StackPanel Grid.Row="4" Orientation="Horizontal" VerticalAlignment="Bottom">
+            <Button Classes="dialog" BorderBrush="#FF528753" Background="#FF303030" Width="90" Height="26" Click="RenderButton_Click" HorizontalContentAlignment="Center">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <Image Source="avares://Mapee/Resources/Image/Misc/Render_32px.png" VerticalAlignment="Center" Stretch="Fill" Width="15" Height="15" />
+                    <TextBlock VerticalAlignment="Center" Foreground="White" Text="Render" />
+                </StackPanel>
+            </Button>
+
+            <CheckBox x:Name="CloseWindowCheckBox" IsChecked="True" Margin="10,0,0,0" VerticalAlignment="Center" Content="Close this window automatically"/>
+        </StackPanel>
+    </Grid>
+</Window>

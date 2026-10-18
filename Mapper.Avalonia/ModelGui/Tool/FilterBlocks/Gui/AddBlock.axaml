@@ -1,0 +1,15 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Mapper.Gui.AddBlock"
+             Background="#FF252525"
+             Width="220">
+    <Border BorderBrush="#FF707070" BorderThickness="1">
+        <StackPanel Margin="5" Spacing="5">
+            <TextBox x:Name="NameTextBox" Text="minecraft:" FontSize="15" Height="25" Padding="3,1,0,0" />
+            <StackPanel Orientation="Horizontal" Spacing="5">
+                <Button x:Name="AddButton" Content="Add" Classes="dialog" Width="60" Height="25" HorizontalContentAlignment="Center" Click="AddButton_Click" />
+                <Button x:Name="CloseButton" Content="Cancel" Classes="dialog" Width="60" Height="25" HorizontalContentAlignment="Center" Click="CloseButton_Click" />
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

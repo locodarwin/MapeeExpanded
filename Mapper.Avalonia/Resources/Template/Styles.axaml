@@ -1,0 +1,125 @@
+<!-- The look the WPF GUI's Resources/Template dictionaries give, as Avalonia styles -->
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Flat buttons with a lighter background on hover and press (WPF: the per-button Style triggers) -->
+    <Style Selector="Button.flat">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="#FFE0E0E0" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.flat /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{Binding $parent[Button].Background}" />
+        <Setter Property="Foreground" Value="{Binding $parent[Button].Foreground}" />
+        <Setter Property="BorderBrush" Value="{Binding $parent[Button].BorderBrush}" />
+        <Setter Property="CornerRadius" Value="0" />
+    </Style>
+    <Style Selector="Button.flat:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="#FF505050" />
+        <Setter Property="Foreground" Value="{Binding $parent[Button].Foreground}" />
+        <Setter Property="BorderBrush" Value="{Binding $parent[Button].BorderBrush}" />
+    </Style>
+    <Style Selector="Button.flat:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="#FF707070" />
+    </Style>
+    <Style Selector="Button.flat:disabled /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{Binding $parent[Button].Background}" />
+    </Style>
+    <Style Selector="Button.flat:pressed">
+        <Setter Property="RenderTransform" Value="none" />
+    </Style>
+
+    <!-- Tool buttons: ToolButtonHook sets the background for every state itself -->
+    <Style Selector="Button.tool">
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="ToolTip.ShowDelay" Value="200" />
+    </Style>
+    <Style Selector="Button.tool /template/ ContentPresenter#PART_ContentPresenter, Button.tool:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.tool:pressed /template/ ContentPresenter#PART_ContentPresenter, Button.tool:disabled /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{Binding $parent[Button].Background}" />
+        <Setter Property="CornerRadius" Value="0" />
+    </Style>
+    <Style Selector="Button.tool:pressed">
+        <Setter Property="RenderTransform" Value="none" />
+    </Style>
+
+    <!-- Dialog buttons: dark grey with a thin border (WPF: Browse, Save as..., More) -->
+    <Style Selector="Button.dialog">
+        <Setter Property="Background" Value="#FF353535" />
+        <Setter Property="BorderBrush" Value="#FF454545" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Foreground" Value="#FFEEEEEE" />
+        <Setter Property="Padding" Value="6,0" />
+        <Setter Property="CornerRadius" Value="0" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.dialog:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="#FF454545" />
+    </Style>
+    <Style Selector="Button.dialog:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="#FF606060" />
+    </Style>
+
+    <!-- Images in disabled tool buttons fade (WPF: ToolButtonImage.xaml, ToolButtonTextBlock.xaml) -->
+    <Style Selector="Button:disabled Image">
+        <Setter Property="Opacity" Value="0.33" />
+    </Style>
+    <Style Selector="Button:disabled TextBlock">
+        <Setter Property="Opacity" Value="0.33" />
+    </Style>
+
+    <!-- WPF: ToolTip.xaml -->
+    <Style Selector="ToolTip">
+        <Setter Property="Background">
+            <LinearGradientBrush StartPoint="50%,0%" EndPoint="50%,100%">
+                <GradientStop Color="#FF484848" Offset="0" />
+                <GradientStop Color="#FF202020" Offset="1" />
+            </LinearGradientBrush>
+        </Setter>
+        <Setter Property="BorderBrush" Value="#FF555555" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="2" />
+        <Setter Property="Foreground" Value="#FFEEEEEE" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Padding" Value="10,4" />
+    </Style>
+
+    <!-- WPF: TextBoxStyle.xaml -->
+    <Style Selector="TextBox">
+        <Setter Property="Foreground" Value="#FFEEEEEE" />
+        <Setter Property="Background" Value="#FF1C1C1C" />
+        <Setter Property="BorderBrush" Value="#FF454545" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="0" />
+        <Setter Property="MinHeight" Value="0" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="TextBox:pointerover /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="#FF1C1C1C" />
+        <Setter Property="BorderBrush" Value="#FF606060" />
+    </Style>
+    <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="#FF1C1C1C" />
+        <Setter Property="BorderBrush" Value="#FF858585" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
+    <Style Selector="TextBlock.label">
+        <Setter Property="Foreground" Value="#FFEEEEEE" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="TextBlock.heading">
+        <Setter Property="Foreground" Value="#FFEEEEEE" />
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+
+    <Style Selector="RadioButton, CheckBox">
+        <Setter Property="Foreground" Value="#FFEEEEEE" />
+    </Style>
+</Styles>

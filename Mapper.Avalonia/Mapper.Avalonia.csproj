@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The Avalonia GUI, for Linux. It mirrors Mapper.Gui (WPF) folder for folder; a feature added to one goes in the other too -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <RootNamespace>Mapper.Gui</RootNamespace>
+    <AssemblyName>Mapee</AssemblyName>
+    <ApplicationIcon>..\Mapper.Gui\Resources\Image\Logo\LogoIcon_48px.ico</ApplicationIcon>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <AssemblyVersion>1.4.0</AssemblyVersion>
+    <FileVersion>1.4.0</FileVersion>
+    <Version>1.4.0</Version>
+    <Product>Mapee Expanded</Product>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Wayland" Version="12.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AssetSystem\AssetSystem.csproj" />
+    <ProjectReference Include="..\CommonUtilities\CommonUtilities.csproj" />
+    <ProjectReference Include="..\Mapper\Mapper.csproj" />
+    <ProjectReference Include="..\MapScanner\MapScanner.csproj" />
+    <ProjectReference Include="..\NbtEditor\NbtEditor.csproj" />
+    <ProjectReference Include="..\WorldEditor\WorldEditor.csproj" />
+  </ItemGroup>
+
+  <!-- Icons and images are shared with the WPF GUI -->
+  <ItemGroup>
+    <AvaloniaResource Include="..\Mapper.Gui\Resources\**\*.png;..\Mapper.Gui\Resources\**\*.ico">
+      <Link>Resources\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </AvaloniaResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\Resources\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Resources\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </None>
+    <None Include="..\LICENSE.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>LICENSE.txt</Link>
+    </None>
+  </ItemGroup>
+
+</Project>

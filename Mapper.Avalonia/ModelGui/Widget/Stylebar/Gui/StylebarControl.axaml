@@ -1,0 +1,24 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Mapper.Gui.StylebarControl"
+             BorderBrush="#FF3F3F3F" BorderThickness="1">
+
+    <UserControl.Effect>
+        <DropShadowDirectionEffect Direction="-75" ShadowDepth="2" Opacity="1" BlurRadius="6" Color="Black"/>
+    </UserControl.Effect>
+
+    <Grid Background="#FF1C1C1C" RowDefinitions="Auto,7,Auto,Auto">
+        <Border BorderBrush="#FF3F3F3F" BorderThickness="0,0,0,1" VerticalAlignment="Top" Grid.Row="0" Height="25" Background="#FF282828">
+            <TextBlock Text="Styles" FontSize="14" Margin="0,2,0,0" HorizontalAlignment="Center" VerticalAlignment="Top" Foreground="#FFEEEEEE" />
+        </Border>
+
+        <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto">
+            <Grid x:Name="MainStyleGrid" Margin="6,0,6,0" HorizontalAlignment="Center" Grid.Column="0" />
+            <Grid x:Name="StyleGrid" Grid.Column="1" />
+        </Grid>
+
+        <Border x:Name="MoreButtonBorder" Width="68" Height="19" Margin="7,2,0,7" BorderThickness="1" BorderBrush="#FF3F3F3F" HorizontalAlignment="Left" Grid.Row="3">
+            <Button x:Name="MoreButton" Classes="flat" Background="#FF303030" Foreground="#FFDDDDDD" FontSize="12" Content="More" Width="66" Height="17" Cursor="Hand" Click="MoreButton_Click" />
+        </Border>
+    </Grid>
+</UserControl>

@@ -1,0 +1,33 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Mapper.Gui.StylePanel"
+             Cursor="Hand"
+             Width="70" Height="76">
+
+    <UserControl.Effect>
+        <DropShadowDirectionEffect Direction="-75" ShadowDepth="2" Opacity="1" BlurRadius="6" Color="Black"/>
+    </UserControl.Effect>
+
+    <UserControl.Styles>
+        <Style Selector="Image#StyleIcon:pointerover">
+            <Setter Property="Opacity" Value="0.9" />
+        </Style>
+        <Style Selector="Image#StyleIcon:disabled">
+            <Setter Property="Opacity" Value="0.5" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid>
+        <Border x:Name="MainBorder" Margin="1" BorderBrush="#FF4F4F4F" BorderThickness="1">
+            <Grid Width="68" Height="73" Background="#FF282828" RowDefinitions="18,*">
+                <TextBlock x:Name="StyleLabel" FontSize="11" FontWeight="SemiBold" Margin="0,1,0,0" HorizontalAlignment="Center" VerticalAlignment="Top" Foreground="#FFEEEEEE" Grid.Row="0" />
+
+                <Border x:Name="ImageContainer" BorderThickness="0,1,0,0" BorderBrush="#FF4F4F4F" Grid.Row="1">
+                    <Image x:Name="StyleIcon" RenderOptions.BitmapInterpolationMode="HighQuality" Stretch="Fill" Width="68" Height="68" />
+                </Border>
+            </Grid>
+        </Border>
+
+        <Border x:Name="IconBorder" BorderBrush="Gold" Width="70" Height="76" ZIndex="100" IsHitTestVisible="False" />
+    </Grid>
+</UserControl>

@@ -1,0 +1,25 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Mapper.Gui.WorldPanel"
+             HorizontalAlignment="Stretch"
+             Cursor="Hand"
+             Background="#FF1C1C1C" Height="63">
+    <Grid RowDefinitions="*,Auto">
+        <Grid Grid.Row="1" ColumnDefinitions="70,*">
+            <Border BorderThickness="1" BorderBrush="#FF404040" Margin="9,5,9,6">
+                <Image x:Name="WorldIcon" Stretch="Fill" Width="50" Height="50" />
+            </Border>
+
+            <Grid Grid.Column="1" Margin="0,1,0,0" RowDefinitions="25,16,*">
+                <TextBlock x:Name="IngameNameLabel" Foreground="#FFEAEAEA" Grid.Row="0" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <TextBlock x:Name="DirectoryNameLabel" Foreground="#FFA5A5A5" Grid.Row="1" FontSize="13" Margin="0,-3,0,0" />
+
+                <TextBlock Grid.Row="2" FontSize="13">
+                    <Run x:Name="GameTypeLabel" Text="" Foreground="#FFD8D8D8"/><Run Text=", " Foreground="#FFA5A5A5"/><Run x:Name="CheatsLabel" Text="" Foreground="#FFD8D8D8"/><Run x:Name="CheatsCommaLabel" Text=", " Foreground="#FFA5A5A5"/><Run Text="Version: " Foreground="#FFA5A5A5"/><Run x:Name="VersionLabel" Text="" Foreground="White"/>
+                </TextBlock>
+            </Grid>
+        </Grid>
+
+        <Border BorderBrush="#FF2E2E2E" Grid.Row="1" Margin="30,0,30,0" BorderThickness="0,0,0,1" ZIndex="100" VerticalAlignment="Bottom" />
+    </Grid>
+</UserControl>

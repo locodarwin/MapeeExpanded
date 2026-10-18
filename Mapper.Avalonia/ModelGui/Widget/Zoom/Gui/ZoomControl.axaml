@@ -1,0 +1,23 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Mapper.Gui.ZoomControl"
+             BorderBrush="#FF3F3F3F" BorderThickness="1"
+             Background="#FF1C1C1C"
+             Width="84" Height="35">
+
+    <UserControl.Effect>
+        <DropShadowDirectionEffect Direction="-75" ShadowDepth="2" Opacity="1" BlurRadius="6" Color="Black"/>
+    </UserControl.Effect>
+
+    <Grid ColumnDefinitions="19,*,21">
+        <Button x:Name="DecreaseZoomButton" Classes="flat" Background="#FF282828" Grid.Column="0" Width="19" Height="33" Click="DecreaseZoomButton_Click">
+            <TextBlock Text="-" FontSize="20" Foreground="#FFE0E0E0" Margin="0,0,1,4" />
+        </Button>
+
+        <TextBlock x:Name="ZoomPercentageLabel" Grid.Column="1" Text="100%" Foreground="#FFE0E0E0" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center" />
+
+        <Button x:Name="IncreaseZoomButton" Classes="flat" Background="#FF282828" Grid.Column="2" Width="21" Height="33" Click="IncreaseZoomButton_Click">
+            <TextBlock Text="+" FontSize="20" Foreground="#FFE0E0E0" Margin="0,0,0,4" />
+        </Button>
+    </Grid>
+</UserControl>

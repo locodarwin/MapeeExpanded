@@ -1,0 +1,29 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Mapper.Gui.DimensionButtonPanel"
+             Cursor="Hand"
+             ToolTip.ShowDelay="200"
+             VerticalAlignment="Center"
+             Width="27" Height="27">
+
+    <UserControl.Effect>
+        <DropShadowDirectionEffect Direction="-75" ShadowDepth="2" Opacity="1" BlurRadius="4" Color="Black"/>
+    </UserControl.Effect>
+
+    <UserControl.Styles>
+        <Style Selector="Image#DimensionIcon:pointerover">
+            <Setter Property="Opacity" Value="0.68" />
+        </Style>
+        <Style Selector="Image#DimensionIcon:disabled">
+            <Setter Property="Opacity" Value="0.5" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid>
+        <DockPanel x:Name="ImageContainer" Width="25" Height="25">
+            <Image x:Name="DimensionIcon" Width="25" Height="25" RenderOptions.BitmapInterpolationMode="None" />
+        </DockPanel>
+
+        <Border x:Name="DimensionBorder" BorderBrush="Gold" Width="27" Height="27" ZIndex="110" IsHitTestVisible="False" />
+    </Grid>
+</UserControl>

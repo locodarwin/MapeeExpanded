@@ -21,6 +21,7 @@ namespace Mapper.Gui.Controller
         public ZoomWidget ZoomWidget { get; private set; }
         public DimensionWidget DimensionWidget { get; private set; }
         public StylebarWidget StylebarWidget { get; private set; }
+        public HeightWidget HeightWidget { get; private set; }
 
         public TextPainter TextPainter { get; }
 
@@ -110,6 +111,7 @@ namespace Mapper.Gui.Controller
             args.Widgets.Add(CreateStylebarControl());
             args.Widgets.Add(CreateToolbarControl());
             args.Widgets.Add(CreateDimensionControl());
+            args.Widgets.Add(CreateHeightControl());
 
             return args;
         }
@@ -157,6 +159,18 @@ namespace Mapper.Gui.Controller
             };
 
             return output;
+        }
+        private Control CreateHeightControl()
+        {
+            HeightWidget = new HeightWidget(ImplementedScene);
+
+            // Opposite the style bar, clear of the dimension buttons above
+            return new HeightControl(HeightWidget)
+            {
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Margin = new Thickness(0, 25, 7, 0)
+            };
         }
         private Control CreateToolbarControl() 
         {

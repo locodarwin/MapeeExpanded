@@ -1,4 +1,5 @@
-﻿using AssetSystem.Biome;
+﻿using Mapper.Gui.Model;
+using AssetSystem.Biome;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -175,6 +176,46 @@ namespace Mapper.Gui.Logic
 
             ProfileReset?.Invoke(Domain.CurrentWorld.CurrentDimension);
         }
+
+        // Cuts the current dimension's map at a height, or with null, goes back to the style's own view
+        public void SetCut(HeightCut? cut)
+        {
+            if (Domain.CurrentWorld is null || Domain.CurrentWorld.CurrentDimension.Cut == cut) return;
+
+            Domain.CurrentWorld.CurrentDimension.Cut = cut;
+            ProfileReset?.Invoke(Domain.CurrentWorld.CurrentDimension);
+        }
+
+        // What the map is drawn with: the dimension's own profile, or under a cut, that profile (or the Caves
+        // style's, for cave mode) started at the cut's height
+        public Profile GetDrawingProfile(WorldDomain world, DimensionDomain dimension, out ScanType scanType)
+        {
+            scanType = world.Style.ScanType;
+            Profile profile = new(world.Style.AssetPack, dimension.HeightmapSettings, dimension.RenderSettings);
+            if (dimension.Cut is not HeightCut cut) return profile;
+
+            if (cut.Caves)
+            {
+                scanType = ScanType.Cave;
+                if (Domain.Styles.FirstOrDefault(s => s.Metadata.Id == CavesStyleId) is Style caves) profile = caves.GetProfile(dimension.Dimension);
+            }
+
+            HeightmapSettings heightmap = profile.HeightmapSettings;
+            heightmap.HeightmapType = HeightmapType.SetY;
+            heightmap.SetY = cut.Y;
+
+            return new Profile(profile.AssetPack, heightmap, profile.RenderSettings);
+        }
+
+        // Where a column is looked at from, and whether as a cave, matching how the map is drawn
+        public (int? StartY, bool Caves) GetScanStart(WorldDomain world, DimensionDomain dimension)
+        {
+            Profile profile = GetDrawingProfile(world, dimension, out ScanType scanType);
+            int? startY = profile.HeightmapSettings.HeightmapType == HeightmapType.SetY ? profile.HeightmapSettings.SetY : null;
+            return (startY, scanType == ScanType.Cave);
+        }
+
+        public const string CavesStyleId = "caves";
 
         private void SetDimensionProfile(DimensionDomain dimension, Profile profile) 
         {

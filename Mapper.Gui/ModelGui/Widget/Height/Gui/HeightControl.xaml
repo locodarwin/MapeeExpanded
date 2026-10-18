@@ -1,0 +1,83 @@
+<UserControl x:Class="Mapper.Gui.HeightControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             BorderBrush="#FF3F3F3F" BorderThickness="1"
+             Width="74" Height="Auto">
+
+    <UserControl.Effect>
+        <DropShadowEffect Direction="-75" ShadowDepth="2" Opacity="5" BlurRadius="6" Color="Black"/>
+    </UserControl.Effect>
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Resources/Template/ToolTip.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Selected marks the current mode, in the gold the style bar marks its style with -->
+            <Style x:Key="ModeButton" TargetType="{x:Type Button}">
+                <Setter Property="Height" Value="19"/>
+                <Setter Property="Margin" Value="6, 0, 6, 3"/>
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="Foreground" Value="#FFDDDDDD"/>
+                <Setter Property="Background" Value="#FF303030"/>
+                <Setter Property="BorderBrush" Value="#FF3F3F3F"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="ToolTipService.InitialShowDelay" Value="200"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type Button}">
+                            <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="#FF404040"/>
+                    </Trigger>
+                    <Trigger Property="IsPressed" Value="True">
+                        <Setter Property="Background" Value="#FF505050"/>
+                    </Trigger>
+                    <Trigger Property="Tag" Value="selected">
+                        <Setter Property="Foreground" Value="Gold"/>
+                        <Setter Property="BorderBrush" Value="Gold"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid Background="#FF1C1C1C">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="7" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Border BorderBrush="#FF3F3F3F" BorderThickness="0, 0, 0, 1" VerticalAlignment="Top" Grid.Row="0" Height="25">
+            <StackPanel Background="#FF282828">
+                <Label Content="Height" FontSize="14" Padding="0" Margin="0, 2, 0, 0" HorizontalAlignment="Center" VerticalAlignment="Top" Foreground="#FFEEEEEE" />
+            </StackPanel>
+        </Border>
+
+        <Button x:Name="SurfaceButton" Style="{StaticResource ModeButton}" Content="Surface" Grid.Row="2" Click="SurfaceButton_Click"
+                ToolTip="The style's own view" />
+        <Button x:Name="SliceButton" Style="{StaticResource ModeButton}" Content="Slice" Grid.Row="3" Click="SliceButton_Click"
+                ToolTip="The map as if the world stopped at this height" />
+        <Button x:Name="CavesButton" Style="{StaticResource ModeButton}" Content="Caves" Grid.Row="4" Click="CavesButton_Click"
+                ToolTip="The floors of the caves below this height" />
+
+        <Label x:Name="HeightLabel" Grid.Row="5" Content="Y 60" FontSize="13" FontWeight="SemiBold" Foreground="#FF95ECF9"
+               HorizontalAlignment="Center" Padding="0" Margin="0, 4, 0, 4" />
+
+        <Slider x:Name="HeightSlider" Grid.Row="6" Orientation="Vertical" Height="200" Margin="0, 0, 0, 8"
+                HorizontalAlignment="Center" SmallChange="1" LargeChange="16" IsSnapToTickEnabled="True" TickFrequency="1"
+                ToolTip="Drag, or scroll here (hold Shift for steps of 10)" />
+    </Grid>
+</UserControl>

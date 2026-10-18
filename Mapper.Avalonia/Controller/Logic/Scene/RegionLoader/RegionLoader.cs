@@ -117,8 +117,8 @@ namespace Mapper.Gui.Logic
                 _cachedScenes.Add(dimension.Dimension, scene);
             }
 
-            Profile profile = new(world.Style.AssetPack, dimension.HeightmapSettings, dimension.RenderSettings);
-            Scene.Domain.ChunkMapperPack.UpdatePack(profile, world.Style.ScanType);
+            Profile profile = Scene.GetDrawingProfile(world, dimension, out ScanType scanType);
+            Scene.Domain.ChunkMapperPack.UpdatePack(profile, scanType);
 
             scene.PrevRange = XzRange.Empty;
             _currentScene = scene;

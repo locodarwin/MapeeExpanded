@@ -19,7 +19,7 @@
         </Style>
     </UserControl.Styles>
 
-    <Grid ColumnDefinitions="Auto,30,Auto,30,Auto,*,Auto">
+    <Grid ColumnDefinitions="Auto,30,Auto,30,Auto,*">
         <TextBlock Margin="10,0,0,0" Grid.Column="0">
             <Run Text="Loaded regions: " Foreground="{StaticResource LabelColor}"/><Run x:Name="LoadedRegionsLabel" Text="0" FontWeight="SemiBold" Foreground="{StaticResource LabelNumberColor}"/><Run Text="; Size: " Foreground="{StaticResource LabelColor}"/><Run x:Name="LoadedSizeLabel" Text="Empty" Foreground="{StaticResource LabelSizeColor}"/>
         </TextBlock>
@@ -32,11 +32,12 @@
 
         <TextBlock Text="|" FontSize="13" Foreground="{StaticResource LabelSeperatorColor}" Grid.Column="3" HorizontalAlignment="Center" />
 
-        <TextBlock Grid.Column="4">
-            <Run Text="Cursor over block:" Foreground="{StaticResource LabelColor}"/><Run x:Name="CursorHiddenLabel" Text=" None" Foreground="{StaticResource LabelInformationColor}"/><Run x:Name="CursorBeginLabel" Text="" Foreground="{StaticResource LabelColor}"/><Run x:Name="CursorOverBlockLabel" Foreground="{StaticResource LabelCoordsColor}"/><Run x:Name="CursorMiddleLabel" Foreground="{StaticResource LabelColor}"/><Run x:Name="CursorOverChunkLabel" Foreground="{StaticResource LabelCoordsColor}"/><Run x:Name="CursorEndLabel" Foreground="{StaticResource LabelColor}"/>
+        <TextBlock Grid.Column="4" Margin="0,0,20,0">
+            <Run Text="Cursor over block:" Foreground="{StaticResource LabelColor}"/><Run x:Name="CursorHiddenLabel" Text=" None" Foreground="{StaticResource LabelInformationColor}"/><Run x:Name="CursorBeginLabel" Text="" Foreground="{StaticResource LabelColor}"/><Run x:Name="CursorOverBlockLabel" Foreground="{StaticResource LabelCoordsColor}"/><Run x:Name="CursorMiddleLabel" Foreground="{StaticResource LabelColor}"/><Run x:Name="CursorOverChunkLabel" Foreground="{StaticResource LabelCoordsColor}"/><Run x:Name="CursorEndLabel" Foreground="{StaticResource LabelColor}"/><Run x:Name="ColumnBlockLabel" Foreground="{StaticResource LabelInformationColor}"/><Run x:Name="ColumnAtLabel" Foreground="{StaticResource LabelColor}"/><Run x:Name="ColumnHeightLabel" Foreground="{StaticResource LabelNumberColor}"/><Run x:Name="ColumnBiomeSeparatorLabel" Foreground="{StaticResource LabelColor}"/><Run x:Name="ColumnBiomeLabel" Foreground="{StaticResource LabelSizeColor}"/>
         </TextBlock>
 
-        <TextBlock x:Name="WorldTextBlock" Margin="0,0,10,0" Grid.Column="6">
+        <!-- The world name gives way first when the window is narrow, since the cursor details change and it doesn't -->
+        <TextBlock x:Name="WorldTextBlock" Margin="0,0,10,0" Grid.Column="5" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis">
             <Run Text="World name: " Foreground="{StaticResource LabelColor}"/><Run x:Name="WorldNameLabel" Foreground="{StaticResource LabelInformationColor}"/><Run Text="; Version: " Foreground="{StaticResource LabelColor}"/><Run x:Name="WorldVersionLabel" Foreground="{StaticResource LabelInformationColor}"/>
         </TextBlock>
     </Grid>

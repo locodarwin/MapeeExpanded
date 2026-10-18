@@ -9,5 +9,6 @@ namespace Mapper.Gui.Model
 
         event EventHandler<SceneInformation>? InformationUpdate;
         event EventHandler<XzPoint>? CursorUpdate;
+        event EventHandler<CursorColumn>? ColumnUpdate;
     }
 }

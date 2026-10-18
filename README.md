@@ -11,6 +11,8 @@ Upstream website: [mapee.net](https://www.mapee.net/home)
 - Remembers between runs: the window size, the style, which overlays are on (grid, slime chunks, axes, chunk highlight), and the worlds you opened recently, which head the world browser even when they live outside the usual folders. Reopening a world returns to the dimension, place and zoom you left it at. Settings are kept in `%APPDATA%\Mapee\Settings.json` (Windows) or `~/.config/Mapee/Settings.json` (Linux)
 - Opens a world named on the command line (its folder, `level.dat` or a `.mcworld`), so a world can be dropped on `Mapee.exe` or opened with Mapee from a file manager
 - Older Bedrock worlds: chunks last saved before 1.18, all the way back to Pocket Edition 0.9, load with their blocks, biomes and heights. Blocks saved under old names (wool before it was split by colour, logs, stone variants and the like) are translated too, which also fixes stray chunks in newer worlds that hadn't been visited since an update
+- Height panel on the right of the map: **Surface** is the style's own view, **Slice** draws the map as if the world stopped at the chosen height, and **Caves** shows the floors of the caves below it. Drag the slider or scroll over it (Shift for steps of 10); each dimension keeps its own height
+- The info bar names the block under the mouse with its height and biome, as the map shows it (so it follows the height panel), and for water or lava, how deep it is and what's at the bottom
 
 **Version 1.4.0**
 - Opens Bedrock Edition worlds: the world browser lists them next to Java worlds, and the open button takes a `level.dat` or a `.mcworld` file

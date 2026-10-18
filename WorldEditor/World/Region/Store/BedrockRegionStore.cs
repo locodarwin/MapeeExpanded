@@ -85,6 +85,14 @@ namespace WorldEditor
             }
         }
 
+        public IChunk? ReadChunk(Coords coords)
+        {
+            if (_world is null || !_world.Indexed.IsCompleted || !_world.ChunkExists(Dimension, coords.X, coords.Z)) return null;
+
+            IDictionary<byte[], byte[]> records = _world.Database.GetByPrefix(BedrockKey.ChunkPrefix(coords.X, coords.Z, Dimension));
+            return ChunkReader.Read(coords.X, coords.Z, Dimension, records, this, _blocks.GetValueOrDefault(coords));
+        }
+
         public void EnumerateChunks(Coords region, int tasks, Action<int, IChunk> body)
         {
             if (_world is null || !Regions.TryGetValue(region, out List<Coords>? unordered)) return;

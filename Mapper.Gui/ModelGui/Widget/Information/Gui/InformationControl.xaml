@@ -14,7 +14,6 @@
             <ColumnDefinition Width="30" />
             <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
 
         <Grid.Resources>
@@ -42,12 +41,13 @@
 
         <Label Content="|" FontSize="13" Foreground="{DynamicResource LabelSeperatorColor}" Padding="1,2,0,0" Grid.Column="3" HorizontalAlignment="Center" />
 
-        <TextBlock Padding="0,4,0,0" Grid.Column="4">
+        <TextBlock Padding="0,4,0,0" Grid.Column="4" Margin="0,0,20,0">
                 <Run Text="Cursor over block:" Foreground="{DynamicResource LabelColor}"/><Run x:Name="CursorHiddenLabel" Text=" None" Foreground="{DynamicResource LabelInformationColor}"/>
-                <Run x:Name="CursorBeginLabel" Text="(" Foreground="{DynamicResource LabelColor}"/><Run x:Name="CursorOverBlockLabel" Foreground="{DynamicResource LabelCoordsColor}"/><Run x:Name="CursorMiddleLabel" Text=") in chunk: (" Foreground="{DynamicResource LabelColor}"/><Run x:Name="CursorOverChunkLabel" Foreground="{DynamicResource LabelCoordsColor}"/><Run x:Name="CursorEndLabel" Text=")" Foreground="{DynamicResource LabelColor}"/>
+                <Run x:Name="CursorBeginLabel" Text="(" Foreground="{DynamicResource LabelColor}"/><Run x:Name="CursorOverBlockLabel" Foreground="{DynamicResource LabelCoordsColor}"/><Run x:Name="CursorMiddleLabel" Text=") in chunk: (" Foreground="{DynamicResource LabelColor}"/><Run x:Name="CursorOverChunkLabel" Foreground="{DynamicResource LabelCoordsColor}"/><Run x:Name="CursorEndLabel" Text=")" Foreground="{DynamicResource LabelColor}"/><Run x:Name="ColumnBlockLabel" Foreground="{DynamicResource LabelInformationColor}"/><Run x:Name="ColumnAtLabel" Foreground="{DynamicResource LabelColor}"/><Run x:Name="ColumnHeightLabel" Foreground="{DynamicResource LabelNumberColor}"/><Run x:Name="ColumnBiomeSeparatorLabel" Foreground="{DynamicResource LabelColor}"/><Run x:Name="ColumnBiomeLabel" Foreground="{DynamicResource LabelSizeColor}"/>
         </TextBlock>
 
-        <TextBlock x:Name="WorldTextBlock" Padding="0,4,0,0" Grid.Column="6">
+        <!-- The world name gives way first when the window is narrow, since the cursor details change and it doesn't -->
+        <TextBlock x:Name="WorldTextBlock" Padding="0,4,0,0" Grid.Column="5" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis">
                 <Run Text="World name: " Foreground="{DynamicResource LabelColor}"/><Run x:Name="WorldNameLabel" Foreground="{DynamicResource LabelInformationColor}"/><Run Text="; Version:" Foreground="{DynamicResource LabelColor}"/>
                 <Run x:Name="WorldVersionLabel" Foreground="{DynamicResource LabelInformationColor}"/>
         </TextBlock>

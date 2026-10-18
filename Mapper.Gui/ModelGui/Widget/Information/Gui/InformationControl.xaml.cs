@@ -26,6 +26,7 @@ namespace Mapper.Gui
             Information = information;
             Information.InformationUpdate += Information_InformationUpdate;
             Information.CursorUpdate += Information_CursorUpdate;
+            Information.ColumnUpdate += Information_ColumnUpdate;
         }
 
         private void InitializeBackgrounWork() 
@@ -111,12 +112,41 @@ namespace Mapper.Gui
             CursorOverChunkLabel.Text = BlockToChunk(point).ToString("N0");
         }
 
+        // "; Grass Block at Y 64, Plains", or for water, "; Water 5 deep over Sand at Y 62, Ocean"
+        private void Information_ColumnUpdate(object? sender, CursorColumn cursor)
+        {
+            if (cursor.Column is not InspectedColumn column || !Information.MainControl.IsMouseOver)
+            {
+                SetColumnLabels(null, null, null);
+                return;
+            }
+
+            string block = ColumnInspector.DisplayName(column.Block.Name);
+            if (column.Depth > 0)
+            {
+                block += $" {column.Depth} deep";
+                if (column.Floor is WorldEditor.Block floor) block += $" over {ColumnInspector.DisplayName(floor.Name)}";
+            }
+
+            SetColumnLabels(block, column.Y.ToString(), column.Biome is string biome ? ColumnInspector.DisplayName(biome) : null);
+        }
+        private void SetColumnLabels(string? block, string? height, string? biome)
+        {
+            ColumnBlockLabel.Text = block is null ? string.Empty : $"; {block}";
+            ColumnAtLabel.Text = height is null ? string.Empty : " at Y ";
+            ColumnHeightLabel.Text = height ?? string.Empty;
+            ColumnBiomeSeparatorLabel.Text = biome is null ? string.Empty : ", ";
+            ColumnBiomeLabel.Text = biome ?? string.Empty;
+        }
+
         private void SetCursorSegmentVisibility(bool visible)
         {
             CursorHiddenLabel.Text = visible ? string.Empty : " None";
 
             CursorOverBlockLabel.Text = string.Empty;
             CursorOverChunkLabel.Text = string.Empty;
+
+            if (!visible) SetColumnLabels(null, null, null);
 
             CursorBeginLabel.Text = visible ? "(" : string.Empty;
             CursorMiddleLabel.Text = visible ? ") in chunk: (" : string.Empty;

@@ -4,5 +4,8 @@ namespace WorldEditor
     public interface IChunkSourceRegionStore : IRegionStore
     {
         void EnumerateChunks(Coords region, int tasks, Action<int, IChunk> body);
+
+        // One chunk on its own, or null if the world hasn't got it
+        IChunk? ReadChunk(Coords chunk);
     }
 }

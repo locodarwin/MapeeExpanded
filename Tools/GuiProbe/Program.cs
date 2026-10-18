@@ -17,6 +17,8 @@
 //   tool:<tooltip or name>            press a toolbar button
 //   zoom:<levels>                     zoom in (positive) or out (negative) around the centre
 //   mouse:<x>,<y>                     move the mouse over the main window
+//   info                              print what the info bar says about the block under the mouse
+//   height:<surface|slice|caves>[:<y>]  set the height panel
 //   drag:<x1>,<y1>,<x2>,<y2>          left-drag across the main window
 //   save:<screenshot|full>:<file>     export the map as the Export as image window would
 //   close                             close every window but the main one
@@ -55,6 +57,7 @@ Window.WindowClosedEvent.AddClassHandler<Window>((window, e) => windows.Remove(w
 string settingsFile = Path.Combine(output, "Settings.json");
 Controller controller = null!;
 MapViewer main = null!;
+CursorColumn? lastColumn = null;
 Start(null);
 
 foreach (string step in args.Skip(1))
@@ -140,6 +143,17 @@ foreach (string step in args.Skip(1))
             main.MouseMove(ParsePoint(value), RawInputModifiers.None);
             Pump(300);
             break;
+        case "info":
+            Pump(300);
+            Console.WriteLine(lastColumn is null ? "  no column reported" : $"  ({lastColumn.X}, {lastColumn.Z}): {Describe(lastColumn.Column)}");
+            break;
+        case "height":
+            string[] height = value.Split(':');
+            if (height.Length > 1) controller.HeightWidget.Y = int.Parse(height[1]);
+            controller.HeightWidget.Mode = Enum.Parse<HeightMode>(height[0], true);
+            Pump(600);
+            Console.WriteLine($"  {controller.HeightWidget.Mode} at Y {controller.HeightWidget.Y} ({controller.HeightWidget.MinY} to {controller.HeightWidget.MaxY})");
+            break;
         case "drag":
             double[] d = value.Split(',').Select(double.Parse).ToArray();
             main.MouseMove(new Point(d[0], d[1]), RawInputModifiers.None);
@@ -175,6 +189,7 @@ void Start(string? startupWorld)
 {
     controller = new Controller(AppSettings.Load(settingsFile), startupWorld);
     main = controller.MainWindow;
+    controller.InformationWidget.ColumnUpdate += (sender, column) => lastColumn = column;
     if (!File.Exists(settingsFile))
     {
         main.Width = 1250;
@@ -226,6 +241,14 @@ void CloseOthers()
 {
     foreach (Window window in windows.Where(window => window != main).ToList()) window.Close();
     Pump(300);
+}
+
+static string Describe(InspectedColumn? column)
+{
+    if (column is null) return "nothing";
+    string text = $"{column.Block.Name} at Y {column.Y}, biome {column.Biome ?? "none"}";
+    if (column.Depth > 0) text += $"; {column.Depth} deep over {column.Floor?.Name ?? "nothing"} at Y {column.FloorY}";
+    return text;
 }
 
 static Point ParsePoint(string text)

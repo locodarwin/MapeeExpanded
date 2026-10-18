@@ -18,7 +18,7 @@ namespace Mapper
             // A Bedrock store reads the whole world database, so it takes the world folder itself
             string regionDirectory = Level.Edition == Edition.Bedrock
                 ? Level.Directory ?? string.Empty
-                : $"{Level.Directory}\\{Dimension.GetRegionFolder(Level.Version.Version)}";
+                : Path.Combine(Level.Directory, Dimension.GetRegionFolder(Level.Version.Version));
             RegionStore.Itemize(regionDirectory);
         }
     }

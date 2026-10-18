@@ -30,7 +30,7 @@ namespace Mapper
                     if(Data is not null && BlockReader is not null && BiomeReader is not null)
                     {
                         bool secondaryIsNull = false;
-                        string secondaryAssetFolder = $"{Args.Block.Source}\\Default";
+                        string secondaryAssetFolder = Path.Combine(Args.Block.Source, "Default");
                         BlockAssetReader<TOutput> blockReader = new(BlockReader);
                         BlockAsset<TOutput>? secondaryAsset = blockReader.Read(new AssetArgs(Data, secondaryAssetFolder));
                         if (secondaryAsset is null)
@@ -39,7 +39,7 @@ namespace Mapper
                             secondaryIsNull = true;
                         }
 
-                        string primaryAssetFolder = $"{Args.Block.Source}\\Biome";
+                        string primaryAssetFolder = Path.Combine(Args.Block.Source, "Biome");
                         BiomeAssetReader<TOutput> biomeReader = new(BiomeReader);
                         BiomeAsset<TOutput>? primaryAsset = biomeReader.Read(new AssetArgs(Data, primaryAssetFolder));
                         if (primaryAsset is null)

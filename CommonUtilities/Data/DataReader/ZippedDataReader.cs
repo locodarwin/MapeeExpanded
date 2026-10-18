@@ -13,7 +13,7 @@ namespace CommonUtilities.Data
         public ZippedDataReader(ZippedFolder baseZipFolder, string basePath = "")
         {
             BaseZipFolder = baseZipFolder;
-            BasePath = basePath;
+            BasePath = DataPath.Normalize(basePath);
 
             _directories = new List<ZippedFolder>();
             AddToDirectories(baseZipFolder, _directories);
@@ -40,7 +40,7 @@ namespace CommonUtilities.Data
 
             foreach (ZippedFile childFile in folder.Files)
             {
-                files.Add(childFile.FullName.Replace("/", "\\"), childFile);
+                files.Add(DataPath.Normalize(childFile.FullName), childFile);
             }
         }
 
@@ -52,7 +52,7 @@ namespace CommonUtilities.Data
             List<string> output = new();
             foreach (ZippedFolder folder in _directories)
             {
-                string path = folder.FullName.Replace("/", "\\");
+                string path = DataPath.Normalize(folder.FullName);
                 if (!IsSubPath(directory, path)) continue;
                 if (searchOption == SearchOption.TopDirectoryOnly && Path.GetDirectoryName(path) != directory) continue;
 
@@ -92,7 +92,7 @@ namespace CommonUtilities.Data
 
             foreach (ZippedFolder folder in _directories) 
             {
-                string path = folder.FullName.Replace("/", "\\");
+                string path = DataPath.Normalize(folder.FullName);
                 if (path != abs) continue;
 
                 return new ZippedDataReader(folder, directory);
@@ -114,8 +114,8 @@ namespace CommonUtilities.Data
 
         private string GetAbsolutePath(string relative)
         {
-            if (string.IsNullOrEmpty(BasePath)) return relative;
-            return $"{BasePath}\\{relative}";
+            if (string.IsNullOrEmpty(BasePath)) return DataPath.Normalize(relative);
+            return Path.Combine(BasePath, DataPath.Normalize(relative));
         }
         private static bool IsSubPath(string basePath, string potentionSubPath) 
         {

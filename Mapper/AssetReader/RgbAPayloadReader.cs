@@ -2,7 +2,7 @@
 using AssetSystem.Block;
 using CommonUtilities.Factory;
 using System.Text.Json.Nodes;
-using System.Windows.Media;
+using System.Drawing;
 
 namespace Mapper
 {
@@ -64,13 +64,13 @@ namespace Mapper
             string value = token.AsValue().GetValue<string>();
             if (value.StartsWith("#")) 
             {
-                Color color = (Color)ColorConverter.ConvertFromString(value);
+                Color color = ColorParser.Parse(value);
                 return new RgbA(color, color.A / 255F);
             }
 
             if (LockedBitmapFactory is null) return null;
 
-            string path = $"{TextureFolder}\\{value}";
+            string path = Path.Combine(TextureFolder, value);
             if (!_bitmapCache.TryGetValue(path, out IReadOnlyBitmap? bitmap))
             {
                 bitmap = LockedBitmapFactory.Create(path);
@@ -176,7 +176,7 @@ namespace Mapper
         {
             if (LockedBitmapFactory is null) return null;
 
-            string path = $"{TextureFolder}\\{originalToken.AsValue().GetValue<string>()}";
+            string path = Path.Combine(TextureFolder, originalToken.AsValue().GetValue<string>());
             if (!_bitmapCache.TryGetValue(path, out IReadOnlyBitmap? bitmap))
             {
                 bitmap = LockedBitmapFactory.Create(path);

@@ -1,5 +1,4 @@
-﻿using System.Windows;
-using System.Windows.Media;
+﻿using System.Drawing;
 using WorldEditor;
 
 namespace Mapper
@@ -16,7 +15,7 @@ namespace Mapper
                     Span<byte> bytes = stackalloc byte[sizeof(int)];
                     if (!BitConverter.TryWriteBytes(bytes, hardCoded.Color)) return VecRgb.Empty;
 
-                    return Color.FromRgb(bytes[2], bytes[1], bytes[0]);
+                    return Color.FromArgb(bytes[2], bytes[1], bytes[0]);
                 case BiomeColorType.Colormapped:
                     if (input.BiomeColor is not ColormappedBiomeColor colormapped || input.Colormap is null) return VecRgb.Empty;
                     return GetColor(colormapped, input.Colormap);

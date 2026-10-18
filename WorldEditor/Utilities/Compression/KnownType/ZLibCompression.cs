@@ -1,4 +1,4 @@
-﻿using ZLibNet;
+using System.IO.Compression;
 
 namespace WorldEditor
 {
@@ -9,7 +9,7 @@ namespace WorldEditor
             using (MemoryStream inputStream = new MemoryStream(input.Array, input.Position, input.Length))
             using (ZLibStream decompressor = new ZLibStream(inputStream, CompressionMode.Decompress))
             {
-                return decompressor.Read(output.Array, output.Position, output.Length);
+                return decompressor.ReadAtLeast(output.Array.AsSpan(output.Position, output.Length), output.Length, throwOnEndOfStream: false);
             }
         }
     }

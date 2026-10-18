@@ -49,12 +49,12 @@ namespace WorldEditor
             if (version < Version.Snapshot_26_1_6 && Namespace.StartsWith("minecraft"))
             {
                 if (this == Overworld) return "region";
-                if (this == Nether) return "DIM-1\\region";
-                if (this == TheEnd) return "DIM1\\region";
+                if (this == Nether) return Path.Combine("DIM-1", "region");
+                if (this == TheEnd) return Path.Combine("DIM1", "region");
                 return "region";
             }
 
-            return $"dimensions\\{@namespace}\\{name}\\region";
+            return Path.Combine("dimensions", @namespace, name, "region");
         }
 
         public override bool Equals([NotNullWhen(true)] object? obj)

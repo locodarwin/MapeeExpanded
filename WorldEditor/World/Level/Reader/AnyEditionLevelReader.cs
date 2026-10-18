@@ -1,4 +1,4 @@
-namespace WorldEditor
+﻿namespace WorldEditor
 {
     // Reads a level.dat from either edition, telling them apart by Bedrock's db folder
     public class AnyEditionLevelReader : IObjectReader<string, Level?>
@@ -17,10 +17,12 @@ namespace WorldEditor
             return JavaReader.Read(file);
         }
 
-        // Where the launchers keep worlds on Windows, Java first. Bedrock moved its worlds to Roaming
+        // Where the launchers keep worlds, Java first. On Windows, Bedrock moved its worlds to Roaming
         // in 1.21.120, with one folder per account plus a Shared one; older installs used the UWP package
         public static IList<string> DefaultWorldDirectories()
         {
+            if (!OperatingSystem.IsWindows()) return LinuxWorldDirectories();
+
             string roaming = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             string local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
@@ -37,6 +39,19 @@ namespace WorldEditor
 
             output.Add(Path.Combine(local, "Packages", "Microsoft.MinecraftUWP_8wekyb3d8bbwe", "LocalState", "games", "com.mojang", "minecraftWorlds"));
             return output;
+        }
+
+        // The Java launcher's saves, and Bedrock worlds from mcpelauncher, the usual way to run Bedrock on Linux
+        private static List<string> LinuxWorldDirectories()
+        {
+            string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string data = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+
+            return
+            [
+                Path.Combine(home, ".minecraft", "saves"),
+                Path.Combine(data, "mcpelauncher", "games", "com.mojang", "minecraftWorlds"),
+            ];
         }
     }
 }

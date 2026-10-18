@@ -2,7 +2,7 @@
 using AssetSystem.Biome;
 using CommonUtilities.Factory;
 using System.Text.Json.Nodes;
-using System.Windows.Media;
+using System.Drawing;
 
 namespace Mapper
 {
@@ -64,14 +64,14 @@ namespace Mapper
         private VecRgb GetColor(JsonNode? token)
         {
             if(token is null) return VecRgb.Empty;
-            return (Color) ColorConverter.ConvertFromString(token.AsValue().GetValue<string>());
+            return ColorParser.Parse(token.AsValue().GetValue<string>());
         }
 
         private IReadOnlyBitmap? GetBitmap(string bitmapPath)
         {
             if(LockedBitmapFactory is null) return null;
 
-            string path = $"{TextureFolder}\\{bitmapPath}";
+            string path = Path.Combine(TextureFolder, bitmapPath);
             if (!_bitmapCache.TryGetValue(path, out IReadOnlyBitmap? bitmap))
             {
                 bitmap = LockedBitmapFactory.Create(path);

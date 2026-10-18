@@ -28,7 +28,7 @@ namespace WorldEditor
         }
         protected virtual void ReadNamespace(string folder, IDataReader dataReader, DataPack output)
         {
-            string biomeFolder = $"{folder}\\worldgen\\biome";
+            string biomeFolder = Path.Combine(folder, "worldgen", "biome");
 
             string[]? biomes = dataReader.GetAllFiles(biomeFolder, "*.json", SearchOption.TopDirectoryOnly);
             ReadDimension(biomes, null, folder, dataReader, output);

@@ -1,6 +1,6 @@
 ﻿using CommonUtilities.Factory;
 using MapScanner;
-using System.Windows;
+using System.Drawing;
 using WorldEditor;
 
 namespace Mapper

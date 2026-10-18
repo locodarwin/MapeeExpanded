@@ -126,7 +126,7 @@ namespace Mapper.Gui.Logic
             if (_currentScene is null || Scene.Domain.CurrentWorld is null || _inSceneChangingProcess) return;
             if (!IsSafeToAdd(coords.X, coords.Z)) return;
 
-            ImageSource? bitmap = canvas.GetBitmap();
+            ImageSource? bitmap = CanvasBitmap.Create(canvas);
             if (bitmap is not null)
             {
                 Coords topLeft = new(canvas.TopLeftPoint.X - ((int)bitmap.Width - 1), canvas.TopLeftPoint.Z);

@@ -37,10 +37,4 @@
     <ProjectReference Include="..\NbtEditor\NbtEditor.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Reference Include="zlibnet">
-      <HintPath>..\Assemblies\zlibnet.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
 </Project>

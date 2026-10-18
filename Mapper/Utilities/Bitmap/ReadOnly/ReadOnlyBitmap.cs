@@ -1,58 +1,49 @@
-﻿using System.IO;
-using System.Windows;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
+using StbImageSharp;
+using System.Drawing;
 
 namespace Mapper
 {
     public sealed class ReadOnlyBitmap : IReadOnlyBitmap
     {
-        public BitmapSource Source { get; }
+        // Bgra32, not premultiplied
         public byte[] PixelData { get; }
 
-        public Size Size => new(Source.PixelWidth, Source.PixelHeight);
+        public Size Size { get; }
 
-        public ReadOnlyBitmap(Uri uri)
+        public ReadOnlyBitmap(string path)
         {
-            Source = new BitmapImage(uri);
-
-            int stride = (int)Source.Width * 4;
-            PixelData = new byte[stride * (int)Source.Height];
-
-            FormatConvertedBitmap convertedBitmap = new FormatConvertedBitmap(Source, PixelFormats.Bgra32, null, 0);
-            convertedBitmap.CopyPixels(PixelData, stride, 0);
+            using Stream stream = File.OpenRead(path);
+            PixelData = Decode(stream, out Size size);
+            Size = size;
         }
         public ReadOnlyBitmap(Stream stream)
         {
-            BitmapImage bitmapImage = new BitmapImage();
-            bitmapImage.BeginInit();
-            bitmapImage.StreamSource = stream;
-            bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-            bitmapImage.EndInit();
-            bitmapImage.Freeze();
+            PixelData = Decode(stream, out Size size);
+            Size = size;
+        }
 
-            Source = bitmapImage;
-            FormatConvertedBitmap convertedBitmap = new FormatConvertedBitmap(bitmapImage, PixelFormats.Bgra32, null, 0);
+        private static byte[] Decode(Stream stream, out Size size)
+        {
+            ImageResult image = ImageResult.FromStream(stream, ColorComponents.RedGreenBlueAlpha);
+            size = new Size(image.Width, image.Height);
 
-            int stride = (convertedBitmap.PixelWidth * convertedBitmap.Format.BitsPerPixel + 7) / 8;
-            PixelData = new byte[stride * bitmapImage.PixelHeight];
-            convertedBitmap.CopyPixels(PixelData, stride, 0);
+            byte[] data = image.Data;
+            for (int i = 0; i < data.Length; i += 4)
+            {
+                (data[i], data[i + 2]) = (data[i + 2], data[i]);
+            }
+
+            return data;
         }
 
         public Color GetPixel(int x, int y)
         {
             int offset = GetOffset(x, y);
-
-            if (Source.Format == PixelFormats.Rgb24) 
-            {
-                return Color.FromRgb(PixelData[offset], PixelData[offset + 1], PixelData[offset + 2]);
-            }
-
             return Color.FromArgb(PixelData[offset + 3], PixelData[offset + 2], PixelData[offset + 1], PixelData[offset]);
         }
         public Color GetAverageColor()
         {
-            return GetAverageColor(0, 0, Source.PixelWidth, Source.PixelHeight);
+            return GetAverageColor(0, 0, Size.Width, Size.Height);
         }
         public Color GetAverageColor(int x1, int y1, int width, int height)
         {
@@ -83,7 +74,7 @@ namespace Mapper
 
         private int GetOffset(int x, int y)
         {
-            return (y * Source.PixelWidth + x) * 4;
+            return (y * Size.Width + x) * 4;
         }
     }
 }

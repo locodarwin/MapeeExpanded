@@ -9,7 +9,7 @@ namespace Mapper.Gui.Logic
 {
     public class TexturedAssetPackFactory : IFactory<TexturedAssetArgs, TexturedAssetPack>
     {
-        public virtual string TexturePath { get; set; } = "assets\\minecraft\\textures";
+        public virtual string TexturePath { get; set; } = Path.Combine("assets", "minecraft", "textures");
         public virtual string DefaultBiome { get; set; } = "minecraft:plains";
 
         public virtual TexturedAssetPack Create(TexturedAssetArgs args)

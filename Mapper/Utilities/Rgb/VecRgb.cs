@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
-using System.Windows.Media;
+using System.Drawing;
 
 namespace Mapper
 {

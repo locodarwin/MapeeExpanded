@@ -1,6 +1,4 @@
-﻿using System.Windows;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
+﻿using System.Drawing;
 using WorldEditor;
 
 namespace Mapper
@@ -39,20 +37,12 @@ namespace Mapper
             _isEmpty = false;
         }
 
-        public ImageSource? GetBitmap()
+        public int PixelWidth => Size.Height;
+        public int PixelHeight => Size.Width;
+
+        public byte[]? GetPixels()
         {
-            if (_isEmpty) return null;
-
-            WriteableBitmap output = new((int)Size.Height, (int)Size.Width, 96, 96, PixelFormats.Bgra32, null);
-            output.Lock();
-
-            int stride = (int)output.Width * (output.Format.BitsPerPixel / 8);
-            output.WritePixels(new Int32Rect(0, 0, (int)output.Width, (int)output.Height), _pixelData, stride, 0);
-            
-            output.Unlock();
-            output.Freeze();
-
-            return output;
+            return _isEmpty ? null : _pixelData;
         }
 
         public void Dispose() { }

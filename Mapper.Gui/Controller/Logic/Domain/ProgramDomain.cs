@@ -54,8 +54,8 @@ namespace Mapper.Gui.Logic
         private static TexturedAssetPack LoadTexturePack() 
         {
             Colormap colormap = new Colormap(
-                new ReadOnlyBitmap(new Uri("Resources\\Mapper\\Textured\\colormap\\grass.png", UriKind.Relative)),
-                new ReadOnlyBitmap(new Uri("Resources\\Mapper\\\\Textured\\colormap\\foliage.png", UriKind.Relative)));
+                new ReadOnlyBitmap(Path.Combine("Resources", "Mapper", "Textured", "colormap", "grass.png")),
+                new ReadOnlyBitmap(Path.Combine("Resources", "Mapper", "Textured", "colormap", "foliage.png")));
 
             return new TexturedAssetPack(new Mapper.TexturedAssetPack()
             {

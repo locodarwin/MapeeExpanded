@@ -43,7 +43,7 @@
         private string GetAbsolutePath(string relative) 
         {
             if (string.IsNullOrEmpty(relative)) return BasePath;
-            return $"{BasePath}\\{relative}";
+            return Path.Combine(BasePath, DataPath.Normalize(relative));
         }
         private string[]? ConvertToRelative(string[]? absolute) 
         {

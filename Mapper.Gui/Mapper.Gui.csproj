@@ -18,6 +18,13 @@
     <AssemblyVersion>1.4.0</AssemblyVersion>
     <FileVersion>1.4.0</FileVersion>
     <Version>1.4.0</Version>
+
+    <!-- A published build is Mapee.exe beside the Resources folder: the assemblies and WPF's native libraries go
+         inside the exe (the native ones are unpacked to %TEMP%\.net on first run), and WPF's translated messages
+         are left out. One file starts much faster than hundreds from a network share -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

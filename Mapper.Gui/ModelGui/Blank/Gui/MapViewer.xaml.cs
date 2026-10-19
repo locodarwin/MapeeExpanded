@@ -86,7 +86,7 @@ namespace Mapper.Gui
             StartupLog.Mark("Main window loaded");
             CustomFrameWindowInitializer frameInitializer = new(this, Template);
 
-            FileVersionInfo fileInfo = FileVersionInfo.GetVersionInfo(Environment.GetCommandLineArgs()[0]);
+            FileVersionInfo fileInfo = FileVersionInfo.GetVersionInfo(Environment.ProcessPath!);
             Title = fileInfo.ProductName;
             frameInitializer.SetSecondaryTitle($"v{fileInfo.FileVersion}");
 

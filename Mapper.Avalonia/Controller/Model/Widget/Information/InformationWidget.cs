@@ -38,6 +38,9 @@ namespace Mapper.Gui.Controller
             Scene.WorldChanged += (old, current) => Reinspect();
             Scene.DimensionChanged += (old, current) => Reinspect();
             Scene.ProfileReset += dimension => Reinspect();
+            // and zooming or keyboard panning moves the map under a still mouse
+            Scene.Map.ScaleBehaviour.ZoomChanged += (sender, e) => Dispatcher.UIThread.Post(InspectUnderMouse);
+            Scene.Map.ScaleBehaviour.OffsetChanged += (sender, e) => Dispatcher.UIThread.Post(InspectUnderMouse);
         }
 
         private void Renderer_Update() 
@@ -46,7 +49,15 @@ namespace Mapper.Gui.Controller
         }
         private void GraphicsCanvas_MouseMove(object? sender, PointerEventArgs e) 
         {
-            XzPoint point = Scene.Map.TransformPointOnScreenToXz(e.GetPosition(Renderer.GraphicsCanvas));
+            InspectAt(e.GetPosition(Renderer.GraphicsCanvas));
+        }
+        private void InspectUnderMouse()
+        {
+            if (Renderer.GraphicsCanvas.IsMouseOver) InspectAt(Renderer.GraphicsCanvas.MousePosition);
+        }
+        private void InspectAt(Point position)
+        {
+            XzPoint point = Scene.Map.TransformPointOnScreenToXz(position);
             CursorUpdate?.Invoke(this, point);
             Inspect((int)Math.Floor(point.X), (int)Math.Floor(point.Z));
         }

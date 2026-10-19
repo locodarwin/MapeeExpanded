@@ -118,6 +118,8 @@ namespace Mapper.Gui.Controller
             args.Widgets.Add(CreateToolbarControl());
             args.Widgets.Add(CreateDimensionControl());
             args.Widgets.Add(CreateHeightControl());
+            // Last, so it lies over the other widgets
+            args.Widgets.Add(new CoordinatesTip(InformationWidget, ImplementedScene));
 
             return args;
         }

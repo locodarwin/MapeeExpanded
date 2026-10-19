@@ -43,7 +43,7 @@ namespace Mapper.Gui
         }
         private void SetScrollbar()
         {
-            ScrollbarUtilities.AdjustScrollbar(ScrollbarControl, Scrollbar, ScrollbarControl.Track.ActualWidth);
+            ScrollbarUtilities.AdjustScrollbar(ScrollbarControl, Scrollbar, ScrollbarControl.Track?.ActualWidth ?? 0);
         }
     }
 }

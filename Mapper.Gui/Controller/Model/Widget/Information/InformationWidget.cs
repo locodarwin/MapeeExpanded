@@ -9,7 +9,7 @@ namespace Mapper.Gui.Controller
 {
     public class InformationWidget : IInformationWidget
     {
-        public Control MainControl => Renderer.GraphicsCanvas;
+        public CanvasControl MainControl => Renderer.GraphicsCanvas;
 
         public event EventHandler<SceneInformation>? InformationUpdate;
         public event EventHandler<XzPoint>? CursorUpdate;

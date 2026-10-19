@@ -8,10 +8,12 @@ using System.Threading.Tasks;
 
 namespace Mapper.Gui
 {
-    // A small OK box, standing in for WPF's MessageBox, which Avalonia doesn't have
+    // A small OK box, or with Confirm a choice of two, standing in for WPF's MessageBox, which Avalonia doesn't have
     public class MessageWindow : Window
     {
-        public MessageWindow(string message, string title)
+        public MessageWindow(string message, string title) : this(message, title, null, null) { }
+
+        private MessageWindow(string message, string title, string? yes, string? no)
         {
             Title = title;
             Background = new SolidColorBrush(Color.FromRgb(35, 35, 35));
@@ -20,9 +22,16 @@ namespace Mapper.Gui
             WindowStartupLocation = WindowStartupLocation.CenterOwner;
             MaxWidth = 500;
 
-            Button ok = new() { Content = "OK", Width = 80, HorizontalAlignment = HorizontalAlignment.Right, HorizontalContentAlignment = HorizontalAlignment.Center };
-            ok.Classes.Add("dialog");
-            ok.Click += (sender, e) => Close();
+            StackPanel buttons = new() { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right };
+            if (yes is null || no is null)
+            {
+                buttons.Children.Add(CreateButton("OK", false));
+            }
+            else
+            {
+                buttons.Children.Add(CreateButton(yes, true));
+                buttons.Children.Add(CreateButton(no, false));
+            }
 
             Content = new StackPanel()
             {
@@ -31,9 +40,23 @@ namespace Mapper.Gui
                 Children =
                 {
                     new TextBlock() { Text = message, TextWrapping = TextWrapping.Wrap, Foreground = new SolidColorBrush(Color.FromRgb(238, 238, 238)) },
-                    ok
+                    buttons
                 }
             };
+        }
+
+        private Button CreateButton(string text, bool result)
+        {
+            Button button = new() { Content = text, MinWidth = 80, HorizontalContentAlignment = HorizontalAlignment.Center };
+            button.Classes.Add("dialog");
+            button.Click += (sender, e) => Close(result);
+            return button;
+        }
+
+        // True if the first choice was taken; closing the window is the second
+        public static async Task<bool> Confirm(string message, string title, string yes, string no, Window owner)
+        {
+            return await new MessageWindow(message, title, yes, no).ShowDialog<bool?>(owner) == true;
         }
 
         public static Task Show(string message, string title, Window? owner = null)

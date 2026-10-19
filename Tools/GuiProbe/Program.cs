@@ -187,8 +187,13 @@ foreach (string step in args.Skip(1))
             Task exporting = Task.Run(() => export(new SynchronousProgress<WebMapProgress>(p => last = p), CancellationToken.None));
             while (!exporting.IsCompleted) Pump(100);
             exporting.GetAwaiter().GetResult();
-            int tiles = Directory.GetFiles(Path.Combine(value, "tiles"), "*.png", SearchOption.AllDirectories).Length;
-            Console.WriteLine($"  {webSaver.WebMapDescription}: {last.Total} zoomed tiles, {tiles} tiles in all, {watch.ElapsedMilliseconds} ms");
+            foreach (string dimensionFolder in Directory.GetDirectories(value).Where(d => Directory.Exists(Path.Combine(d, "tiles"))))
+            {
+                int tiles = Directory.GetFiles(Path.Combine(dimensionFolder, "tiles"), "*.png", SearchOption.AllDirectories).Length;
+                int heights = Directory.GetFiles(Path.Combine(dimensionFolder, "heights")).Length;
+                Console.WriteLine($"  {Path.GetFileName(dimensionFolder)}: {tiles} tiles in all, {heights} height files");
+            }
+            Console.WriteLine($"  {webSaver.WebMapDescription}: {watch.ElapsedMilliseconds} ms");
             break;
         case "check":
             ToggleButton toggle = windows.Select(window => window.FindControl<ToggleButton>(value)).FirstOrDefault(control => control is not null)

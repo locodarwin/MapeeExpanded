@@ -1,5 +1,6 @@
 ﻿using Mapper.Gui.Model;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -127,7 +128,7 @@ namespace Mapper.Gui
         }
         private void SetWebMapDescription()
         {
-            string description = "Renders the whole dimension, not only what has loaded, into a folder with a page that pans and zooms in any browser. Large worlds take a while.";
+            string description = "Renders the Overworld, Nether and End, whichever the world has and all of each, into a folder with a page that pans, zooms and switches between them in any browser. Large worlds take a while.";
 
             if (DescriptionLabel is null) return;
             DescriptionLabel.Text = $"Description: {description}";
@@ -200,10 +201,13 @@ namespace Mapper.Gui
         {
             Microsoft.Win32.OpenFolderDialog folderDialog = new()
             {
-                Title = "Choose an empty folder for the web map"
+                Title = "Choose a folder for the web map"
             };
             if (folderDialog.ShowDialog(this) != true) return;
             string folder = folderDialog.FolderName;
+
+            if (ReplaceWarning(_imageSaver.WebMapWillReplace(folder)) is string warning &&
+                MessageBox.Show(this, warning + "\n\nExport here anyway?", "Export map", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
 
             Action<IProgress<WebMapProgress>?, CancellationToken> export;
             try
@@ -258,12 +262,21 @@ namespace Mapper.Gui
             Close();
         }
 
+        // Nothing is asked when the folder is empty or the export only adds to it
+        private static string? ReplaceWarning(IList<string> replaced)
+        {
+            if (replaced.Count == 0) return null;
+            return $"This folder already holds web map files: {string.Join(", ", replaced)}.\n\n" +
+                "Exporting here replaces them, along with any web map exported here before. Anything else in the folder is left alone.";
+        }
+
         private void ShowWebMapProgress(WebMapProgress progress)
         {
+            string dimension = progress.Dimension is null ? string.Empty : $"{progress.Dimension}: ";
             SavingLabel.Text = progress.Stage switch
             {
-                WebMapStage.Rendering => $"Rendering regions {progress.Done} / {progress.Total}",
-                WebMapStage.Zooming => $"Making zoom levels {progress.Done} / {progress.Total}",
+                WebMapStage.Rendering => $"{dimension}rendering regions {progress.Done} / {progress.Total}",
+                WebMapStage.Zooming => $"{dimension}making zoom levels {progress.Done} / {progress.Total}",
                 _ => "Finishing"
             };
         }

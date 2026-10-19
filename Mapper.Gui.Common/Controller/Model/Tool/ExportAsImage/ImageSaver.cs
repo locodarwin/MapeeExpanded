@@ -1,6 +1,7 @@
 ﻿using Mapper.Gui.Logic;
 using Mapper.Gui.Model;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 #if AVALONIA
 using Avalonia;
@@ -52,6 +53,7 @@ namespace Mapper.Gui.Controller
 
         public bool CanSaveWebMap => WebMapSaver.CanSave;
         public string WebMapDescription => WebMapSaver.Describe();
+        public IList<string> WebMapWillReplace(string folder) => WebMapSaver.WillReplace(folder);
         public Action<IProgress<WebMapProgress>?, CancellationToken> PrepareWebMap(string folder, WebMapOptions options)
         {
             return WebMapSaver.Prepare(folder, options);

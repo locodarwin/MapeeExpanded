@@ -216,6 +216,16 @@ namespace Mapper.Gui.Logic
             return new Profile(profile.AssetPack, heightmap, profile.RenderSettings);
         }
 
+        // For a dimension not yet opened, the style's own view of it
+        public Profile GetDrawingProfile(WorldDomain world, Dimension dimension, out ScanType scanType)
+        {
+            if (world.GetDimension(dimension) is DimensionDomain domain) return GetDrawingProfile(world, domain, out scanType);
+
+            scanType = world.Style.ScanType;
+            Profile profile = world.Style.GetProfile(dimension);
+            return new Profile(world.Style.AssetPack, profile.HeightmapSettings, profile.RenderSettings);
+        }
+
         // Where a column is looked at from, and whether as a cave, matching how the map is drawn
         public (int? StartY, bool Caves) GetScanStart(WorldDomain world, DimensionDomain dimension)
         {

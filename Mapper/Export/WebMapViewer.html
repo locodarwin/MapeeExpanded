@@ -41,6 +41,16 @@
   .marker i { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); border: 2px solid #1a1a1a; box-sizing: border-box; flex: none; }
   .marker span { margin-left: 5px; padding: 1px 5px; border-radius: 3px; background: rgba(20, 20, 20, 0.8); white-space: nowrap; font-size: 12px; }
   #markers.hidden, #grid.hidden { display: none; }
+  #dims { display: flex; gap: 4px; margin-top: 6px; }
+  #dims:empty { display: none; }
+  #dims button { border: 1px solid var(--border); border-radius: 4px; background: #2c2c2c; color: var(--text);
+    font: 12px/1 system-ui, sans-serif; padding: 5px 9px; cursor: pointer; }
+  #dims button:hover { background: #383838; }
+  #dims button.on { color: var(--accent); border-color: var(--accent); }
+  /* The block under a resting mouse, as Mapee shows it */
+  #tip { position: absolute; z-index: 3; pointer-events: none; display: none; white-space: pre;
+    background: rgba(24, 24, 24, 0.82); border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 3px;
+    padding: 2px 6px; font-size: 12px; color: #e0e0e0; }
 </style>
 </head>
 <body>
@@ -49,7 +59,8 @@
   <canvas id="grid" class="hidden"></canvas>
   <div id="markers"></div>
 </div>
-<div id="info" class="panel"><h1></h1><p></p></div>
+<div id="info" class="panel"><h1></h1><p></p><div id="dims"></div></div>
+<div id="tip"></div>
 <div id="status" class="panel"><span id="cursor">&nbsp;</span> &nbsp; <span id="scale"></span></div>
 <div id="controls" class="panel">
   <button id="zoomIn" title="Zoom in (+)">+</button>
@@ -64,26 +75,34 @@ const MAP = /*{{DATA}}*/null;
 
 const TILE = MAP.tileSize;
 const MAX_ZOOM = 5;
-const MIN_ZOOM = MAP.minLevel - 1;
 
-// Which tiles exist at each level, from the regions at level 0
-const levels = { 0: new Set() };
-let bounds = { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity };
-for (let i = 0; i < MAP.regions.length; i += 2) {
-  const x = MAP.regions[i], z = MAP.regions[i + 1];
-  levels[0].add(x + "," + z);
-  bounds.left = Math.min(bounds.left, x * TILE); bounds.top = Math.min(bounds.top, z * TILE);
-  bounds.right = Math.max(bounds.right, (x + 1) * TILE); bounds.bottom = Math.max(bounds.bottom, (z + 1) * TILE);
-}
-if (!isFinite(bounds.left)) bounds = { left: -TILE, top: -TILE, right: TILE, bottom: TILE };
-for (let level = -1; level >= MAP.minLevel; level--) {
-  const set = new Set();
-  for (const key of levels[level + 1]) {
-    const [x, z] = key.split(",").map(Number);
-    set.add(Math.floor(x / 2) + "," + Math.floor(z / 2));
+// Each dimension's tiles at each level, from its regions at level 0, and the area they cover
+for (const d of MAP.dimensions) {
+  d.levels = { 0: new Set() };
+  let bounds = { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity };
+  for (let i = 0; i < d.regions.length; i += 2) {
+    const x = d.regions[i], z = d.regions[i + 1];
+    d.levels[0].add(x + "," + z);
+    bounds.left = Math.min(bounds.left, x * TILE); bounds.top = Math.min(bounds.top, z * TILE);
+    bounds.right = Math.max(bounds.right, (x + 1) * TILE); bounds.bottom = Math.max(bounds.bottom, (z + 1) * TILE);
   }
-  levels[level] = set;
+  if (!isFinite(bounds.left)) bounds = { left: -TILE, top: -TILE, right: TILE, bottom: TILE };
+  d.bounds = bounds;
+  for (let level = -1; level >= d.minLevel; level--) {
+    const set = new Set();
+    for (const key of d.levels[level + 1]) {
+      const [x, z] = key.split(",").map(Number);
+      set.add(Math.floor(x / 2) + "," + Math.floor(z / 2));
+    }
+    d.levels[level] = set;
+  }
+  // Where it was last looked at, once it has been
+  d.view = null;
 }
+const dimById = id => MAP.dimensions.find(d => d.id === id);
+let dim = dimById(MAP.initial) || MAP.dimensions[0] || { id: "", name: "", subtitle: "", minLevel: 0, regions: [], markers: [],
+  levels: { 0: new Set() }, bounds: { left: -TILE, top: -TILE, right: TILE, bottom: TILE }, view: null };
+const minZoom = () => dim.minLevel - 1;
 
 const mapEl = document.getElementById("map");
 const tilesEl = document.getElementById("tiles");
@@ -92,8 +111,10 @@ const gridEl = document.getElementById("grid");
 const cursorEl = document.getElementById("cursor");
 const scaleEl = document.getElementById("scale");
 
+const tipEl = document.getElementById("tip");
+const dimsEl = document.getElementById("dims");
+
 document.querySelector("#info h1").textContent = MAP.title;
-document.querySelector("#info p").textContent = MAP.subtitle;
 
 // The view: the block at the middle of the window and how many CSS pixels a block takes, as a power of two
 const view = { x: 0, z: 0, zoom: 0 };
@@ -121,7 +142,7 @@ function createTile(level, x, z) {
   const tile = { img, level, x, z, loaded: false };
   img.onload = () => { tile.loaded = true; scheduleDraw(); };
   img.onerror = () => { tile.loaded = true; img.style.visibility = "hidden"; scheduleDraw(); };
-  img.src = "tiles/" + level + "/" + x + "_" + z + ".png";
+  img.src = dim.id + "/tiles/" + level + "/" + x + "_" + z + ".png";
   tilesEl.appendChild(img);
   return tile;
 }
@@ -142,13 +163,13 @@ function placeTile(tile) {
 function draw() {
   // Pick the level whose pixels are no bigger than the screen's, so tiles are only ever shrunk until level 0
   const dpr = window.devicePixelRatio || 1;
-  currentLevel = Math.min(0, Math.max(MAP.minLevel, Math.ceil(view.zoom + Math.log2(dpr) - 1e-6)));
+  currentLevel = Math.min(0, Math.max(dim.minLevel, Math.ceil(view.zoom + Math.log2(dpr) - 1e-6)));
   const span = TILE * Math.pow(2, -currentLevel);
 
   const [left, top] = toWorld(0, 0);
   const [right, bottom] = toWorld(width(), height());
   const wanted = new Set();
-  const available = levels[currentLevel];
+  const available = dim.levels[currentLevel];
   let allLoaded = true;
 
   for (let tz = Math.floor(top / span); tz <= Math.floor(bottom / span); tz++) {
@@ -194,19 +215,23 @@ function scheduleDraw() {
   requestAnimationFrame(() => { drawPending = false; draw(); saveHash(); });
 }
 
-// Markers
-const markerEls = MAP.markers.map(m => {
-  const el = document.createElement("div");
-  el.className = "marker";
-  const dot = document.createElement("i");
-  const label = document.createElement("span");
-  label.textContent = m.name;
-  el.append(dot, label);
-  markersEl.appendChild(el);
-  return el;
-});
+// Markers, of the dimension shown
+let markerEls = [];
+function createMarkers() {
+  markersEl.replaceChildren();
+  markerEls = dim.markers.map(m => {
+    const el = document.createElement("div");
+    el.className = "marker";
+    const dot = document.createElement("i");
+    const label = document.createElement("span");
+    label.textContent = m.name;
+    el.append(dot, label);
+    markersEl.appendChild(el);
+    return el;
+  });
+}
 function drawMarkers() {
-  MAP.markers.forEach((m, i) => {
+  dim.markers.forEach((m, i) => {
     const [x, y] = toScreen(m.x, m.z);
     markerEls[i].style.left = Math.round(x) + "px";
     markerEls[i].style.top = Math.round(y) + "px";
@@ -262,7 +287,7 @@ function drawStatus() {
 const fmt = n => n >= 10 ? Math.round(n).toString() : (Math.round(n * 10) / 10).toString();
 
 // Moving about
-function clampZoom(z) { return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z)); }
+function clampZoom(z) { return Math.min(MAX_ZOOM, Math.max(minZoom(), z)); }
 
 function zoomAt(sx, sy, zoom) {
   const [wx, wz] = toWorld(sx, sy);
@@ -288,7 +313,7 @@ function animateZoom(target, sx, sy) {
 }
 
 function fit() {
-  const margin = 40;
+  const margin = 40, bounds = dim.bounds;
   const zx = Math.log2(Math.max(1, width() - margin) / (bounds.right - bounds.left));
   const zz = Math.log2(Math.max(1, height() - margin) / (bounds.bottom - bounds.top));
   view.zoom = clampZoom(Math.min(0, Math.floor(Math.min(zx, zz) * 4) / 4));
@@ -302,6 +327,7 @@ const pointers = new Map();
 let pinch = null;
 
 mapEl.addEventListener("pointerdown", e => {
+  hideTip();
   if (e.button !== 0 && e.pointerType === "mouse") return;
   mapEl.setPointerCapture(e.pointerId);
   pointers.set(e.pointerId, [e.clientX, e.clientY]);
@@ -312,7 +338,11 @@ mapEl.addEventListener("pointerdown", e => {
 mapEl.addEventListener("pointermove", e => {
   pointer = [e.clientX, e.clientY];
   const last = pointers.get(e.pointerId);
-  if (!last) { scheduleDraw(); return; }
+  if (!last) {
+    if (e.pointerType === "mouse" && e.buttons === 0) restartTip(); else hideTip();
+    scheduleDraw();
+    return;
+  }
 
   if (pointers.size === 1) {
     const s = scale();
@@ -341,7 +371,7 @@ function endPointer(e) {
 }
 mapEl.addEventListener("pointerup", endPointer);
 mapEl.addEventListener("pointercancel", endPointer);
-mapEl.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") { pointer = null; scheduleDraw(); } });
+mapEl.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") { pointer = null; hideTip(); scheduleDraw(); } });
 
 function pinchState() {
   const [a, b] = [...pointers.values()];
@@ -355,9 +385,10 @@ mapEl.addEventListener("wheel", e => {
   const lines = e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1;
   const delta = Math.max(-1, Math.min(1, -e.deltaY * lines * 0.004));
   zoomAt(e.clientX, e.clientY, view.zoom + delta);
+  restartTip();
 }, { passive: false });
 
-mapEl.addEventListener("dblclick", e => animateZoom(view.zoom + (e.shiftKey ? -1 : 1), e.clientX, e.clientY));
+mapEl.addEventListener("dblclick", e => { animateZoom(view.zoom + (e.shiftKey ? -1 : 1), e.clientX, e.clientY); restartTip(); });
 
 document.getElementById("zoomIn").onclick = () => animateZoom(view.zoom + 1, width() / 2, height() / 2);
 document.getElementById("zoomOut").onclick = () => animateZoom(view.zoom - 1, width() / 2, height() / 2);
@@ -369,7 +400,36 @@ function toggleGrid() { gridButton.classList.toggle("on", !gridEl.classList.togg
 function toggleMarkers() { markerButton.classList.toggle("on", !markersEl.classList.toggle("hidden")); }
 gridButton.onclick = toggleGrid;
 markerButton.onclick = toggleMarkers;
-if (MAP.markers.length === 0) markerButton.style.display = "none";
+
+// Switching dimensions: each keeps where it was looked at
+function showDimension(next, nextView) {
+  if (!next || (next === dim && !nextView && dim.view)) return;
+  if (next !== dim) dim.view = { ...view };
+  dim = next;
+  for (const tile of tiles.values()) tile.img.remove();
+  tiles.clear();
+  createMarkers();
+  markerButton.style.display = dim.markers.length === 0 ? "none" : "";
+  document.querySelector("#info p").textContent = dim.subtitle;
+  for (const button of dimsEl.children) button.classList.toggle("on", button.dataset.id === dim.id);
+  hideTip();
+
+  if (nextView) Object.assign(view, nextView, { zoom: clampZoom(nextView.zoom) });
+  else if (dim.view) Object.assign(view, dim.view);
+  else fit();
+  dim.view = { ...view };
+  scheduleDraw();
+}
+if (MAP.dimensions.length > 1) {
+  MAP.dimensions.forEach((d, i) => {
+    const button = document.createElement("button");
+    button.textContent = d.name;
+    button.title = d.name + " (" + (i + 1) + ")";
+    button.dataset.id = d.id;
+    button.onclick = () => showDimension(d);
+    dimsEl.appendChild(button);
+  });
+}
 
 document.addEventListener("keydown", e => {
   if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -384,31 +444,131 @@ document.addEventListener("keydown", e => {
     case "Home": fit(); break;
     case "g": case "G": toggleGrid(); break;
     case "m": case "M": toggleMarkers(); break;
-    default: return;
+    default:
+      if (e.key >= "1" && e.key <= "9" && MAP.dimensions[e.key - 1]) { showDimension(MAP.dimensions[e.key - 1]); break; }
+      return;
   }
+  // Whatever the key did, the block under the mouse may have changed
+  restartTip();
   e.preventDefault();
 });
 
-// The address keeps the view, so a link opens where it was copied: #x,z,zoom
+// The address keeps the dimension and the view, so a link opens where it was copied: #nether/x,z,zoom
 let hashTimer = null;
 function saveHash() {
   clearTimeout(hashTimer);
   hashTimer = setTimeout(() => {
-    const hash = "#" + Math.round(view.x) + "," + Math.round(view.z) + "," + (Math.round(view.zoom * 100) / 100);
+    const hash = "#" + dim.id + "/" + Math.round(view.x) + "," + Math.round(view.z) + "," + (Math.round(view.zoom * 100) / 100);
     try { history.replaceState(null, "", hash); } catch (e) { /* not allowed for some file:// pages */ }
   }, 250);
 }
+// The dimension and view the address names, or null; an address without a dimension is from before there were several
 function readHash() {
-  const parts = location.hash.slice(1).split(",").map(Number);
-  if (parts.length !== 3 || parts.some(n => !isFinite(n))) return false;
-  [view.x, view.z] = parts;
-  view.zoom = clampZoom(parts[2]);
-  return true;
+  let text = decodeURIComponent(location.hash.slice(1)), target = dim;
+  const slash = text.indexOf("/");
+  if (slash >= 0) {
+    target = dimById(text.slice(0, slash));
+    text = text.slice(slash + 1);
+    if (!target) return null;
+  }
+  const parts = text.split(",").map(Number);
+  if (parts.length !== 3 || parts.some(n => !isFinite(n))) return null;
+  return { dim: target, view: { x: parts[0], z: parts[1], zoom: parts[2] } };
+}
+
+// The coordinates label: after the mouse rests on the map a moment, the block under it, as in Mapee. Y comes from
+// the dimension's heights, loaded a region at a time; until they arrive, or where nothing is drawn, there's no Y
+const TIP_DELAY = 300;
+let tipTimer = null, tipBlock = null;
+
+function hideTip() {
+  clearTimeout(tipTimer);
+  tipTimer = null;
+  tipBlock = null;
+  tipEl.style.display = "none";
+}
+function restartTip() {
+  hideTip();
+  if (pointer && pointers.size === 0) tipTimer = setTimeout(showTip, TIP_DELAY);
+}
+function showTip() {
+  tipTimer = null;
+  if (!pointer) return;
+  const [wx, wz] = toWorld(pointer[0], pointer[1]);
+  const block = { dim, x: Math.floor(wx), z: Math.floor(wz), at: pointer };
+  tipBlock = block;
+  placeTip(block, null);
+  heightAt(dim, block.x, block.z).then(y => { if (tipBlock === block && y !== null) placeTip(block, y); });
+}
+function placeTip(block, y) {
+  tipEl.textContent = y === null ? "X " + block.x + "   Z " + block.z : "X " + block.x + "   Y " + y + "   Z " + block.z;
+  tipEl.style.display = "block";
+  // Below and right of the pointer, or on the other side where that would leave the window
+  const [px, py] = block.at;
+  let x = px + 14, y2 = py + 18;
+  if (x + tipEl.offsetWidth > width()) x = px - tipEl.offsetWidth - 4;
+  if (y2 + tipEl.offsetHeight > height()) y2 = py - tipEl.offsetHeight - 4;
+  tipEl.style.left = Math.max(0, x) + "px";
+  tipEl.style.top = Math.max(0, y2) + "px";
+}
+
+// Heights: <dimension>/heights/<x>_<z>.js calls mapeeHeights with the region's Ys, as differences along its rows,
+// deflated and in base64. Scripts, because a page opened from disk may load scripts beside it but not read files
+const NO_HEIGHT = -32768;
+const heights = new Map();
+const heightWaiters = new Map();
+
+window.mapeeHeights = (id, x, z, data) => {
+  const key = id + "/" + x + "," + z;
+  const resolve = heightWaiters.get(key);
+  heightWaiters.delete(key);
+  if (resolve) resolve(decodeHeights(data).catch(() => null));
+};
+async function decodeHeights(data) {
+  const bytes = Uint8Array.from(atob(data), c => c.charCodeAt(0));
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+  const values = new Int16Array(await new Response(stream).arrayBuffer());
+  for (let i = 1; i < values.length; i++) values[i] += values[i - 1];
+  return values;
+}
+function regionHeights(d, rx, rz) {
+  const key = d.id + "/" + rx + "," + rz;
+  if (heights.has(key)) return heights.get(key);
+  if (!d.levels[0].has(rx + "," + rz) || typeof DecompressionStream === "undefined") return Promise.resolve(null);
+
+  const promise = new Promise(resolve => {
+    heightWaiters.set(key, resolve);
+    const script = document.createElement("script");
+    script.src = d.id + "/heights/" + rx + "_" + rz + ".js";
+    script.onload = script.onerror = () => {
+      script.remove();
+      // A region with nothing drawn has no file, and a file that didn't call back is as good as none
+      if (heightWaiters.get(key) === resolve) { heightWaiters.delete(key); resolve(null); }
+    };
+    document.head.appendChild(script);
+  });
+  heights.set(key, promise);
+  // Each region is half a megabyte unpacked, so only the latest few are kept
+  if (heights.size > 24) heights.delete(heights.keys().next().value);
+  return promise;
+}
+async function heightAt(d, x, z) {
+  const rx = Math.floor(x / TILE), rz = Math.floor(z / TILE);
+  const values = await regionHeights(d, rx, rz);
+  if (!values) return null;
+  const y = values[(z - rz * TILE) * TILE + (x - rx * TILE)];
+  return y === NO_HEIGHT ? null : y;
 }
 
 window.addEventListener("resize", scheduleDraw);
-window.addEventListener("hashchange", () => { if (readHash()) scheduleDraw(); });
-if (!readHash()) fit(); else scheduleDraw();
+window.addEventListener("hashchange", () => {
+  const target = readHash();
+  if (target) showDimension(target.dim, target.view);
+});
+{
+  const target = readHash();
+  showDimension(target ? target.dim : dim, target ? target.view : null);
+}
 </script>
 </body>
 </html>

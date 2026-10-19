@@ -1,5 +1,6 @@
 using StbImageSharp;
 using System.Collections.Concurrent;
+using System.IO.Compression;
 using System.Reflection;
 using System.Text.Json;
 using WorldEditor;
@@ -8,21 +9,19 @@ namespace Mapper
 {
     public record WebMapMarker(string Name, double X, double Z);
 
-    // What the viewer shows around the map
-    public class WebMapInfo
-    {
-        public string Title { get; init; } = "Map";
-        public string Subtitle { get; init; } = string.Empty;
-        public IList<WebMapMarker> Markers { get; init; } = [];
-    }
+    // One dimension's map as the page lists it: its folder, what the switcher and the panel call it, and what
+    // its writer drew
+    public record WebMapDimension(string Id, string Name, string Subtitle, IList<WebMapMarker> Markers,
+        IReadOnlyCollection<Coords> Regions, int MinLevel);
 
     public enum WebMapStage { Rendering, Zooming, Done }
-    public readonly record struct WebMapProgress(WebMapStage Stage, int Done, int Total);
+    public readonly record struct WebMapProgress(WebMapStage Stage, int Done, int Total, string? Dimension = null);
 
-    // Lays a rendered map out as a folder a browser can open: index.html plus tiles/<level>/<x>_<z>.png.
-    // Level 0 is one tile per region at one pixel per block; each level below halves that, down to where the
-    // whole map fits in a few tiles. The viewer is a single page with no outside scripts, so the folder
-    // works straight from disk or on any web server
+    // Lays one dimension's rendered map out under <folder>/<id>: tiles/<level>/<x>_<z>.png and
+    // heights/<x>_<z>.js. Level 0 is one tile per region at one pixel per block; each level below halves that,
+    // down to where the whole map fits in a few tiles. The heights give the page each block's Y; they're scripts
+    // because a page opened from disk may run scripts beside it but not read files. WebMapPage writes the page
+    // over all the dimensions, with no outside scripts, so the folder works straight from disk or on any web server
     public class WebMapWriter
     {
         public const int TileSize = 512;
@@ -32,33 +31,22 @@ namespace Mapper
         private const int LowestLevel = -8;
 
         public string OutputDirectory { get; }
+        public string Id { get; }
 
         private readonly string _tiles;
+        private readonly string _heights;
         private readonly ConcurrentDictionary<Coords, byte> _regions = new();
 
-        // Checks the folder is empty or holds an earlier export, whose tiles are then cleared
-        public WebMapWriter(string outputDirectory)
+        // Call WebMapFolder.Clear on the folder first, so no tiles are left from an earlier export
+        public WebMapWriter(string outputDirectory, string id)
         {
             OutputDirectory = outputDirectory;
-            _tiles = Path.Combine(outputDirectory, "tiles");
-
-            Directory.CreateDirectory(outputDirectory);
-            if (IsEarlierExport(outputDirectory))
-            {
-                if (Directory.Exists(_tiles)) Directory.Delete(_tiles, true);
-            }
-            else if (Directory.EnumerateFileSystemEntries(outputDirectory).Any())
-            {
-                throw new IOException("The folder isn't empty. Choose an empty folder, or one holding an earlier web map export to replace it.");
-            }
+            Id = id;
+            _tiles = Path.Combine(outputDirectory, id, "tiles");
+            _heights = Path.Combine(outputDirectory, id, "heights");
 
             Directory.CreateDirectory(Path.Combine(_tiles, "0"));
-        }
-
-        public static bool IsEarlierExport(string directory)
-        {
-            string index = Path.Combine(directory, "index.html");
-            return File.Exists(index) && File.ReadAllText(index).Contains(Marker);
+            Directory.CreateDirectory(_heights);
         }
 
         // Takes a region as the map renderer draws it: Bgra32 rows covering blocks from (left, top), possibly
@@ -89,8 +77,34 @@ namespace Mapper
             _regions[region] = 0;
         }
 
-        // Makes the zoomed-out levels and the page. Call once every region is added
-        public void Finish(WebMapInfo info, IProgress<WebMapProgress>? progress = null, CancellationToken cancellation = default)
+        // The Y of the block drawn in each column of a region, rows from the north, short.MinValue where nothing
+        // is. Stored as differences along the rows, deflated and in base64, as a call the page answers. Safe to
+        // call from several threads
+        public void AddHeights(Coords region, short[] heights)
+        {
+            if (heights.Length != TileSize * TileSize) throw new ArgumentException("A region's heights are 512 by 512", nameof(heights));
+            if (Array.TrueForAll(heights, h => h == short.MinValue)) return;
+
+            byte[] deltas = new byte[heights.Length * 2];
+            short previous = 0;
+            for (int i = 0; i < heights.Length; i++)
+            {
+                short delta = unchecked((short)(heights[i] - previous));
+                deltas[i * 2] = (byte)delta;
+                deltas[i * 2 + 1] = (byte)(delta >> 8);
+                previous = heights[i];
+            }
+
+            using MemoryStream compressed = new();
+            using (DeflateStream deflate = new(compressed, CompressionLevel.Optimal, true)) deflate.Write(deltas);
+
+            string script = $"mapeeHeights(\"{Id}\",{region.X},{region.Z},\"{Convert.ToBase64String(compressed.ToArray())}\");\n";
+            File.WriteAllText(Path.Combine(_heights, $"{region.X}_{region.Z}.js"), script);
+        }
+
+        // Makes the zoomed-out levels. Call once every region is added; the page takes what it returns
+        public WebMapDimension Finish(string name, string subtitle, IList<WebMapMarker> markers,
+            IProgress<WebMapProgress>? progress = null, CancellationToken cancellation = default)
         {
             List<HashSet<Coords>> levels = [[.. _regions.Keys]];
             int total = CountLevels(levels[0]).Sum(), done = 0;
@@ -105,13 +119,12 @@ namespace Mapper
                 Parallel.ForEach(parents, new ParallelOptions() { CancellationToken = cancellation }, parent =>
                 {
                     WriteParent(level, parent, children);
-                    progress?.Report(new WebMapProgress(WebMapStage.Zooming, Interlocked.Increment(ref done), total));
+                    progress?.Report(new WebMapProgress(WebMapStage.Zooming, Interlocked.Increment(ref done), total, name));
                 });
                 levels.Add(parents);
             }
 
-            File.WriteAllText(Path.Combine(OutputDirectory, "index.html"), CreatePage(info, levels[0], -(levels.Count - 1)));
-            progress?.Report(new WebMapProgress(WebMapStage.Done, total, total));
+            return new WebMapDimension(Id, name, subtitle, markers, levels[0], -(levels.Count - 1));
         }
 
         // How many tiles each level below 0 will have, for progress
@@ -172,26 +185,94 @@ namespace Mapper
         {
             return Path.Combine(_tiles, level.ToString(), $"{x}_{z}.png");
         }
+    }
 
-        private static string CreatePage(WebMapInfo info, HashSet<Coords> regions, int minLevel)
+    // The export folder: what an export there replaces, and clearing it beforehand
+    public static class WebMapFolder
+    {
+        // The dimensions given folders of their own, by the ids their folders are named after
+        public static readonly IReadOnlyList<(Dimension Dimension, string Id)> Dimensions =
+            [(Dimension.Overworld, "overworld"), (Dimension.Nether, "nether"), (Dimension.TheEnd, "the_end")];
+
+        public static string IdOf(Dimension dimension)
+        {
+            foreach ((Dimension known, string id) in Dimensions) if (known == dimension) return id;
+
+            string name = dimension.Namespace.Replace(':', '_');
+            return new string([.. name.Select(c => char.IsAsciiLetterOrDigit(c) || c == '-' ? c : '_')]);
+        }
+
+        public static bool IsEarlierExport(string directory)
+        {
+            string index = Path.Combine(directory, "index.html");
+            return File.Exists(index) && File.ReadAllText(index).Contains(WebMapWriter.Marker);
+        }
+
+        // What in the folder an export of these dimensions writes over, by name; empty when nothing is
+        public static IList<string> WillReplace(string directory, IEnumerable<string> ids)
+        {
+            if (!Directory.Exists(directory)) return [];
+
+            List<string> names = ["index.html", .. ids, .. IsEarlierExport(directory) ? ["tiles"] : Array.Empty<string>()];
+            return [.. names.Where(name => Path.Exists(Path.Combine(directory, name)))];
+        }
+
+        public static bool IsEmpty(string directory)
+        {
+            return !Directory.Exists(directory) || !Directory.EnumerateFileSystemEntries(directory).Any();
+        }
+
+        // Removes the tiles and heights of these dimensions, and the single map an export before dimensions left
+        // at the top. Anything else in the folder stays
+        public static void Clear(string directory, IEnumerable<string> ids)
+        {
+            Directory.CreateDirectory(directory);
+            if (IsEarlierExport(directory)) Delete(Path.Combine(directory, "tiles"));
+
+            foreach (string id in ids)
+            {
+                Delete(Path.Combine(directory, id, "tiles"));
+                Delete(Path.Combine(directory, id, "heights"));
+            }
+        }
+
+        private static void Delete(string directory)
+        {
+            if (Directory.Exists(directory)) Directory.Delete(directory, true);
+        }
+    }
+
+    // The page over the dimensions: index.html, the viewer with the dimensions' data in it
+    public static class WebMapPage
+    {
+        public static void Write(string directory, string title, IList<WebMapDimension> dimensions, string? initial = null)
         {
             var data = new
             {
-                title = info.Title,
-                subtitle = info.Subtitle,
-                tileSize = TileSize,
-                minLevel,
-                regions = regions.OrderBy(c => c.Z).ThenBy(c => c.X).SelectMany(c => new[] { c.X, c.Z }),
-                markers = info.Markers.Select(m => new { name = m.Name, x = m.X, z = m.Z })
+                title,
+                tileSize = WebMapWriter.TileSize,
+                initial = dimensions.Any(d => d.Id == initial) ? initial : dimensions.FirstOrDefault()?.Id,
+                dimensions = dimensions.Select(d => new
+                {
+                    id = d.Id,
+                    name = d.Name,
+                    subtitle = d.Subtitle,
+                    minLevel = d.MinLevel,
+                    regions = d.Regions.OrderBy(c => c.Z).ThenBy(c => c.X).SelectMany(c => new[] { c.X, c.Z }),
+                    markers = d.Markers.Select(m => new { name = m.Name, x = m.X, z = m.Z })
+                })
             };
             string json = JsonSerializer.Serialize(data).Replace("</", "<\\/");
 
             using Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Mapper.Export.WebMapViewer.html")
                 ?? throw new InvalidOperationException("The web map viewer is missing from the build");
             using StreamReader reader = new(stream);
-            return reader.ReadToEnd()
-                .Replace("{{TITLE}}", System.Net.WebUtility.HtmlEncode(info.Title))
+            string page = reader.ReadToEnd()
+                .Replace("{{TITLE}}", System.Net.WebUtility.HtmlEncode(title))
                 .Replace("/*{{DATA}}*/null", json);
+
+            Directory.CreateDirectory(directory);
+            File.WriteAllText(Path.Combine(directory, "index.html"), page);
         }
     }
 }

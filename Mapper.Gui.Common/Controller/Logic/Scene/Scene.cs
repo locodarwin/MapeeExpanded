@@ -143,6 +143,7 @@ namespace Mapper.Gui.Logic
             }
 
             DimensionDomain old = Domain.CurrentWorld.CurrentDimension;
+            StartupLog.Mark($"Dimension changed to {dimension.Namespace}");
 
             DimensionBeginChange?.Invoke(old, dimensionDomain);
 
@@ -152,6 +153,7 @@ namespace Mapper.Gui.Logic
 
         public void UpdateStyle(Style style) 
         {
+            StartupLog.Mark($"Style changed to {style.Metadata.Id}");
             Style old = Domain.CurrentStyle;
 
             Domain.CurrentStyle = style;
@@ -174,6 +176,7 @@ namespace Mapper.Gui.Logic
         }
         public void UpdateProfile(Profile profile)
         {
+            StartupLog.Mark("Profile changed (block filter or render settings)");
             if (Domain.CurrentWorld is null) return;
 
             Domain.CurrentWorld.Style.AssetPack = profile.AssetPack;
@@ -188,6 +191,7 @@ namespace Mapper.Gui.Logic
             if (Domain.CurrentWorld is null || Domain.CurrentWorld.CurrentDimension.Cut == cut) return;
 
             Domain.CurrentWorld.CurrentDimension.Cut = cut;
+            StartupLog.Mark($"Height cut changed to {cut?.ToString() ?? "none"}");
             ProfileReset?.Invoke(Domain.CurrentWorld.CurrentDimension);
         }
 

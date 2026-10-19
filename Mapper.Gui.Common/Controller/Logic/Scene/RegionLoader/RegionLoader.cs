@@ -18,6 +18,7 @@ namespace Mapper.Gui.Logic
         private SceneCache? _currentScene;
         private bool _inSceneChangingProcess = false;
         private object _lock = new();
+        private int _added = 0;
 
         public RegionLoader(Scene scene)
         {
@@ -122,8 +123,16 @@ namespace Mapper.Gui.Logic
 
         private void OnRegionRendered(Coords coords, ICanvas canvas)
         {
-            if (_currentScene is null || Scene.Domain.CurrentWorld is null || _inSceneChangingProcess) return;
-            if (!IsSafeToAdd(coords.X, coords.Z)) return;
+            if (_currentScene is null || Scene.Domain.CurrentWorld is null || _inSceneChangingProcess)
+            {
+                if (StartupLog.Active) StartupLog.Mark($"  region {coords.X},{coords.Z} rendered but dropped: {(_currentScene is null ? "no scene" : Scene.Domain.CurrentWorld is null ? "no world" : "scene changing")}");
+                return;
+            }
+            if (!IsSafeToAdd(coords.X, coords.Z))
+            {
+                if (StartupLog.Active) StartupLog.Mark($"  region {coords.X},{coords.Z} rendered but already there");
+                return;
+            }
 
             var bitmap = CanvasBitmap.Create(canvas);
             if (bitmap is not null)
@@ -169,18 +178,29 @@ namespace Mapper.Gui.Logic
             {
                 if (Scene.Domain.CurrentWorld.CurrentDimension.Scene.RenderedRegions.ContainsKey(region.Coords)) return;
                 Scene.Domain.CurrentWorld.CurrentDimension.Scene.RenderedRegions.Add(region.Coords, region);
+                _added++;
+            }
+            if (StartupLog.Active && (_added <= 10 || _added % 25 == 0))
+            {
+                StartupLog.Mark($"  region {region.Coords.X},{region.Coords.Z} added to {Scene.Domain.CurrentWorld.CurrentDimension.Dimension.Namespace} " +
+                    $"({(region.Image is null ? "empty" : "with image")}), {_added} added so far");
             }
         }
 
         public void LoadArea(XzRange range)
         {
-            if (_currentScene is null || range == _currentScene?.PrevRange || _inSceneChangingProcess) return;
+            if (_currentScene is null || range == _currentScene?.PrevRange || _inSceneChangingProcess)
+            {
+                if (StartupLog.Active) StartupLog.MarkChange("load", $"Load area {StartupLog.Describe(range)} skipped: {(_currentScene is null ? "no scene" : _inSceneChangingProcess ? "scene changing" : "same as before")}");
+                return;
+            }
 
             WorldMapper.Invoke(() =>
             {
                 Coords[] queue = ArrayPool<Coords>.Shared.Rent((int)range.Size.X * (int)range.Size.Z);
                 Memory<Coords> queueMemory = queue;
                 CreateQueue(range, ref queueMemory);
+                if (StartupLog.Active) StartupLog.Mark($"Load area {StartupLog.Describe(range)}: {queueMemory.Length} regions queued");
 
                 WorldMapper.Queue.ReplaceWith(queueMemory);
                 ArrayPool<Coords>.Shared.Return(queue);

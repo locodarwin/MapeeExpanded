@@ -6,7 +6,8 @@ using System.Reflection;
 namespace Mapper.Gui
 {
     // Writes how far into the process each step of startup happened, and when each assembly loaded, to startup.log
-    // beside the settings, replaced every launch. It's how a slow start gets traced on a machine we can't run on.
+    // beside the settings, replaced every launch; then the first world's load (regions queued, rendered and painted)
+    // until it has been open a while. It's how a slow start or a blank map gets traced on a machine we can't run on.
     // The file is flushed line by line, so it's complete up to the step that hangs even if the app is killed
     public static class StartupLog
     {
@@ -15,6 +16,10 @@ namespace Mapper.Gui
         private static readonly object _lock = new();
         private static StreamWriter? _writer;
         private static DateTime _processStart;
+        private static readonly System.Collections.Generic.Dictionary<string, string> _lastRepeatable = new();
+
+        // False once the log is closed, so callers in busy paths can skip building their text
+        public static bool Active => _writer is not null;
 
         public static void Begin()
         {
@@ -41,21 +46,40 @@ namespace Mapper.Gui
 
         public static void Mark(string step) => Write(step);
 
-        // Once the world browser is up; assembly loads after that are ordinary use
-        public static void End()
+        // For steps that repeat many times a second: written only when the text differs from the last line of that kind
+        public static void MarkChange(string kind, string step)
         {
             lock (_lock)
             {
-                if (_writer is null) return;
-                AppDomain.CurrentDomain.AssemblyLoad -= AssemblyLoaded;
+                if (_lastRepeatable.TryGetValue(kind, out string? last) && last == step) return;
+                _lastRepeatable[kind] = step;
             }
-            Mark("Startup done");
-            lock (_lock)
-            {
-                _writer?.Dispose();
-                _writer = null;
-            }
+            Write(step);
         }
+
+        // Once the world browser is up; assembly loads after that are ordinary use
+        public static void StopAssemblyLog()
+        {
+            AppDomain.CurrentDomain.AssemblyLoad -= AssemblyLoaded;
+            Mark("Startup done");
+        }
+
+        // Once the first world has had time to draw
+        public static void EndAfter(TimeSpan delay)
+        {
+            System.Threading.Tasks.Task.Delay(delay).ContinueWith(_ =>
+            {
+                Mark("Log ends");
+                lock (_lock)
+                {
+                    _writer?.Dispose();
+                    _writer = null;
+                }
+            });
+        }
+
+        public static string Describe(Mapper.Gui.Model.XzRange range) =>
+            $"{range.TopLeftPoint.X:F0},{range.TopLeftPoint.Z:F0} to {range.BottomRightPoint.X:F0},{range.BottomRightPoint.Z:F0}";
 
         private static void AssemblyLoaded(object? sender, AssemblyLoadEventArgs e) => Write($"  loaded {e.LoadedAssembly.GetName().Name}");
 

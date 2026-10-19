@@ -35,11 +35,29 @@ namespace Mapper.Gui.Controller
         {
             RememberView();
 
+            StartupLog.Mark($"Opening world {source} ({level.Edition}), player at {level.Player.Position.X:F0}, {level.Player.Position.Z:F0}");
             Scene.SetWorld(level);
             _currentSource = source;
+            LogView("World set");
 
-            RestoreView(Settings.Remember(source));
+            RecentWorld recent = Settings.Remember(source);
+            StartupLog.Mark($"Remembered view: {recent.Dimension ?? "none"} at {recent.X?.ToString("F0") ?? "-"}, {recent.Z?.ToString("F0") ?? "-"}, zoom {recent.Zoom?.ToString() ?? "-"}");
+            RestoreView(recent);
+            LogView("View restored");
             Settings.Save();
+
+            StartupLog.EndAfter(TimeSpan.FromSeconds(20));
+        }
+
+        private void LogView(string step)
+        {
+            if (!StartupLog.Active || Scene.Domain.CurrentWorld is null) return;
+
+            DimensionDomain dimension = Scene.Domain.CurrentWorld.CurrentDimension;
+            ScaleBehaviour scale = Scene.Map.ScaleBehaviour;
+            StartupLog.Mark($"{step}: {dimension.Dimension.Namespace}, centre {dimension.Scaling.CenterPoint.X:F0}, {dimension.Scaling.CenterPoint.Y:F0}, " +
+                $"zoom {scale.CurrentZoomLevel}, offset {scale.Offset.X:F0}, {scale.Offset.Y:F0}, visible regions {StartupLog.Describe(Scene.Map.ProvideVisibleGrid())}, " +
+                $"style {Scene.Domain.CurrentStyle.Metadata.Id}, {dimension.Scene.SceneParameter.RegionStore.GetType().Name}");
         }
 
         // Reads the world off the UI thread, since a .mcworld may need extracting first

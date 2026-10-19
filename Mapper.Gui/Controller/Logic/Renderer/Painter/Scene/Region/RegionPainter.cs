@@ -18,6 +18,7 @@ namespace Mapper.Gui.Logic
         {
             if (DrawingGroup is null) return;
 
+            int painted = 0;
             for (int z = 0; z < visibleGrid.Size.Z; z++)
             {
                 for (int x = 0; x < visibleGrid.Size.X; x++)
@@ -28,8 +29,10 @@ namespace Mapper.Gui.Logic
 
                     Point xy = Map.TransformXzToXy(new XzPoint(region.Coords.X * 512 + region.AreaInRegion.Value.TopLeftPoint.X, region.Coords.Z * 512 + region.AreaInRegion.Value.TopLeftPoint.Z));
                     drawingContext.DrawImage(region.Image, new Rect(xy, new Size(region.Image.Width, region.Image.Height)));
+                    painted++;
                 }
             }
+            if (StartupLog.Active) StartupLog.MarkChange("paint", $"Painted {painted} regions of {StartupLog.Describe(visibleGrid)}");
         }
     }
 }

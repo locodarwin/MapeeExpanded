@@ -218,6 +218,7 @@ namespace Mapper.Gui.Controller
             if (current.Scene.SceneParameter.RegionStore is IBackgroundRegionStore { Ready.IsCompleted: false } background)
             {
                 TextPainter.SetText(new Text("Reading world. This may take a moment"));
+                StartupLog.Mark("Map message: Reading world");
                 background.Ready.ContinueWith(_ => Dispatcher.UIThread.Post(() =>
                 {
                     if (ImplementedScene.Domain.CurrentWorld?.CurrentDimension == current) CheckDimensionIsEmpty(current);
@@ -239,6 +240,7 @@ namespace Mapper.Gui.Controller
             }
 
             TextPainter.SetText(text);
+            StartupLog.Mark($"Map message: {text?.DisplayedText ?? "none"}");
         }
     }
 }

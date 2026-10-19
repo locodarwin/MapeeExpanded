@@ -44,7 +44,7 @@ namespace Mapper.Gui.Controller
                 StartupLog.Mark(opened ? "World opened" : "World didn't open");
                 if (opened)
                 {
-                    StartupLog.End();
+                    StartupLog.StopAssemblyLog();
                     return;
                 }
                 await MessageWindow.Show($"Couldn't open {Path.GetFileName(startup)} as a Minecraft world.", "Mapee", MapViewer);
@@ -71,9 +71,9 @@ namespace Mapper.Gui.Controller
             WorldBrowser browser = new(AnyEditionLevelReader.DefaultWorldDirectories(), new AnyEditionLevelReader(), Opener.Settings.RecentWorlds.Select(w => w.Path).ToList());
             StartupLog.Mark("World browser made");
 #if AVALONIA
-            browser.Opened += (sender, e) => StartupLog.End();
+            browser.Opened += (sender, e) => StartupLog.StopAssemblyLog();
 #else
-            browser.ContentRendered += (sender, e) => StartupLog.End();
+            browser.ContentRendered += (sender, e) => StartupLog.StopAssemblyLog();
 #endif
             await AppWindows.ShowDialog(browser, MapViewer);
 

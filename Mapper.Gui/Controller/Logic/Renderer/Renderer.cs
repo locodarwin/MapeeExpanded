@@ -47,7 +47,11 @@ namespace Mapper.Gui.Logic
         {
             GraphicsCanvas.Dispatcher.Invoke(() =>
             {
-                if (_isBusy) return;
+                if (_isBusy)
+                {
+                    if (StartupLog.Active) StartupLog.Mark("Render skipped: already rendering");
+                    return;
+                }
                 _isBusy = true;
 
                 foreach (IPainter painter in _painters)

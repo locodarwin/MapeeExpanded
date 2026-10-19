@@ -15,6 +15,7 @@
     <FileVersion>1.4.0</FileVersion>
     <Version>1.4.0</Version>
     <Product>Mapee Expanded</Product>
+    <DefineConstants>$(DefineConstants);AVALONIA</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
@@ -51,5 +52,8 @@
       <Link>LICENSE.txt</Link>
     </None>
   </ItemGroup>
+
+  <!-- Code shared with the other GUI -->
+  <Import Project="..\Mapper.Gui.Common\Mapper.Gui.Common.projitems" Label="Shared" />
 
 </Project>

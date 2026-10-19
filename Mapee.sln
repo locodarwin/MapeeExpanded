@@ -31,7 +31,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{0AB3BF05
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mapee.Tests", "Tests\Mapee.Tests\Mapee.Tests.csproj", "{9F4EAEE4-DA4A-4E14-8DDE-970222968E5A}"
 EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Mapper.Gui.Common", "Mapper.Gui.Common\Mapper.Gui.Common.shproj", "{B79AA6B7-C73B-4867-9CB5-076EEB443EA1}"
+EndProject
 Global
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		Mapper.Gui.Common\Mapper.Gui.Common.projitems*{b79aa6b7-c73b-4867-9cb5-076eeb443ea1}*SharedItemsImports = 13
+		Mapper.Gui.Common\Mapper.Gui.Common.projitems*{22814061-837e-4723-bd36-8865486712bf}*SharedItemsImports = 5
+		Mapper.Gui.Common\Mapper.Gui.Common.projitems*{f9a58f05-99fa-4d08-9948-866ec134a926}*SharedItemsImports = 5
+	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Debug|ARM = Debug|ARM
@@ -249,6 +256,8 @@ Global
 		{F9A58F05-99FA-4D08-9948-866EC134A926} = {1066015E-11D8-4AE9-821F-306337E4A1CF}
 		{72ACD655-1A02-2F22-6A64-C81923763A7F} = {1066015E-11D8-4AE9-821F-306337E4A1CF}
 		{9F4EAEE4-DA4A-4E14-8DDE-970222968E5A} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{B79AA6B7-C73B-4867-9CB5-076EEB443EA1} = {1066015E-11D8-4AE9-821F-306337E4A1CF}
+		{22814061-837E-4723-BD36-8865486712BF} = {1066015E-11D8-4AE9-821F-306337E4A1CF}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {CEB7ADBA-EAA5-4C60-BC2E-2D79D60F31C4}

@@ -159,4 +159,7 @@
     </None>
   </ItemGroup>
 
+  <!-- Code shared with the other GUI -->
+  <Import Project="..\Mapper.Gui.Common\Mapper.Gui.Common.projitems" Label="Shared" />
+
 </Project>

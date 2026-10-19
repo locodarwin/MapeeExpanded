@@ -21,9 +21,12 @@
 //   height:<surface|slice|caves>[:<y>]  set the height panel
 //   drag:<x1>,<y1>,<x2>,<y2>          left-drag across the main window
 //   save:<screenshot|full>:<file>     export the map as the Export as image window would
+//   webmap:<folder>                   export the dimension on screen as a web map
+//   check:<control name>              tick a radio button or check box in any open window
 //   close                             close every window but the main one
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -175,6 +178,24 @@ foreach (string step in args.Skip(1))
             Pump(200);
             Console.WriteLine($"  saved {save[1]} ({new FileInfo(save[1]).Length:N0} bytes)");
             break;
+        case "webmap":
+            IImageSaver webSaver = controller.ToolbarWidget.ToolButtonSegments.SelectMany(segment => segment.Tools)
+                .Select(tool => tool.Tool).OfType<ExportAsImageTool>().First().ImageSaver;
+            var export = webSaver.PrepareWebMap(value, new WebMapOptions() { IncludeMarkers = true });
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            WebMapProgress last = default;
+            Task exporting = Task.Run(() => export(new SynchronousProgress<WebMapProgress>(p => last = p), CancellationToken.None));
+            while (!exporting.IsCompleted) Pump(100);
+            exporting.GetAwaiter().GetResult();
+            int tiles = Directory.GetFiles(Path.Combine(value, "tiles"), "*.png", SearchOption.AllDirectories).Length;
+            Console.WriteLine($"  {webSaver.WebMapDescription}: {last.Total} zoomed tiles, {tiles} tiles in all, {watch.ElapsedMilliseconds} ms");
+            break;
+        case "check":
+            ToggleButton toggle = windows.Select(window => window.FindControl<ToggleButton>(value)).FirstOrDefault(control => control is not null)
+                ?? throw new ArgumentException($"No open window has a control named {value}");
+            toggle.IsChecked = true;
+            Pump(300);
+            break;
         case "close":
             CloseOthers();
             break;
@@ -255,4 +276,9 @@ static Point ParsePoint(string text)
 {
     double[] values = text.Split(',').Select(double.Parse).ToArray();
     return new Point(values[0], values[1]);
+}
+
+class SynchronousProgress<T>(Action<T> report) : IProgress<T>
+{
+    public void Report(T value) => report(value);
 }

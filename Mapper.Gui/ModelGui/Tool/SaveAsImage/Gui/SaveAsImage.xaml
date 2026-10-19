@@ -11,7 +11,7 @@
         UseLayoutRounding="True"
         Icon="/Resources/Icon/ToolButton/ExportAsImage_64px.ico"
         Template="{DynamicResource CustomWindowFrameTemplate}"
-        Title="Save as image" Height="325" Width="387" Background="#FF232323" WindowStartupLocation="CenterScreen" Loaded="Window_Loaded">
+        Title="Export map" Height="325" Width="520" Background="#FF232323" WindowStartupLocation="CenterScreen" Loaded="Window_Loaded">
 
     <WindowChrome.WindowChrome>
         <WindowChrome GlassFrameThickness="0" CornerRadius="0" CaptionHeight="0" UseAeroCaptionButtons="False" ResizeBorderThickness="7"/>
@@ -36,16 +36,19 @@
         <Grid Grid.Row="0" Margin="5, 5, 0, 0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="165" />
+                <ColumnDefinition Width="185" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
             <RadioButton x:Name="ScreenshotRadioButton" Foreground="#FFEEEEEE" Content="Screenshot" IsChecked="True" Grid.Column="0" Checked="ScreenshotRadioButton_Checked" />
             <RadioButton x:Name="FullResolutionButton" Foreground="#FFEEEEEE" Content="Full resolution" Grid.Column="1" Checked="FullResolutionButton_Checked" />
+            <RadioButton x:Name="WebMapButton" Foreground="#FFEEEEEE" Content="Web map" Grid.Column="2" Checked="WebMapButton_Checked" />
         </Grid>
 
         <TextBlock x:Name="DescriptionLabel" Foreground="#FFBBBBBB" Text="Description:" FontStyle="Italic" TextWrapping="WrapWithOverflow" Margin="25, 5, 10, 0" Grid.Row="1" />
 
         <Border BorderBrush="#FF606060" BorderThickness="0, 1, 0, 0" Grid.Row="2" HorizontalAlignment="Left">
+          <Grid>
             <Grid x:Name="FullResolutionPanel" Margin="5, 8, 0, 0" Width="350">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -72,6 +75,14 @@
                     <RadioButton x:Name="InvisibleColorRadioBox" Content="Invisible" Foreground="#FFEEEEEE" Grid.Column="2" />
                 </Grid>
             </Grid>
+
+            <StackPanel x:Name="WebMapPanel" Margin="5, 8, 0, 0" Width="350" Visibility="Hidden">
+                <Label Content="Map" FontSize="14" FontWeight="Bold" Margin="14, 0, 0, 1" Foreground="#FFEEEEEE" />
+                <TextBlock x:Name="WebMapDescriptionLabel" Foreground="#FFBBBBBB" Margin="19, 0, 0, 6" />
+                <CheckBox x:Name="IncludeMarkersCheckBox" IsChecked="True" Content="Mark the spawn and the player" Foreground="#FFEEEEEE" Margin="0, 0, 0, 5" />
+                <CheckBox x:Name="OpenWhenDoneCheckBox" IsChecked="True" Content="Open in the browser when done" Foreground="#FFEEEEEE" />
+            </StackPanel>
+          </Grid>
         </Border>
 
         <Grid Grid.Row="3" Margin="0, 0, 0, 13" HorizontalAlignment="Left" VerticalAlignment="Bottom">
@@ -107,7 +118,7 @@
                 </Button>
             </Border>
 
-            <TextBlock x:Name="SavingLabel" Grid.Column="1" Width="75" Margin="12, 0, 0, 0" Foreground="#FFBBBBBB" VerticalAlignment="Center" Visibility="Collapsed" Text="Saving" />
+            <TextBlock x:Name="SavingLabel" Grid.Column="1" Margin="12, 0, 0, 0" Foreground="#FFBBBBBB" VerticalAlignment="Center" Visibility="Collapsed" Text="Saving" />
         </Grid>
     </Grid>
 </Window>

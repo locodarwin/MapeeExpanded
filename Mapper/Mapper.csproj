@@ -36,6 +36,11 @@
     <PackageReference Include="StbImageSharp" Version="2.30.15" />
   </ItemGroup>
 
+  <!-- The page a web map export opens with; filled in with the map's data when written -->
+  <ItemGroup>
+    <EmbeddedResource Include="Export\WebMapViewer.html" LogicalName="Mapper.Export.WebMapViewer.html" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\AssetSystem\AssetSystem.csproj" />
     <ProjectReference Include="..\CommonUtilities\CommonUtilities.csproj" />

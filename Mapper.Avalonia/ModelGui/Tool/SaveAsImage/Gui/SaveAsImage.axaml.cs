@@ -1,5 +1,7 @@
 using Mapper.Gui.Model;
 using System;
+using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -17,6 +19,10 @@ namespace Mapper.Gui
         private int _savingDotCount;
         private bool _isSaving;
 
+        // Set while a web map exports; the save button cancels it
+        private CancellationTokenSource? _webMapCancellation;
+        private string _webMapStatus = string.Empty;
+
         public SaveAsImageControl(IImageSaver imageSaver)
         {
             InitializeComponent();
@@ -33,24 +39,34 @@ namespace Mapper.Gui
             {
                 if (ScreenshotRadioButton.IsChecked != true) return;
                 SetScreenshotDescritpion();
-                SetFullResolutionPanelEnabled(false);
+                ShowPanel(null);
             };
             FullResolutionButton.IsCheckedChanged += (sender, e) =>
             {
                 if (FullResolutionButton.IsChecked != true) return;
                 SetFullScreenResolutionDescritpion();
-                SetFullResolutionPanelEnabled(true);
+                ShowPanel(FullResolutionPanel);
+            };
+            WebMapButton.IsCheckedChanged += (sender, e) =>
+            {
+                if (WebMapButton.IsChecked != true) return;
+                SetWebMapDescription();
+                ShowPanel(WebMapPanel);
             };
             ClipAreaCheckBox.IsCheckedChanged += (sender, e) => SetFullResolutionLabel();
 
             SetScreenshotDescritpion();
-            SetFullResolutionPanelEnabled(false);
+            ShowPanel(null);
 
             SetScreenshotLabel();
             SetFullResolutionLabel();
+            WebMapButton.IsEnabled = _imageSaver.CanSaveWebMap;
+            WebMapDescriptionLabel.Text = _imageSaver.WebMapDescription;
+
+            Closing += (sender, e) => _webMapCancellation?.Cancel();
         }
 
-        private void SetScreenshotLabel() 
+        private void SetScreenshotLabel()
         {
             Size size = _imageSaver.GetScreenshotSize();
             ScreenshotRadioButton.Content = $"Screenshot  ({size.Width}x{size.Height})";
@@ -58,13 +74,18 @@ namespace Mapper.Gui
         private void SetFullResolutionLabel()
         {
             Size size = _imageSaver.GetFullResolutionSize(CreateFullResolutionImageArgs());
-            FullResolutionButton.Content = $"Full resolution  ({size.Width}x{size.Height})";
+            // Until something has rendered there is no area to measure
+            bool measured = size.Width > 0 && size.Height > 0;
+            FullResolutionButton.Content = measured ? $"Full resolution  ({size.Width}x{size.Height})" : "Full resolution";
         }
 
-        private void SetFullResolutionPanelEnabled(bool enabled)
+        private void ShowPanel(Control? panel)
         {
-            FullResolutionPanel.Opacity = enabled ? 1 : 0;
-            FullResolutionPanel.IsHitTestVisible = enabled;
+            foreach (Control each in new Control[] { FullResolutionPanel, WebMapPanel })
+            {
+                each.Opacity = each == panel ? 1 : 0;
+                each.IsHitTestVisible = each == panel;
+            }
         }
 
         private void SetScreenshotDescritpion()
@@ -77,10 +98,26 @@ namespace Mapper.Gui
             string description = "Saves the image as one pixel per block. Gridlines will note be visible. Image size can be rather large.";
             DescriptionLabel.Text = $"Description: {description}";
         }
+        private void SetWebMapDescription()
+        {
+            string description = "Renders the whole dimension, not only what has loaded, into a folder with a page that pans and zooms in any browser. Large worlds take a while.";
+            DescriptionLabel.Text = $"Description: {description}";
+        }
 
         private async void SaveButton_Click(object? sender, RoutedEventArgs e)
         {
+            if (_webMapCancellation is not null)
+            {
+                _webMapCancellation.Cancel();
+                return;
+            }
             if (_isSaving) return;
+
+            if (WebMapButton.IsChecked == true)
+            {
+                await SaveWebMap();
+                return;
+            }
 
             IStorageFile? file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions()
             {
@@ -128,6 +165,80 @@ namespace Mapper.Gui
             Close();
         }
 
+        private async Task SaveWebMap()
+        {
+            var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions()
+            {
+                Title = "Choose an empty folder for the web map",
+                AllowMultiple = false
+            });
+            string? folder = folders.Count > 0 ? folders[0].TryGetLocalPath() : null;
+            if (folder is null) return;
+
+            Action<IProgress<WebMapProgress>?, CancellationToken> export;
+            try
+            {
+                export = _imageSaver.PrepareWebMap(folder, new WebMapOptions() { IncludeMarkers = IncludeMarkersCheckBox.IsChecked == true });
+            }
+            catch (Exception exception)
+            {
+                await MessageWindow.Show($"Web map could not be exported.\n\n{exception.Message}", "Export map", this);
+                return;
+            }
+
+            Progress<WebMapProgress> progress = new(ShowWebMapProgress);
+            using CancellationTokenSource cancellation = new();
+            _webMapCancellation = cancellation;
+            _webMapStatus = "Starting";
+            Exception? saveException = null;
+
+            BeginSaving();
+            SaveButton.IsEnabled = true;
+            SaveButton.Content = "Cancel";
+
+            try
+            {
+                await Task.Run(() => export(progress, cancellation.Token));
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                saveException = exception;
+            }
+            finally
+            {
+                _webMapCancellation = null;
+                SaveButton.Content = "Save as...";
+                EndSaving();
+            }
+
+            if (cancellation.IsCancellationRequested) return;
+            if (saveException is not null)
+            {
+                await MessageWindow.Show($"Web map could not be exported.\n\n{saveException.Message}", "Export map", this);
+                return;
+            }
+
+            if (OpenWhenDoneCheckBox.IsChecked == true)
+            {
+                await Launcher.LaunchFileInfoAsync(new FileInfo(Path.Combine(folder, "index.html")));
+            }
+            Close();
+        }
+
+        private void ShowWebMapProgress(WebMapProgress progress)
+        {
+            _webMapStatus = progress.Stage switch
+            {
+                WebMapStage.Rendering => $"Rendering regions {progress.Done} / {progress.Total}",
+                WebMapStage.Zooming => $"Making zoom levels {progress.Done} / {progress.Total}",
+                _ => "Finishing"
+            };
+            SavingLabel.Text = _webMapStatus;
+        }
+
         private void BeginSaving()
         {
             _isSaving = true;
@@ -143,11 +254,15 @@ namespace Mapper.Gui
             _savingAnimationTimer.Stop();
             SavingLabel.IsVisible = false;
             SetControlsEnabled(true);
+            WebMapButton.IsEnabled = _imageSaver.CanSaveWebMap;
             _isSaving = false;
         }
 
         private void SavingAnimationTimer_Tick(object? sender, EventArgs e)
         {
+            // A web map reports its own progress instead
+            if (_webMapCancellation is not null) return;
+
             _savingDotCount = (_savingDotCount + 1) % 4;
             SavingLabel.Text = $"Saving{new string('.', _savingDotCount)}";
         }
@@ -156,14 +271,17 @@ namespace Mapper.Gui
         {
             ScreenshotRadioButton.IsEnabled = enabled;
             FullResolutionButton.IsEnabled = enabled;
+            WebMapButton.IsEnabled = enabled;
             ClipAreaCheckBox.IsEnabled = enabled;
             CheckerPatternRadioBox.IsEnabled = enabled;
             BlackColorRadioBox.IsEnabled = enabled;
             InvisibleColorRadioBox.IsEnabled = enabled;
+            IncludeMarkersCheckBox.IsEnabled = enabled;
+            OpenWhenDoneCheckBox.IsEnabled = enabled;
             SaveButton.IsEnabled = enabled;
         }
 
-        private FullResolutionImageArgs CreateFullResolutionImageArgs() 
+        private FullResolutionImageArgs CreateFullResolutionImageArgs()
         {
             return new FullResolutionImageArgs()
             {

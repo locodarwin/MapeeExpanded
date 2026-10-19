@@ -4,17 +4,19 @@
         CanResize="False"
         UseLayoutRounding="True"
         Icon="avares://Mapee/Resources/Icon/ToolButton/ExportAsImage_64px.ico"
-        Title="Save as image" Height="325" Width="470" Background="#FF232323" WindowStartupLocation="CenterOwner">
+        Title="Export map" Height="325" Width="620" Background="#FF232323" WindowStartupLocation="CenterOwner">
 
     <Grid Margin="15,15,15,0" RowDefinitions="32,56,Auto,*">
         <StackPanel Grid.Row="0" Margin="5,0,0,0" Orientation="Horizontal" Spacing="20">
             <RadioButton x:Name="ScreenshotRadioButton" GroupName="Kind" Content="Screenshot" IsChecked="True" />
             <RadioButton x:Name="FullResolutionButton" GroupName="Kind" Content="Full resolution" />
+            <RadioButton x:Name="WebMapButton" GroupName="Kind" Content="Web map" />
         </StackPanel>
 
         <TextBlock x:Name="DescriptionLabel" Foreground="#FFBBBBBB" Text="Description:" FontStyle="Italic" TextWrapping="Wrap" Margin="25,5,10,0" Grid.Row="1" />
 
         <Border BorderBrush="#FF606060" BorderThickness="0,1,0,0" Grid.Row="2" HorizontalAlignment="Left">
+          <Grid>
             <StackPanel x:Name="FullResolutionPanel" Margin="5,8,0,0" Width="350">
                 <TextBlock Text="Area" FontSize="14" FontWeight="Bold" Margin="0,0,0,2" Foreground="#FFEEEEEE" />
                 <CheckBox x:Name="ClipAreaCheckBox" IsChecked="True" Content="Clip area to only rendered regions" />
@@ -26,11 +28,19 @@
                     <RadioButton x:Name="InvisibleColorRadioBox" GroupName="Background" Content="Invisible" Grid.Column="2" />
                 </Grid>
             </StackPanel>
+
+            <StackPanel x:Name="WebMapPanel" Margin="5,8,0,0" Width="350">
+                <TextBlock Text="Map" FontSize="14" FontWeight="Bold" Margin="0,0,0,2" Foreground="#FFEEEEEE" />
+                <TextBlock x:Name="WebMapDescriptionLabel" Foreground="#FFBBBBBB" Margin="0,0,0,4" />
+                <CheckBox x:Name="IncludeMarkersCheckBox" IsChecked="True" Content="Mark the spawn and the player" />
+                <CheckBox x:Name="OpenWhenDoneCheckBox" IsChecked="True" Content="Open in the browser when done" />
+            </StackPanel>
+          </Grid>
         </Border>
 
         <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,13" HorizontalAlignment="Left" VerticalAlignment="Bottom">
             <Button x:Name="SaveButton" Content="Save as..." Classes="dialog" Width="100" Height="26" HorizontalContentAlignment="Center" Click="SaveButton_Click" />
-            <TextBlock x:Name="SavingLabel" Width="75" Margin="12,0,0,0" Foreground="#FFBBBBBB" VerticalAlignment="Center" IsVisible="False" Text="Saving" />
+            <TextBlock x:Name="SavingLabel" Margin="12,0,0,0" Foreground="#FFBBBBBB" VerticalAlignment="Center" IsVisible="False" Text="Saving" />
         </StackPanel>
     </Grid>
 </Window>

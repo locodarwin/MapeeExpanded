@@ -113,7 +113,7 @@ namespace Mapper.Gui.Controller
             ExportAsImageTool tool = new(Renderer);
             ToolButton output = new(tool)
             {
-                ToolTip = "Export as image",
+                ToolTip = "Export as image or web map",
                 Icon = new BitmapImage(new Uri("/Resources/Image/ToolButton/ExportAsImage_22px.png", UriKind.Relative))
             };
 

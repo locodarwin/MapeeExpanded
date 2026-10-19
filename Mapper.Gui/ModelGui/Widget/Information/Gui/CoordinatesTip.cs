@@ -25,6 +25,7 @@ namespace Mapper.Gui
         private readonly Scene _scene;
         private readonly CanvasControl _canvas;
         private readonly TextBlock _text;
+        private readonly Border _border;
         private readonly DispatcherTimer _timer;
         // While the label shows, checks that the cursor is still where it was
         private readonly DispatcherTimer _watch;
@@ -41,7 +42,7 @@ namespace Mapper.Gui
             _canvas = information.MainControl;
 
             _text = new TextBlock() { FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(224, 224, 224)) };
-            Content = new Border()
+            _border = new Border()
             {
                 Child = _text,
                 Background = new SolidColorBrush(Color.FromArgb(208, 24, 24, 24)),
@@ -50,6 +51,7 @@ namespace Mapper.Gui
                 CornerRadius = new CornerRadius(3),
                 Padding = new Thickness(6, 2, 6, 2)
             };
+            Content = _border;
             HorizontalAlignment = HorizontalAlignment.Left;
             VerticalAlignment = VerticalAlignment.Top;
             IsHitTestVisible = false;
@@ -119,15 +121,17 @@ namespace Mapper.Gui
             }
 
             _text.Text = CursorCoordinates.Format(_block.X, _block.Z, _column);
-            // A collapsed element measures as nothing
+            // A collapsed element measures as nothing. The border, not this control: this control's size takes in its
+            // margin, which is where the label was last time
             Visibility = Visibility.Hidden;
-            Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            _border.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            Size size = _border.DesiredSize;
 
             // Below and right of the pointer, or on the other side where that would leave the map
             double x = _position.X + CursorGapX;
             double y = _position.Y + CursorGapY;
-            if (x + DesiredSize.Width > _canvas.ActualWidth) x = _position.X - DesiredSize.Width - 4;
-            if (y + DesiredSize.Height > _canvas.ActualHeight) y = _position.Y - DesiredSize.Height - 4;
+            if (x + size.Width > _canvas.ActualWidth) x = _position.X - size.Width - 4;
+            if (y + size.Height > _canvas.ActualHeight) y = _position.Y - size.Height - 4;
 
             Margin = new Thickness(Math.Max(0, x), Math.Max(0, y), 0, 0);
             Visibility = Visibility.Visible;

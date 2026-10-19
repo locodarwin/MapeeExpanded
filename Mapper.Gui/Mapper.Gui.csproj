@@ -9,9 +9,6 @@
     <OutputPath>$(SolutionDir)Build\$(Configuration)\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
 
-    <TieredCompilation>false</TieredCompilation>
-    <TieredCompilationQuickJit>false</TieredCompilationQuickJit>
-    <TieredCompilationQuickJitForLoops>false</TieredCompilationQuickJitForLoops>
     <RetainVMGarbageCollection>false</RetainVMGarbageCollection>
     <ServerGarbageCollection>true</ServerGarbageCollection>
     <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
@@ -91,6 +88,12 @@
     <ProjectReference Include="..\MapScanner\MapScanner.csproj" />
     <ProjectReference Include="..\NbtEditor\NbtEditor.csproj" />
     <ProjectReference Include="..\WorldEditor\WorldEditor.csproj" />
+  </ItemGroup>
+
+  <!-- Shown by the generated Main as soon as the process starts, before the app's own code has compiled, and
+       closed once the main window is up -->
+  <ItemGroup>
+    <SplashScreen Include="Resources\Image\Logo\Splash.png" />
   </ItemGroup>
 
   <ItemGroup>

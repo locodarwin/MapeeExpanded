@@ -2,7 +2,6 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.Windows.Media;
 using WorldEditor;
 
 namespace Mapper.Gui.Logic
@@ -126,11 +125,11 @@ namespace Mapper.Gui.Logic
             if (_currentScene is null || Scene.Domain.CurrentWorld is null || _inSceneChangingProcess) return;
             if (!IsSafeToAdd(coords.X, coords.Z)) return;
 
-            ImageSource? bitmap = CanvasBitmap.Create(canvas);
+            var bitmap = CanvasBitmap.Create(canvas);
             if (bitmap is not null)
             {
-                Coords topLeft = new(canvas.TopLeftPoint.X - ((int)bitmap.Width - 1), canvas.TopLeftPoint.Z);
-                Coords bottomRight = new(topLeft.X + (int)bitmap.Width - 1, topLeft.Z + (int)bitmap.Height - 1);
+                Coords topLeft = new(canvas.TopLeftPoint.X - (canvas.PixelWidth - 1), canvas.TopLeftPoint.Z);
+                Coords bottomRight = new(topLeft.X + canvas.PixelWidth - 1, topLeft.Z + canvas.PixelHeight - 1);
 
                 if (topLeft.X < _currentScene.TopLeft.X) _currentScene.TopLeft = new XzPoint(topLeft.X, _currentScene.TopLeft.Z);
                 if (topLeft.Z < _currentScene.TopLeft.Z) _currentScene.TopLeft = new XzPoint(_currentScene.TopLeft.X, topLeft.Z);
@@ -141,8 +140,8 @@ namespace Mapper.Gui.Logic
                 XzRange areaInRegion = new(
                     MathUtilities.NegMod(topLeft.X, 512),
                     MathUtilities.NegMod(topLeft.Z, 512),
-                    (int)bitmap.Width - 1,
-                    (int)bitmap.Height - 1);
+                    canvas.PixelWidth - 1,
+                    canvas.PixelHeight - 1);
 
                 RenderedRegion output = new(new XzPoint(coords.X, coords.Z), areaInRegion, bitmap);
                 AddSafely(output);

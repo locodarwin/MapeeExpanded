@@ -18,6 +18,12 @@ namespace Mapper
 
         public static void Write(Stream output, byte[] rgba, int width, int height)
         {
+            using PngRowWriter writer = new(output, width, height);
+            for (int y = 0; y < height; y++) writer.WriteRow(rgba.AsSpan(y * width * 4, width * 4));
+        }
+
+        internal static void WriteHeader(Stream output, int width, int height)
+        {
             output.Write(Signature);
 
             byte[] header = new byte[13];
@@ -26,40 +32,21 @@ namespace Mapper
             header[8] = 8;  // bits per channel
             header[9] = 6;  // RGBA
             WriteChunk(output, "IHDR", header);
-
-            using (MemoryStream compressed = new())
-            {
-                using (ZLibStream zlib = new(compressed, CompressionLevel.Optimal, leaveOpen: true))
-                {
-                    WriteRows(zlib, rgba, width, height);
-                }
-                WriteChunk(output, "IDAT", compressed.GetBuffer().AsSpan(0, (int)compressed.Length));
-            }
-
-            WriteChunk(output, "IEND", []);
         }
 
-        private static void WriteRows(Stream output, byte[] rgba, int width, int height)
+        // Writes the row, filtered whichever way leaves the smallest numbers, with its filter byte first
+        internal static void WriteRow(Stream output, ReadOnlySpan<byte> row, ReadOnlySpan<byte> above, ref byte[] best, ref byte[] trial)
         {
-            int stride = width * 4;
-            byte[] best = new byte[stride + 1], trial = new byte[stride + 1];
-
-            for (int y = 0; y < height; y++)
+            long bestScore = long.MaxValue;
+            for (byte filter = 0; filter <= 4; filter++)
             {
-                ReadOnlySpan<byte> row = rgba.AsSpan(y * stride, stride);
-                ReadOnlySpan<byte> above = y == 0 ? new byte[stride] : rgba.AsSpan((y - 1) * stride, stride);
+                long score = Filter(filter, row, above, trial);
+                if (score >= bestScore) continue;
 
-                long bestScore = long.MaxValue;
-                for (byte filter = 0; filter <= 4; filter++)
-                {
-                    long score = Filter(filter, row, above, trial);
-                    if (score >= bestScore) continue;
-
-                    bestScore = score;
-                    (best, trial) = (trial, best);
-                }
-                output.Write(best);
+                bestScore = score;
+                (best, trial) = (trial, best);
             }
+            output.Write(best);
         }
 
         // Fills output with the filter byte and the filtered row; returns how far the bytes are from zero
@@ -98,7 +85,7 @@ namespace Mapper
             return pb <= pc ? b : c;
         }
 
-        private static void WriteChunk(Stream output, string type, ReadOnlySpan<byte> data)
+        internal static void WriteChunk(Stream output, string type, ReadOnlySpan<byte> data)
         {
             Span<byte> number = stackalloc byte[4];
             BinaryPrimitives.WriteInt32BigEndian(number, data.Length);
@@ -129,6 +116,87 @@ namespace Mapper
                 table[n] = c;
             }
             return table;
+        }
+    }
+
+    // Writes a PNG a row at a time, so an image too big to hold in memory can be written as it's drawn. The
+    // compressed data goes out in IDAT chunks of up to a megabyte. Disposing writes the end of the file
+    public sealed class PngRowWriter : IDisposable
+    {
+        private readonly Stream _output;
+        private readonly int _width, _height;
+        private readonly IdatStream _idat;
+        private readonly ZLibStream _zlib;
+        private byte[] _best, _trial;
+        private readonly byte[] _above;  // zeros before the first row, as the filters expect
+        private int _rows;
+        private bool _disposed;
+
+        public PngRowWriter(Stream output, int width, int height)
+        {
+            if (width <= 0 || height <= 0) throw new ArgumentOutOfRangeException(nameof(width), "A PNG needs at least one pixel");
+
+            _output = output;
+            _width = width;
+            _height = height;
+            _above = new byte[width * 4];
+            _best = new byte[width * 4 + 1];
+            _trial = new byte[width * 4 + 1];
+
+            PngWriter.WriteHeader(output, width, height);
+            _idat = new IdatStream(output);
+            _zlib = new ZLibStream(_idat, CompressionLevel.Optimal, leaveOpen: true);
+        }
+
+        // One row of RGBA pixels, top first
+        public void WriteRow(ReadOnlySpan<byte> rgba)
+        {
+            if (rgba.Length != _width * 4) throw new ArgumentException($"A row is {_width * 4} bytes", nameof(rgba));
+            if (_rows == _height) throw new InvalidOperationException("Every row has been written");
+
+            PngWriter.WriteRow(_zlib, rgba, _above, ref _best, ref _trial);
+            rgba.CopyTo(_above);
+            _rows++;
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            _zlib.Dispose();
+            _idat.Flush();
+            if (_rows != _height) throw new InvalidOperationException($"Only {_rows} of {_height} rows were written");
+            PngWriter.WriteChunk(_output, "IEND", []);
+        }
+
+        private sealed class IdatStream(Stream output) : Stream
+        {
+            private const int ChunkSize = 1 << 20;
+            private readonly MemoryStream _buffer = new();
+
+            public override void Write(byte[] buffer, int offset, int count) => Write(buffer.AsSpan(offset, count));
+            public override void Write(ReadOnlySpan<byte> buffer)
+            {
+                _buffer.Write(buffer);
+                if (_buffer.Length >= ChunkSize) Flush();
+            }
+
+            public override void Flush()
+            {
+                if (_buffer.Length == 0) return;
+                PngWriter.WriteChunk(output, "IDAT", _buffer.GetBuffer().AsSpan(0, (int)_buffer.Length));
+                _buffer.SetLength(0);
+            }
+
+            public override bool CanRead => false;
+            public override bool CanSeek => false;
+            public override bool CanWrite => true;
+            public override long Length => throw new NotSupportedException();
+            public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+            public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+            public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+            public override void SetLength(long value) => throw new NotSupportedException();
         }
     }
 }

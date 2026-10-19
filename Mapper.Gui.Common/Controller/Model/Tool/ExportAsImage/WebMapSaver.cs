@@ -33,41 +33,41 @@ namespace Mapper.Gui.Controller
         {
             WorldDomain world = Scene.Domain.CurrentWorld ?? throw new InvalidOperationException("No world is open");
 
-            var targets = Targets().Select(dimension =>
+            List<WebMapTarget> targets = [.. Targets().Select(dimension =>
             {
                 Profile profile = Scene.GetDrawingProfile(world, dimension, out ScanType scanType);
-                return new
-                {
-                    Dimension = dimension,
-                    Profile = profile,
-                    ScanType = scanType,
-                    Subtitle = Describe(world, dimension),
-                    Markers = options.IncludeMarkers ? Markers(world.Level, dimension) : []
-                };
-            }).ToList();
+                return new WebMapTarget(dimension, profile, scanType, Describe(world, dimension), options.IncludeMarkers ? Markers(world.Level, dimension) : []);
+            })];
             string title = world.Level.WorldName ?? "Map";
             string current = WebMapFolder.IdOf(world.CurrentDimension.Dimension);
+            AssetPack assetPack = Scene.Domain.DefaultAssetPack;
 
-            return (progress, cancellation) =>
+            return (progress, cancellation) => _ = Export(assetPack, world.Level, targets, folder, title, current, progress, cancellation);
+        }
+
+        // Writes the dimensions into the folder as one web map that opens on the current one, and returns those
+        // written (a dimension with no regions is left out). Runs anywhere
+        public static IList<WebMapDimension> Export(AssetPack defaultAssetPack, Level level, IList<WebMapTarget> targets, string folder, string title, string current,
+            IProgress<WebMapProgress>? progress, CancellationToken cancellation)
+        {
+            WebMapFolder.Clear(folder, targets.Select(t => WebMapFolder.IdOf(t.Dimension)));
+
+            List<WebMapDimension> dimensions = [];
+            foreach (WebMapTarget target in targets)
             {
-                WebMapFolder.Clear(folder, targets.Select(t => WebMapFolder.IdOf(t.Dimension)));
+                cancellation.ThrowIfCancellationRequested();
 
-                List<WebMapDimension> dimensions = [];
-                foreach (var target in targets)
-                {
-                    cancellation.ThrowIfCancellationRequested();
+                ChunkMapperPack pack = new(defaultAssetPack);
+                pack.UpdatePack(target.Profile, target.ScanType);
 
-                    ChunkMapperPack pack = new(Scene.Domain.DefaultAssetPack);
-                    pack.UpdatePack(target.Profile, target.ScanType);
+                SceneInfo scene = new(level, target.Dimension);
+                if (WebMapExporter.Export(pack, scene, folder, WebMapFolder.IdOf(target.Dimension), target.Dimension.Name, target.Subtitle, target.Markers, progress, cancellation)
+                    is WebMapDimension dimension) dimensions.Add(dimension);
+            }
 
-                    SceneInfo scene = new(world.Level, target.Dimension);
-                    if (WebMapExporter.Export(pack, scene, folder, WebMapFolder.IdOf(target.Dimension), target.Dimension.Name, target.Subtitle, target.Markers, progress, cancellation)
-                        is WebMapDimension dimension) dimensions.Add(dimension);
-                }
-
-                WebMapPage.Write(folder, title, dimensions, current);
-                progress?.Report(new WebMapProgress(WebMapStage.Done, 1, 1));
-            };
+            WebMapPage.Write(folder, title, dimensions, current);
+            progress?.Report(new WebMapProgress(WebMapStage.Done, 1, 1));
+            return dimensions;
         }
 
         public string Describe()
@@ -83,7 +83,7 @@ namespace Mapper.Gui.Controller
             return string.Join(" · ", parts);
         }
 
-        private static string Describe(HeightCut cut) => cut.Caves ? $"caves below Y {cut.Y}" : $"slice at Y {cut.Y}";
+        public static string Describe(HeightCut cut) => cut.Caves ? $"caves below Y {cut.Y}" : $"slice at Y {cut.Y}";
 
         // The three, and the dimension on screen if it's another
         private IEnumerable<Dimension> Targets()
@@ -101,7 +101,8 @@ namespace Mapper.Gui.Controller
             return string.Join(" · ", parts);
         }
 
-        private static List<WebMapMarker> Markers(Level level, Dimension dimension)
+        // The world spawn in the Overworld and the player in whichever dimension they are in
+        public static List<WebMapMarker> Markers(Level level, Dimension dimension)
         {
             List<WebMapMarker> markers = [];
             if (dimension == Dimension.Overworld) markers.Add(new WebMapMarker("Spawn", level.WorldGen.WorldSpawn.X, level.WorldGen.WorldSpawn.Z));
@@ -109,4 +110,7 @@ namespace Mapper.Gui.Controller
             return markers;
         }
     }
+
+    // One dimension of a web map and how it's drawn
+    public record WebMapTarget(Dimension Dimension, Profile Profile, ScanType ScanType, string Subtitle, IList<WebMapMarker> Markers);
 }

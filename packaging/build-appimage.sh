@@ -3,6 +3,7 @@
 #   APPIMAGETOOL=/path/to/appimagetool packaging/build-appimage.sh [version]
 # appimagetool: https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
 # DOTNET defaults to dotnet on PATH, then ~/.dotnet/dotnet. Output: artifacts/MapeeExpanded-<version>-x86_64.AppImage
+# The command line tool (Mapee.Cli) goes in beside the GUI: `Mapee.AppImage render|webmap|worlds|styles ...` runs it
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -28,6 +29,13 @@ DOTNET_CLI_TELEMETRY_OPTOUT=1 "$DOTNET" publish "$ROOT/Mapper.Avalonia/Mapper.Av
   --self-contained true \
   --output "$PUBLISH_DIR"
 
+# Same libraries at the same versions, so the two share the folder; each has its own deps.json
+DOTNET_CLI_TELEMETRY_OPTOUT=1 "$DOTNET" publish "$ROOT/Mapee.Cli/Mapee.Cli.csproj" \
+  --configuration Release \
+  --runtime linux-x64 \
+  --self-contained true \
+  --output "$PUBLISH_DIR"
+
 cp -a "$PUBLISH_DIR/." "$APP_DIR/usr/bin/"
 cp "$ROOT/Mapper.Gui/Resources/Image/Logo/Logo_512px.png" "$APP_DIR/mapee.png"
 cp "$ROOT/Mapper.Gui/Resources/Image/Logo/Logo_512px.png" "$APP_DIR/usr/share/icons/hicolor/512x512/apps/mapee.png"
@@ -35,6 +43,9 @@ cp "$ROOT/Mapper.Gui/Resources/Image/Logo/Logo_512px.png" "$APP_DIR/usr/share/ic
 cat > "$APP_DIR/AppRun" <<'APPRUN'
 #!/usr/bin/env bash
 HERE="$(dirname "$(readlink -f "$0")")"
+case "${1:-}" in
+  render|webmap|worlds|styles|help|--help|--version) exec "$HERE/usr/bin/mapee-cli" "$@" ;;
+esac
 exec "$HERE/usr/bin/Mapee" "$@"
 APPRUN
 chmod +x "$APP_DIR/AppRun"

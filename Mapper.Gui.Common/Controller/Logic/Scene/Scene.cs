@@ -42,17 +42,7 @@ namespace Mapper.Gui.Logic
 
         public void SetWorld(Level level)
         {
-            if (level.Version.Version == WorldEditor.Version.Unknown) 
-            {
-                bool hasAlphaChunks = Directory.EnumerateFiles(level.Directory ?? "", "c.*.*.dat", SearchOption.AllDirectories).Any();
-                if (hasAlphaChunks)
-                {
-                    level.Version = new LevelVersion()
-                    {
-                        Version = WorldEditor.Version.Pre_Beta_1_2
-                    };
-                }
-            }
+            DetectAlphaWorld(level);
 
             SceneInfo sceneParameter = new(level, Dimension.Overworld);
             DimensionDomain dimension = new(new RenderedScene(sceneParameter))
@@ -76,6 +66,20 @@ namespace Mapper.Gui.Logic
 
             WorldChanged?.Invoke(old, Domain.CurrentWorld);
         }
+        // A world from before Beta 1.2 has no version; its chunks in c.<x>.<z>.dat files give it away
+        public static void DetectAlphaWorld(Level level)
+        {
+            if (level.Version.Version != WorldEditor.Version.Unknown) return;
+
+            bool hasAlphaChunks = Directory.EnumerateFiles(level.Directory ?? "", "c.*.*.dat", SearchOption.AllDirectories).Any();
+            if (hasAlphaChunks)
+            {
+                level.Version = new LevelVersion()
+                {
+                    Version = WorldEditor.Version.Pre_Beta_1_2
+                };
+            }
+        }
         private void ClearsWorld()
         {
             if (Domain.CurrentWorld is null) return;
@@ -83,6 +87,16 @@ namespace Mapper.Gui.Logic
         }
 
         private void LoadDataPacks(Level level, WorldDomain world) 
+        {
+            DataPackAssetPack? assetPack = ReadDataPacks(level, Domain.TexturePack.AssetPack.Colormap);
+            if (assetPack is null) return;
+
+            world.DataPack = assetPack;
+            if (!world.Style.Metadata.DisableDatapackStyle) UseDataPackColors(world.Style, assetPack);
+        }
+
+        // The colours the world's data packs give their biomes, or null when it has none that load
+        public static DataPackAssetPack? ReadDataPacks(Level level, Colormap colormap)
         {
             DataPackReader reader = new();
             IList<IDataPack> dataPacks = new List<IDataPack>();
@@ -100,28 +114,23 @@ namespace Mapper.Gui.Logic
             }
 
             DataPackAssetPackFactory factory = new DataPackAssetPackFactory();
-            DataPackAssetPack? assetPack = factory.Create(new DataPackAssetPackFactoryArgs() 
+            return factory.Create(new DataPackAssetPackFactoryArgs() 
             {
                 DataPacks = dataPacks,
-                Colormap = Domain.TexturePack.AssetPack.Colormap
+                Colormap = colormap
             });
-
-            if (assetPack is null) return;
-
-            world.DataPack = assetPack;
-            if (!world.Style.Metadata.DisableDatapackStyle) UpdateDatapackStyle(world);
         }
-        private void UpdateDatapackStyle(WorldDomain world) 
-        {
-            if (world.DataPack is null) return;
 
-            CompositeBiomeAsset<VecRgb> asset = new(world.DataPack.BiomeColorAsset, world.Style.AssetPack.BiomeColorAsset)
+        // Colours the data packs' biomes in the style, leaving the style's own colours for the rest
+        public static void UseDataPackColors(Style style, DataPackAssetPack dataPack) 
+        {
+            CompositeBiomeAsset<VecRgb> asset = new(dataPack.BiomeColorAsset, style.AssetPack.BiomeColorAsset)
             {
-                DefaultBiome = world.Style.AssetPack.BiomeColorAsset.DefaultBiome,
-                DefaultOutput = world.Style.AssetPack.BiomeColorAsset.DefaultOutput
+                DefaultBiome = style.AssetPack.BiomeColorAsset.DefaultBiome,
+                DefaultOutput = style.AssetPack.BiomeColorAsset.DefaultOutput
             };
 
-            world.Style.AssetPack.BiomeColorAsset = asset;
+            style.AssetPack.BiomeColorAsset = asset;
         }
 
         public void ChangeDimension(Dimension dimension)
@@ -169,7 +178,7 @@ namespace Mapper.Gui.Logic
                 SetDimensionProfile(dimension, style.GetProfile(dimension.Dimension));
             }
 
-            if (!style.Metadata.DisableDatapackStyle) UpdateDatapackStyle(Domain.CurrentWorld);
+            if (!style.Metadata.DisableDatapackStyle && Domain.CurrentWorld.DataPack is DataPackAssetPack dataPack) UseDataPackColors(style, dataPack);
 
             StyleReset?.Invoke(old, Domain.CurrentStyle);
             ProfileReset?.Invoke(Domain.CurrentWorld.CurrentDimension);
@@ -203,10 +212,16 @@ namespace Mapper.Gui.Logic
             Profile profile = new(world.Style.AssetPack, dimension.HeightmapSettings, dimension.RenderSettings);
             if (dimension.Cut is not HeightCut cut) return profile;
 
+            return Cut(profile, dimension.Dimension, cut, Domain.Styles, ref scanType);
+        }
+
+        // The profile started at the cut's height; for cave mode, the Caves style's profile (when there is one)
+        public static Profile Cut(Profile profile, Dimension dimension, HeightCut cut, IEnumerable<Style> styles, ref ScanType scanType)
+        {
             if (cut.Caves)
             {
                 scanType = ScanType.Cave;
-                if (Domain.Styles.FirstOrDefault(s => s.Metadata.Id == CavesStyleId) is Style caves) profile = caves.GetProfile(dimension.Dimension);
+                if (styles.FirstOrDefault(s => s.Metadata.Id == CavesStyleId) is Style caves) profile = caves.GetProfile(dimension);
             }
 
             HeightmapSettings heightmap = profile.HeightmapSettings;

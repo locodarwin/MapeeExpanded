@@ -15,6 +15,7 @@ Upstream website: [mapee.net](https://www.mapee.net/home)
 - The info bar names the block under the mouse with its height and biome, as the map shows it (so it follows the height panel), and for water or lava, how deep it is and what's at the bottom
 - Export as a web map: the export window's new **Web map** option renders the whole world, not only what has loaded, into a folder holding `index.html` and a tile pyramid for each of the Overworld, Nether and End the world has, each in the current style (and height cut, where the height panel is on). The page pans and zooms like an online map (mouse, touch, keyboard), switches between the dimensions, shows the block's X, Y and Z beside a resting mouse as Mapee does, marks the spawn and the player, has a region and chunk grid, and keeps the dimension and view in the address so a link opens where it was copied. It needs no internet and no server: open it from disk or put the folder on any web host. Any folder will do; if it already holds web map files, Mapee names them and asks before replacing them
 - Coordinates beside the mouse: rest the mouse over the map for a moment and a small label gives the block's X, Y and Z
+- Command line: `mapee-cli` draws a world without opening a window, a dimension into one PNG or the whole world into a web map, with the same styles and height cuts as the app (see "Command line" below)
 
 **Version 1.4.0**
 - Opens Bedrock Edition worlds: the world browser lists them next to Java worlds, and the open button takes a `level.dat` or a `.mcworld` file
@@ -26,6 +27,23 @@ Upstream website: [mapee.net](https://www.mapee.net/home)
 **Version 1.2.0** (upstream)
 - Added Alpha support
 - Added new blocks in 26.2
+
+# Command line
+
+`mapee-cli` comes with Mapee: `mapee-cli.exe` beside `Mapee.exe` on Windows; on Linux the AppImage runs it when its first argument is a command (`Mapee.AppImage render ...`). It draws the way the app does, and needs no display, so it can run from a script or a scheduled task.
+
+```
+mapee-cli render <world> --out map.png [--dimension overworld|nether|end] [--area x1,z1,x2,z2]
+mapee-cli webmap <world> --out <folder> [--dimension overworld,nether] [--no-markers] [--force]
+mapee-cli worlds          # the worlds in the game's world folders
+mapee-cli styles          # the style ids
+```
+
+- `<world>` is a world folder, its `level.dat`, a `.mcworld`, or the name of a world that `mapee-cli worlds` lists.
+- `render` writes one dimension at a pixel per block, transparent where nothing has been generated; `--area` keeps the blocks between two corners. It prints where the image lies in block coordinates.
+- `webmap` writes the same web map as the export window, every dimension the world has. An earlier web map in the folder is replaced without asking, so a map can be kept up to date from a script; other files that would be replaced need `--force`.
+- Both take `--style <id>` (default `default`), and `--slice <y>` or `--caves <y>` to draw as the height panel's Slice or Caves would.
+- Exit codes: 0 done, 1 failed or nothing to draw, 2 wrong usage, 130 cancelled.
 
 # Sample gui images
 

@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- mapee-cli: renders a world to a PNG or a web map from the command line, on Windows and Linux, with no window.
+       It draws through the Avalonia GUI's code (styles, height cuts, web map saver) and starts Avalonia headless only so
+       style icons can load. It needs the Resources folder beside it, as the GUIs do -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>mapee-cli</AssemblyName>
+    <RootNamespace>Mapee.Cli</RootNamespace>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <Product>Mapee Expanded</Product>
+  </PropertyGroup>
+
+  <!-- On Windows it ships as one exe beside Mapee.exe -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'win-x64'">
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Headless" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Skia" Version="12.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Mapper.Avalonia\Mapper.Avalonia.csproj" />
+  </ItemGroup>
+
+</Project>

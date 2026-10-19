@@ -220,14 +220,17 @@ void Start(string? startupWorld)
     Pump(1500);
 }
 
+// Runs the dispatcher's own loop in short frames, so DispatcherTimers fire as they would in the app (RunJobs alone
+// runs queued work but not timers)
 void Pump(int milliseconds)
 {
     DateTime end = DateTime.Now.AddMilliseconds(milliseconds);
     do
     {
-        Dispatcher.UIThread.RunJobs();
+        DispatcherFrame frame = new();
+        DispatcherTimer.RunOnce(() => frame.Continue = false, TimeSpan.FromMilliseconds(10));
+        Dispatcher.UIThread.PushFrame(frame);
         AvaloniaHeadlessPlatform.ForceRenderTimerTick();
-        Thread.Sleep(10);
     }
     while (DateTime.Now < end);
 }

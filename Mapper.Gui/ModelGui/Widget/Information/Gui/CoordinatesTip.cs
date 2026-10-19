@@ -1,9 +1,11 @@
 using Mapper.Gui.Logic;
 using Mapper.Gui.Model;
 using System;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 
@@ -15,6 +17,7 @@ namespace Mapper.Gui
     public class CoordinatesTip : ContentControl
     {
         private static readonly TimeSpan Delay = TimeSpan.FromMilliseconds(300);
+        private static readonly TimeSpan WatchInterval = TimeSpan.FromMilliseconds(100);
         private const double CursorGapX = 14;
         private const double CursorGapY = 18;
 
@@ -23,6 +26,8 @@ namespace Mapper.Gui
         private readonly CanvasControl _canvas;
         private readonly TextBlock _text;
         private readonly DispatcherTimer _timer;
+        // While the label shows, checks that the cursor is still where it was
+        private readonly DispatcherTimer _watch;
 
         private Point _position;
         private (int X, int Z) _block;
@@ -52,6 +57,8 @@ namespace Mapper.Gui
 
             _timer = new DispatcherTimer() { Interval = Delay };
             _timer.Tick += (sender, e) => Show();
+            _watch = new DispatcherTimer() { Interval = WatchInterval };
+            _watch.Tick += (sender, e) => Watch();
 
             _canvas.MouseMove += Canvas_MouseMove;
             _canvas.MouseDown += (sender, e) => Hide();
@@ -101,7 +108,15 @@ namespace Mapper.Gui
         private void Show()
         {
             _timer.Stop();
-            if (_scene.Domain.CurrentWorld is null || IsButtonDown() || !_canvas.IsMouseOver) return;
+            if (_scene.Domain.CurrentWorld is null || IsButtonDown() || !TryGetCursorOnMap(out Point cursor)) return;
+
+            // The cursor moved without the canvas hearing of it: the pause starts again from where it is
+            if (Moved(cursor))
+            {
+                _position = cursor;
+                Restart();
+                return;
+            }
 
             _text.Text = CursorCoordinates.Format(_block.X, _block.Z, _column);
             // A collapsed element measures as nothing
@@ -116,12 +131,69 @@ namespace Mapper.Gui
 
             Margin = new Thickness(Math.Max(0, x), Math.Max(0, y), 0, 0);
             Visibility = Visibility.Visible;
+            _watch.Start();
+        }
+
+        private void Watch()
+        {
+            if (TryGetCursorOnMap(out Point cursor) && !Moved(cursor) && !IsButtonDown()) return;
+
+            Hide();
+            if (TryGetCursorOnMap(out cursor))
+            {
+                _position = cursor;
+                Restart();
+            }
         }
 
         private void Hide()
         {
             _timer.Stop();
+            _watch.Stop();
             Visibility = Visibility.Collapsed;
         }
+
+        private bool Moved(Point cursor)
+        {
+            return Math.Abs(cursor.X - _position.X) > 1 || Math.Abs(cursor.Y - _position.Y) > 1;
+        }
+
+        // Where the cursor really is, asked of Windows. WPF's mouse position and IsMouseOver are left from the last
+        // event the canvas got, which can be stale: after the cursor leaves the window quickly, crosses another window,
+        // or a drag ends. False when the cursor isn't on the visible map
+        private bool TryGetCursorOnMap(out Point position)
+        {
+            position = default;
+            if (!GetCursorPos(out POINT screen)) return false;
+            if (Window.GetWindow(_canvas) is not Window window || PresentationSource.FromVisual(_canvas) is null) return false;
+
+            // Another window over this one
+            if (GetAncestor(WindowFromPoint(screen), GA_ROOT) != new WindowInteropHelper(window).Handle) return false;
+
+            position = _canvas.PointFromScreen(new Point(screen.X, screen.Y));
+            if (position.X < 0 || position.Y < 0 || position.X >= _canvas.ActualWidth || position.Y >= _canvas.ActualHeight) return false;
+
+            // A widget over the map, such as the style bar or the toolbar
+            Point inWindow = _canvas.TranslatePoint(position, window);
+            return window.InputHitTest(inWindow) is DependencyObject hit && (hit == _canvas || _canvas.IsAncestorOf(hit));
+        }
+
+        private const uint GA_ROOT = 2;
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct POINT
+        {
+            public int X;
+            public int Y;
+        }
+
+        [DllImport("user32.dll")]
+        private static extern bool GetCursorPos(out POINT point);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr WindowFromPoint(POINT point);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetAncestor(IntPtr hwnd, uint flags);
     }
 }

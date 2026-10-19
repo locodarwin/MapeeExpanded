@@ -17,6 +17,7 @@ namespace Mapper.Gui
 
         public override void OnFrameworkInitializationCompleted()
         {
+            StartupLog.Mark("Avalonia initialised");
             AppDomain.CurrentDomain.UnhandledException += UnhandledExceptions;
             InitializeBackgroundWork();
 

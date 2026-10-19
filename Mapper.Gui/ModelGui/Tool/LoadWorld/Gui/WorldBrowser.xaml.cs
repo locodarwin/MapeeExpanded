@@ -38,12 +38,15 @@ namespace Mapper.Gui
             BaseDirectories = baseDirectories;
             LevelReader = levelReader;
 
+            StartupLog.Mark($"World browser looks in {string.Join(", ", baseDirectories)}");
             List<WorldPanelEntry> recent = LoadRecent(recentWorlds ?? []);
+            StartupLog.Mark($"  {recent.Count} recent worlds read");
             HashSet<string> listed = recent.Select(x => WorldLocation.Key(x.Level.Directory ?? x.Source)).ToHashSet();
 
             _entries = recent.Concat(BaseDirectories.SelectMany(LoadEntries)
                 .Where(x => !listed.Contains(WorldLocation.Key(x.Level.Directory ?? x.Source)))
                 .OrderByDescending(x => x.Level.LastPlayed)).ToList();
+            StartupLog.Mark($"  {_entries.Count()} worlds listed");
             foreach (WorldPanelEntry entry in _entries)
             {
                 AddWorld(entry);
@@ -90,6 +93,7 @@ namespace Mapper.Gui
         }
         private bool TryLoadEntry(string world, string source, out WorldPanelEntry entry)
         {
+            StartupLog.Mark($"  reading {world}");
             try
             {
                 Level? level = LevelReader.Read($"{world}\\level.dat");
@@ -123,6 +127,7 @@ namespace Mapper.Gui
                 }
 
                 entry = new WorldPanelEntry(level, icon, source);
+                StartupLog.Mark($"  read {world}");
                 return true;
             }
             catch(Exception e)

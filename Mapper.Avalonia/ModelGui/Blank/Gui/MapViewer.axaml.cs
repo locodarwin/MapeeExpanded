@@ -84,6 +84,7 @@ namespace Mapper.Gui
 
             if (HasBeenShown) return;
             HasBeenShown = true;
+            StartupLog.Mark("Main window shown");
 
             Shown?.Invoke(this, EventArgs.Empty);
         }

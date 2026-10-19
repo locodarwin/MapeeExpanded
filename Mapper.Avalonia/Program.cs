@@ -10,12 +10,14 @@ namespace Mapper.Gui
         [STAThread]
         public static void Main(string[] args)
         {
+            StartupLog.Begin();
             // A world named on the command line is relative to where the user is, so it's resolved before moving
             args = Array.ConvertAll(args, FullPath);
 
             // Resources are read relative to the working directory, as in the WPF GUI, and an AppImage starts wherever the user is
             Directory.SetCurrentDirectory(AppContext.BaseDirectory);
             UseGtkScaleOnX11();
+            StartupLog.Mark("Starting Avalonia");
 
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }

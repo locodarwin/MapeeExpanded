@@ -83,6 +83,7 @@ namespace Mapper.Gui
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
+            StartupLog.Mark("Main window loaded");
             CustomFrameWindowInitializer frameInitializer = new(this, Template);
 
             FileVersionInfo fileInfo = FileVersionInfo.GetVersionInfo(Environment.GetCommandLineArgs()[0]);
@@ -101,6 +102,7 @@ namespace Mapper.Gui
 
             if (HasBeenShown) return;
             HasBeenShown = true;
+            StartupLog.Mark("Main window shown");
 
             Shown?.Invoke(this, EventArgs.Empty);
         }

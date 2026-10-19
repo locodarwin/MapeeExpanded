@@ -38,9 +38,11 @@ namespace Mapper.Gui.Controller
         public Controller(AppSettings? settings = null, string? startupWorld = null) 
         {
             Settings = settings ?? AppSettings.Load();
+            StartupLog.Mark("Settings read");
             GraphicsCanvas = new CanvasControl();
 
             Domain = new ProgramDomain();
+            StartupLog.Mark("Styles and assets read");
             ImplementedScene = new Scene(GraphicsCanvas, Domain);
             ImplementedRenderer = new Renderer(ImplementedScene, GraphicsCanvas);
             WorldOpener = new WorldOpener(ImplementedScene, Settings) { StartupWorld = startupWorld };
@@ -51,7 +53,9 @@ namespace Mapper.Gui.Controller
 
             MouseHook.Start(GraphicsCanvas);
 
+            StartupLog.Mark("Scene and renderer made");
             MainWindow = new MapViewer();
+            StartupLog.Mark("Main window made");
             MainWindow.Initialize(CreateMainWindowArgs());
             MainWindow.ApplySettings(Settings.Window);
             WorldOpener.DimensionWidget = DimensionWidget;
@@ -65,6 +69,7 @@ namespace Mapper.Gui.Controller
             ImplementedScene.StyleBeginReset += Scene_StyleReset;
 
             ApplySettings();
+            StartupLog.Mark("Main window ready");
         }
 
         // The last style and overlays come back, and every change is saved as it happens, so a crash loses nothing

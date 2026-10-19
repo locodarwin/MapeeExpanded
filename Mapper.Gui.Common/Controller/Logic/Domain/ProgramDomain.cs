@@ -22,11 +22,14 @@ namespace Mapper.Gui.Logic
         {
             AssetPackFactory assetPackFactory = new();
             DefaultAssetPack = assetPackFactory.Create(new DataReader(Path.Combine("Resources", "Mapper", "DefaultAsset")));
+            StartupLog.Mark("  asset pack");
 
             Styles = LoadStyles();
             CurrentStyle = Styles[0];
+            StartupLog.Mark($"  {Styles.Count} styles");
 
             TexturePack = LoadTexturePack();
+            StartupLog.Mark("  colour maps");
             ChunkMapperPack = new ChunkMapperPack(DefaultAssetPack);
         }
 

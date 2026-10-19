@@ -39,7 +39,14 @@ namespace Mapper.Gui.Controller
 
             if (startup is not null)
             {
-                if (await Opener.TryOpen(startup)) return;
+                StartupLog.Mark($"Opening {startup}");
+                bool opened = await Opener.TryOpen(startup);
+                StartupLog.Mark(opened ? "World opened" : "World didn't open");
+                if (opened)
+                {
+                    StartupLog.End();
+                    return;
+                }
                 await MessageWindow.Show($"Couldn't open {Path.GetFileName(startup)} as a Minecraft world.", "Mapee", MapViewer);
             }
 
@@ -60,7 +67,14 @@ namespace Mapper.Gui.Controller
         {
             _isActive = true;
 
+            StartupLog.Mark("Opening the world browser");
             WorldBrowser browser = new(AnyEditionLevelReader.DefaultWorldDirectories(), new AnyEditionLevelReader(), Opener.Settings.RecentWorlds.Select(w => w.Path).ToList());
+            StartupLog.Mark("World browser made");
+#if AVALONIA
+            browser.Opened += (sender, e) => StartupLog.End();
+#else
+            browser.ContentRendered += (sender, e) => StartupLog.End();
+#endif
             await AppWindows.ShowDialog(browser, MapViewer);
 
             _isActive = false;

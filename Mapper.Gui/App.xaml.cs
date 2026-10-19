@@ -11,6 +11,11 @@ namespace Mapper.Gui
     /// </summary>
     public partial class App : Application
     {
+        public App()
+        {
+            StartupLog.Begin();
+        }
+
         [STAThread]
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -20,6 +25,7 @@ namespace Mapper.Gui
             string? world = e.Args.FirstOrDefault(arg => !arg.StartsWith('-'));
             if (world is not null) world = Path.GetFullPath(world);
             Directory.SetCurrentDirectory(AppContext.BaseDirectory);
+            StartupLog.Mark("OnStartup");
 
             AppDomain.CurrentDomain.UnhandledException += UnhandledExceptions;
             InitializeBackgroundWork();

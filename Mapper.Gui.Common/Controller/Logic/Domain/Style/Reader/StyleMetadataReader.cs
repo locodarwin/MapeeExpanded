@@ -2,9 +2,14 @@
 using CommonUtilities.Data;
 using System.IO;
 using System.Text.Json.Nodes;
+using WorldEditor;
+#if AVALONIA
+using Avalonia.Media.Imaging;
+using ImageSource = Avalonia.Media.IImage;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using WorldEditor;
+#endif
 
 namespace Mapper.Gui.Logic
 {
@@ -91,6 +96,9 @@ namespace Mapper.Gui.Logic
         {
             using MemoryStream input = new(bytes);
 
+#if AVALONIA
+            return new Bitmap(input);
+#else
             BitmapImage output = new BitmapImage();
             output.BeginInit();
             output.StreamSource = input;
@@ -99,6 +107,7 @@ namespace Mapper.Gui.Logic
             output.Freeze();
 
             return output;
+#endif
         }
         private static string ReadToEnd(byte[] bytes) 
         {

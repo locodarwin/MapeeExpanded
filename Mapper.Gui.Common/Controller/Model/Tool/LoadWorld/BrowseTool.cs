@@ -4,6 +4,10 @@ using System;
 using System.IO;
 using System.Linq;
 using WorldEditor;
+#if AVALONIA
+#else
+using System.Windows;
+#endif
 
 namespace Mapper.Gui.Controller
 {
@@ -57,7 +61,7 @@ namespace Mapper.Gui.Controller
             _isActive = true;
 
             WorldBrowser browser = new(AnyEditionLevelReader.DefaultWorldDirectories(), new AnyEditionLevelReader(), Opener.Settings.RecentWorlds.Select(w => w.Path).ToList());
-            await browser.ShowDialog(MapViewer);
+            await AppWindows.ShowDialog(browser, MapViewer);
 
             _isActive = false;
 

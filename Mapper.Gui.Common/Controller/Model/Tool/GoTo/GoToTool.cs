@@ -1,8 +1,12 @@
-using Mapper.Gui.Logic;
+﻿using Mapper.Gui.Logic;
 using Mapper.Gui.Model;
+#if AVALONIA
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+#else
+using System.Windows;
+#endif
 
 namespace Mapper.Gui.Controller
 {
@@ -46,18 +50,32 @@ namespace Mapper.Gui.Controller
             XzPoint centerPoint = Scene.Map.TransformPointOnScreenToXz(new Point(Canvas.ActualWidth / 2, Canvas.ActualHeight / 2));
             GoToWindow goToWindow = new(centerPoint, playerPos, playSpawn, worldSpawn);
 
-            // A flyout under the button; the WPF GUI places a borderless window there, which Wayland doesn't allow
-            Flyout flyout = new() { Content = goToWindow, Placement = PlacementMode.Bottom };
-            goToWindow.PointSelected += (s, ee) => flyout.Hide();
-            flyout.Closed += (s, ee) =>
+            void Closed()
             {
                 _isActive = false;
 
                 if (goToWindow.DialogClosed) return;
                 Scene.Map.SetCenterPoint(goToWindow.SelectedPoint);
-            };
+            }
+
+#if AVALONIA
+            // A flyout under the button; WPF places a borderless window there, which Wayland doesn't allow
+            Flyout flyout = new() { Content = goToWindow, Placement = PlacementMode.Bottom };
+            goToWindow.PointSelected += (s, ee) => flyout.Hide();
+            flyout.Closed += (s, ee) => Closed();
 
             flyout.ShowAt(Owner.Button);
+#else
+            Point startupLocation = Owner.Button.PointToScreen(new(0, 0)).CalibrateToDpiScale();
+            startupLocation.Y += Owner.Button.ActualHeight;
+            startupLocation.X += Owner.Button.ActualWidth / 2 - goToWindow.Width / 2;
+
+            goToWindow.Top = startupLocation.Y;
+            goToWindow.Left = startupLocation.X;
+
+            goToWindow.Show();
+            goToWindow.Closing += (s, ee) => Closed();
+#endif
         }
     }
 }

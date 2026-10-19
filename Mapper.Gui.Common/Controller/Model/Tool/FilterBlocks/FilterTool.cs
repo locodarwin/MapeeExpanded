@@ -1,8 +1,12 @@
-using Mapper.Gui.Logic;
+﻿using Mapper.Gui.Logic;
 using Mapper.Gui.Model;
+#if AVALONIA
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+#else
+using System.Windows;
+#endif
 
 namespace Mapper.Gui.Controller
 {
@@ -25,7 +29,7 @@ namespace Mapper.Gui.Controller
             Scene.StyleBeginReset += Scene_StyleReset;
 
             OnTurnedOn += TurnedOn;
-            if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) desktop.ShutdownRequested += (sender, e) => Close();
+            AppWindows.OnExit(Close);
         }
 
         private void Scene_WorldBeginChange(WorldDomain? old, WorldDomain current)
@@ -76,8 +80,7 @@ namespace Mapper.Gui.Controller
 
             BlockFilterControl window = new(profile);
             _window = window;
-            if (MessageWindow.ActiveWindow() is Window owner) window.Show(owner);
-            else window.Show();
+            AppWindows.ShowTool(window);
 
             window.BlockFilterUpdated += (sender, e) =>
             {

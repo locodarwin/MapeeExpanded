@@ -1,11 +1,15 @@
-using Mapper.Gui.Logic;
+﻿using Mapper.Gui.Logic;
 using Mapper.Gui.Model;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Avalonia.Media.Imaging;
 using WorldEditor;
+#if AVALONIA
+using Avalonia.Media.Imaging;
+#else
+using System.Windows.Media.Imaging;
+#endif
 
 namespace Mapper.Gui.Controller
 {

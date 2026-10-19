@@ -1,4 +1,7 @@
-﻿using System.Windows;
+﻿#if AVALONIA
+#else
+using System.Windows;
+#endif
 
 namespace Mapper.Gui
 {
@@ -6,7 +9,7 @@ namespace Mapper.Gui
     {
         public static bool ShowMessage(string message)
         {
-            MessageBox.Show(message, "Input", MessageBoxButton.OK, MessageBoxImage.Exclamation);
+            _ = MessageWindow.Show(message, "Input");
             return false;
         }
     }

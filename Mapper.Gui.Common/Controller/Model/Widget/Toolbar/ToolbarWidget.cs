@@ -2,7 +2,10 @@
 using Mapper.Gui.Model;
 using System;
 using System.Collections.Generic;
+#if AVALONIA
+#else
 using System.Windows.Media.Imaging;
+#endif
 
 namespace Mapper.Gui.Controller
 {
@@ -90,7 +93,7 @@ namespace Mapper.Gui.Controller
             ToolButton output = new(tool)
             {
                 ToolTip = "Night mode",
-                Icon = new BitmapImage(new Uri("/Resources/Image/ToolButton/DayNightCycle_22px.png", UriKind.Relative))
+                Icon = AppImages.Load("/Resources/Image/ToolButton/DayNightCycle_22px.png")
             };
 
             return output;
@@ -101,7 +104,7 @@ namespace Mapper.Gui.Controller
             ToolButton output = new(tool)
             {
                 ToolTip = "Go to position in world",
-                Icon = new BitmapImage(new Uri("/Resources/Image/ToolButton/GoTo_22px.png", UriKind.Relative))
+                Icon = AppImages.Load("/Resources/Image/ToolButton/GoTo_22px.png")
             };
 
             tool.Owner = output;
@@ -110,11 +113,11 @@ namespace Mapper.Gui.Controller
         }
         private ToolButton CreateExportAsImageButton()
         {
-            ExportAsImageTool tool = new(Renderer);
+            ExportAsImageTool tool = new(Renderer, MainWindow);
             ToolButton output = new(tool)
             {
                 ToolTip = "Export as image or web map",
-                Icon = new BitmapImage(new Uri("/Resources/Image/ToolButton/ExportAsImage_22px.png", UriKind.Relative))
+                Icon = AppImages.Load("/Resources/Image/ToolButton/ExportAsImage_22px.png")
             };
 
             return output;
@@ -124,7 +127,7 @@ namespace Mapper.Gui.Controller
             FilterTool tool = new(Renderer.Scene);
             ToolButton output = new(tool)
             {
-                Icon = new BitmapImage(new Uri("/Resources/Image/ToolButton/Filter_22px.png", UriKind.Relative)),
+                Icon = AppImages.Load("/Resources/Image/ToolButton/Filter_22px.png"),
                 Name = "Block filter",
                 ToolTip = "Filter blocks"
             };
@@ -136,7 +139,7 @@ namespace Mapper.Gui.Controller
             RenderSettingsTool tool = new(Renderer.Scene);
             ToolButton output = new(tool)
             {
-                Icon = new BitmapImage(new Uri("/Resources/Image/ToolButton/RenderSettings_22px.png", UriKind.Relative)),
+                Icon = AppImages.Load("/Resources/Image/ToolButton/RenderSettings_22px.png"),
                 Name = "Render settings",
                 ToolTip = "Change render settings"
             };
@@ -148,7 +151,7 @@ namespace Mapper.Gui.Controller
             BrowseTool tool = new(Renderer.Scene, MainWindow, WorldOpener);
             ToolButton output = new(tool)
             {
-                Icon = new BitmapImage(new Uri("/Resources/Image/ToolButton/LoadWorld_22px.png", UriKind.Relative)),
+                Icon = AppImages.Load("/Resources/Image/ToolButton/LoadWorld_22px.png"),
                 Name = "Load world ",
                 ToolTip = "Load a new world"
             };
@@ -162,7 +165,7 @@ namespace Mapper.Gui.Controller
             {
                 Tool = tool,
                 ToolTip = toolTip,
-                Icon = new BitmapImage(new Uri($"/Resources/Image/ToolButton/{iconName}", UriKind.Relative))
+                Icon = AppImages.Load($"/Resources/Image/ToolButton/{iconName}")
             };
 
             AddInvoker(tool);

@@ -11,5 +11,7 @@ namespace Mapper.Gui.Model
         public bool ClipArea { get; init; }
         public bool CheckerPatternEnabled { get; init; }
         public Color BackgroundColor { get; init; }
+        // Draws the world's pins and zones over the map, as shown
+        public bool IncludeMarkup { get; init; }
     }
 }

@@ -1,5 +1,6 @@
 using Mapper.Gui.Model;
 using System;
+using System.Collections.Generic;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -37,6 +38,19 @@ namespace Mapper.Gui
             {
                 if (e.Key == Key.Enter) GoToButton_Click(sender, e);
             };
+        }
+
+        public void AddPlaces(IEnumerable<(string Title, XzPoint Point)> places)
+        {
+            foreach (var (title, point) in places)
+            {
+                Button button = new() { Content = $"{title} ({(int)Math.Floor(point.X)}; {(int)Math.Floor(point.Z)})" };
+                button.Classes.Add("flat");
+                button.Classes.Add("goto");
+                button.Click += (sender, e) => Select(point);
+                PlacesPanel.Children.Add(button);
+            }
+            PlacesSection.IsVisible = PlacesPanel.Children.Count > 0;
         }
 
         private void GoToButton_Click(object? sender, RoutedEventArgs e)

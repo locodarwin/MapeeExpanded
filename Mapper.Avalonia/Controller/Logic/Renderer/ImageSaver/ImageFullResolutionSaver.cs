@@ -1,7 +1,9 @@
+using Mapper.Gui.Controller;
 using Mapper.Gui.Model;
 using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Threading;
 using WorldEditor;
 
 namespace Mapper.Gui.Logic
@@ -122,6 +124,28 @@ namespace Mapper.Gui.Logic
 
             Renderer.BackgroundPainter.Paint(drawingContext, backgroundPaintArgs);
             Renderer.ScenePainter.Paint(drawingContext, scenePaintArgs);
+
+            if (args.IncludeMarkup && Renderer.MarkupPainter?.Tool is { ShowMarkup: true } markup)
+            {
+                // Brushes and shapes may only be touched on the UI thread, and this runs off it; the markup is drawn
+                // there into a layer of its own, which goes over the map here like the regions' bitmaps
+                using RenderTargetBitmap? layer = Dispatcher.UIThread.Invoke(() => DrawMarkup(markup, area));
+                if (layer is not null) drawingContext.DrawImage(layer, area);
+            }
+        }
+
+        // A block a pixel, the layer's top left corner where the area starts; null when nothing reaches the area
+        private static RenderTargetBitmap? DrawMarkup(MarkupTool markup, Rect area)
+        {
+            MarkupFrame frame = MarkupFrame.Build(markup.Editor.Document, new FixedMarkupView(markup.View.Dimension, area.X, area.Y, 1), area.Width, area.Height);
+            if (frame.IsEmpty) return null;
+
+            RenderTargetBitmap layer = new(new PixelSize((int)area.Width, (int)area.Height), new Vector(96, 96));
+            using (DrawingContext context = layer.CreateDrawingContext())
+            {
+                MarkupPainter.Draw(context, frame);
+            }
+            return layer;
         }
     }
 }

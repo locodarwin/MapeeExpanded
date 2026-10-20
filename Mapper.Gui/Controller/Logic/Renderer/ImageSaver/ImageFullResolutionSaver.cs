@@ -1,4 +1,5 @@
-﻿using Mapper.Gui.Model;
+﻿using Mapper.Gui.Controller;
+using Mapper.Gui.Model;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -121,6 +122,15 @@ namespace Mapper.Gui.Logic
 
             Renderer.BackgroundPainter.Paint(drawingContext, backgroundPaintArgs);
             Renderer.ScenePainter.Paint(drawingContext, scenePaintArgs);
+
+            if (args.IncludeMarkup && Renderer.MarkupPainter?.Tool is { ShowMarkup: true } markup)
+            {
+                // A block a pixel, with the image's top left corner where the area starts
+                MarkupFrame frame = MarkupFrame.Build(markup.Editor.Document, new FixedMarkupView(markup.View.Dimension, area.X, area.Y, 1), area.Width, area.Height);
+                drawingContext.PushTransform(new TranslateTransform(area.X, area.Y));
+                MarkupPainter.Draw(drawingContext, frame, 1);
+                drawingContext.Pop();
+            }
         }
 
         private static void Save(DrawingGroup drawingGroup, Rect area, string path)

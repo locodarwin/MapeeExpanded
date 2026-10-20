@@ -16,6 +16,7 @@ Upstream website: [mapee.net](https://www.mapee.net/home)
 - Export as a web map: the export window's new **Web map** option renders the whole world, not only what has loaded, into a folder holding `index.html` and a tile pyramid for each of the Overworld, Nether and End the world has, each in the current style (and height cut, where the height panel is on). The page pans and zooms like an online map (mouse, touch, keyboard), switches between the dimensions, shows the block's X, Y and Z beside a resting mouse as Mapee does, marks the spawn and the player, has a region and chunk grid, and keeps the dimension and view in the address so a link opens where it was copied. It needs no internet and no server: open it from disk or put the folder on any web host. Any folder will do; if it already holds web map files, Mapee names them and asks before replacing them
 - Coordinates beside the mouse: rest the mouse over the map for a moment and a small label gives the block's X, Y and Z
 - Command line: `mapee-cli` draws a world without opening a window, a dimension into one PNG or the whole world into a web map, with the same styles and height cuts as the app (see "Command line" below)
+- Markup: mark the map with labelled **pins** and labelled **zones** (territories, claims, farms, towns), each with a colour, a note, and for pins one of eight symbols. They're kept per world and per dimension, show in the Go to window and the web map, and can be drawn into exported images (see "Markup" below)
 
 **Version 1.4.0**
 - Opens Bedrock Edition worlds: the world browser lists them next to Java worlds, and the open button takes a `level.dat` or a `.mcworld` file
@@ -28,12 +29,25 @@ Upstream website: [mapee.net](https://www.mapee.net/home)
 - Added Alpha support
 - Added new blocks in 26.2
 
+# Markup
+
+The toolbar's **Markup** button (the flag) opens a bar under the toolbar with what a click on the map does:
+
+- **Pin**: click to drop a pin on the block, and give it a label, colour, symbol and note. Click a pin to change it.
+- **Zone**: click each corner; double-click, press Enter or click the first corner to finish. Backspace takes the last corner back; hold Shift to snap corners to chunk corners.
+- **Rectangle**: drag out a rectangular zone; hold Shift to take in whole chunks.
+- **Select**: click a pin or zone to pick it, double-click to change it, Delete to remove it; drag a pin, or a picked zone's corners, to move them. On a picked zone, double-click an edge to add a corner there, or a corner to remove it.
+
+Dragging still moves the map in every mode, and a right-click on any pin or zone changes it even with the bar closed. Hovering over a zone shows its size in blocks and chunks. Ctrl+Z and Ctrl+Y undo and redo while the bar is open. **Places** lists the dimension's pins and zones (click one to go there), and the Go to window lists them too. **Export** and **Import** move markup between machines or onto a copy of a world; **Hide** hides it until the Markup button is pressed again.
+
+Markup is saved as you go, one file per world in the settings folder (`%APPDATA%\Mapee\Markup` on Windows, `~/.config/Mapee/Markup` on Linux), never in the world itself. It follows the path the world was opened from, as the recent worlds do, so a copied world starts without it until you import it. The export window's **Include pins and zones** puts it in screenshots, full-resolution images and web maps; in a web map, click a pin or zone to see its note, and **PINS** and **ZONES** (M and Z) switch them off.
+
 # Command line
 
 `mapee-cli` comes with Mapee: `mapee-cli.exe` beside `Mapee.exe` on Windows; on Linux the AppImage runs it when its first argument is a command (`Mapee.AppImage render ...`). It draws the way the app does, and needs no display, so it can run from a script or a scheduled task.
 
 ```
-mapee-cli render <world> --out map.png [--dimension overworld|nether|end] [--area x1,z1,x2,z2]
+mapee-cli render <world> --out map.png [--dimension overworld|nether|end] [--area x1,z1,x2,z2] [--markup]
 mapee-cli webmap <world> --out <folder> [--dimension overworld,nether] [--no-markers] [--force]
 mapee-cli worlds          # the worlds in the game's world folders
 mapee-cli styles          # the style ids
@@ -43,6 +57,7 @@ mapee-cli styles          # the style ids
 - `render` writes one dimension at a pixel per block, transparent where nothing has been generated; `--area` keeps the blocks between two corners. It prints where the image lies in block coordinates.
 - `webmap` writes the same web map as the export window, every dimension the world has. An earlier web map in the folder is replaced without asking, so a map can be kept up to date from a script; other files that would be replaced need `--force`.
 - Both take `--style <id>` (default `default`), and `--slice <y>` or `--caves <y>` to draw as the height panel's Slice or Caves would.
+- Markup: `render --markup` draws the pins and zones marked on the world in Mapee; `webmap` includes them unless `--no-markers` (which also leaves out the spawn and player). `--markup <file.json>` uses a file from the bar's Export instead.
 - Exit codes: 0 done, 1 failed or nothing to draw, 2 wrong usage, 130 cancelled.
 
 # Sample gui images

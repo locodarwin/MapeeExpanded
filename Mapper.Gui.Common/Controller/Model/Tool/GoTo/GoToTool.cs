@@ -1,5 +1,6 @@
 ﻿using Mapper.Gui.Logic;
 using Mapper.Gui.Model;
+using System.Linq;
 #if AVALONIA
 using Avalonia;
 using Avalonia.Controls;
@@ -15,6 +16,8 @@ namespace Mapper.Gui.Controller
         public ToolButton? Owner { get; set; }
         public Scene Scene { get; }
         public CanvasControl Canvas { get; }
+        // Its pins and zones are listed under the spawn points, while markup is shown
+        public MarkupTool? Markup { get; set; }
 
         private bool _isActive = false;
 
@@ -49,6 +52,14 @@ namespace Mapper.Gui.Controller
 
             XzPoint centerPoint = Scene.Map.TransformPointOnScreenToXz(new Point(Canvas.ActualWidth / 2, Canvas.ActualHeight / 2));
             GoToWindow goToWindow = new(centerPoint, playerPos, playSpawn, worldSpawn);
+            if (Markup is { Enabled: true, ShowMarkup: true })
+            {
+                goToWindow.AddPlaces(Markup.Places().Select(item =>
+                {
+                    var (x, z) = MarkupTool.CentreOf(item);
+                    return (MarkupTool.Title(item), new XzPoint(x, z));
+                }));
+            }
 
             void Closed()
             {

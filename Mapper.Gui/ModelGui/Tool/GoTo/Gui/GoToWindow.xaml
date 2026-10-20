@@ -8,7 +8,7 @@
         Background="#FF232323"
         WindowStyle="None"
         ResizeMode="NoResize"
-        Title="GoToWindow" Height="109" Width="220">
+        Title="GoToWindow" SizeToContent="Height" Width="220">
 
     <WindowChrome.WindowChrome>
         <WindowChrome GlassFrameThickness="0" CornerRadius="0" CaptionHeight="0" UseAeroCaptionButtons="False" ResizeBorderThickness="7"/>
@@ -29,6 +29,7 @@
                 <RowDefinition Height="25" />
                 <RowDefinition Height="25" />
                 <RowDefinition Height="28" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <Grid Margin="5, 0, 5, 0" Grid.Row="0">
@@ -138,6 +139,14 @@
                     </Style>
                 </Button.Style>
             </Button>
+
+            <!-- The world's pins and zones, when it has any -->
+            <StackPanel x:Name="PlacesSection" Grid.Row="4" Visibility="Collapsed">
+                <Border Height="1" Background="#FF707070" Margin="0, 1, 0, 2" />
+                <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
+                    <StackPanel x:Name="PlacesPanel" />
+                </ScrollViewer>
+            </StackPanel>
         </Grid>
     </Border>
 </Window>

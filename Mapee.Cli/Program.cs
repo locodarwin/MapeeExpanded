@@ -17,10 +17,11 @@ namespace Mapee.Cli
                   Draws one dimension into a PNG, a pixel per block.
                   --dimension <d>          overworld (default), nether, end
                   --area <x1>,<z1>,<x2>,<z2>  only the blocks between these corners
+                  --markup                 draw the pins and zones marked on the world in Mapee
               mapee-cli webmap <world> --out <folder> [options]
                   Exports a zoomable web map (open index.html), every dimension the world has.
                   --dimension <d>[,<d>]    only these dimensions
-                  --no-markers             leave out the spawn and player markers
+                  --no-markers             leave out the spawn and player markers, and the pins and zones
                   --force                  replace files in a folder that isn't an earlier web map
               mapee-cli worlds             lists the worlds in the game's world folders
               mapee-cli styles             lists the styles
@@ -29,6 +30,8 @@ namespace Mapee.Cli
               --style <id or name>         how the map is coloured (default: Default; see mapee-cli styles)
               --slice <y>                  draw the world cut at height y, as the height panel's Slice
               --caves <y>                  draw the caves below height y, as the height panel's Caves
+              --markup <file.json>         the pins and zones in a file exported from Mapee, in place of
+                                           those marked on the world (the web map shows the world's anyway)
 
             <world> is a world folder, its level.dat, a .mcworld file, or the name of a world in the
             game's world folders (Java or Bedrock).
@@ -99,7 +102,8 @@ namespace Mapee.Cli
                 _ => throw new UsageException("render draws one dimension; give one to --dimension")
             };
 
-            Level level = OpenWorld(line.World!);
+            (Level level, string source) = OpenWorld(line.World!);
+            MarkupDocument? markup = line.Markup ? ReadMarkup(line, source, level) : null;
             ProgramDomain domain = LoadDomain();
             Style style = WorldStyle(domain, level, line.Style);
             (Profile profile, ScanType scanType, string description) = Drawing(domain, style, dimension, line.Cut);
@@ -107,8 +111,15 @@ namespace Mapee.Cli
             ChunkMapperPack pack = new(domain.DefaultAssetPack);
             pack.UpdatePack(profile, scanType);
 
+            MarkupImage? marks = markup is null ? null : new MarkupImage(markup, dimension.Namespace);
+            if (marks is { HasAny: false })
+            {
+                Console.Error.WriteLine($"No pins or zones are marked in {The(dimension)}; drawing the map without them");
+                marks = null;
+            }
+
             ConsoleProgress progress = new();
-            MapImageBounds? bounds = MapImageExporter.Export(pack, new SceneInfo(level, dimension), line.Out!, line.Area, progress, cancellation);
+            MapImageBounds? bounds = MapImageExporter.Export(pack, new SceneInfo(level, dimension), line.Out!, line.Area, progress, cancellation, marks is null ? null : marks.Draw);
             progress.Finish();
 
             if (bounds is not MapImageBounds drawn)
@@ -117,6 +128,7 @@ namespace Mapee.Cli
                 return 1;
             }
 
+            if (marks is not null && markup is not null) description += $", {Count(markup.PinsIn(dimension.Namespace).Count(), "pin")} and {Count(markup.ZonesIn(dimension.Namespace).Count(), "zone")}";
             Console.WriteLine($"Wrote {line.Out}: {drawn.Width:N0} x {drawn.Height:N0} px, {level.WorldName}'s {dimension.Name} ({description}), " +
                 $"blocks {drawn.X}, {drawn.Z} to {drawn.X + drawn.Width - 1}, {drawn.Z + drawn.Height - 1}");
             return 0;
@@ -124,6 +136,23 @@ namespace Mapee.Cli
 
         // "the Overworld", "The End"
         private static string The(Dimension dimension) => dimension.Name.StartsWith("The ") ? dimension.Name : $"the {dimension.Name}";
+
+        private static string Count(int count, string what) => $"{count} {what}{(count == 1 ? "" : "s")}";
+
+        // The file given, or what's marked on the world in Mapee (kept in Mapee's settings folder, found by the
+        // world's path, so a world named here the way Mapee opened it finds the same markup)
+        private static MarkupDocument ReadMarkup(CommandLine line, string source, Level level)
+        {
+            if (line.MarkupFile is not string file) return MarkupStore.Default.Load(source, level.WorldName);
+            try
+            {
+                return MarkupStore.Read(file);
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Text.Json.JsonException or InvalidDataException)
+            {
+                throw new UsageException($"Couldn't read markup from {file}: {e.Message}");
+            }
+        }
 
         private static int WebMap(CommandLine line, CancellationToken cancellation)
         {
@@ -137,7 +166,8 @@ namespace Mapee.Cli
                 throw new UsageException($"{folder} already has {string.Join(", ", replaced)}, which the web map would replace; add --force to replace them");
             }
 
-            Level level = OpenWorld(line.World!);
+            (Level level, string source) = OpenWorld(line.World!);
+            MarkupDocument? markup = line.Markers ? ReadMarkup(line, source, level) : null;
             ProgramDomain domain = LoadDomain();
             Style style = WorldStyle(domain, level, line.Style);
 
@@ -151,7 +181,7 @@ namespace Mapee.Cli
             string current = WebMapFolder.IdOf(dimensions.Contains(level.Player.Dimension) ? level.Player.Dimension : dimensions[0]);
 
             ConsoleProgress progress = new();
-            IList<WebMapDimension> written = WebMapSaver.Export(domain.DefaultAssetPack, level, targets, folder, level.WorldName ?? "Map", current, progress, cancellation);
+            IList<WebMapDimension> written = WebMapSaver.Export(domain.DefaultAssetPack, level, targets, folder, level.WorldName ?? "Map", current, progress, cancellation, markup);
             progress.Finish();
 
             if (written.Count == 0)
@@ -161,7 +191,8 @@ namespace Mapee.Cli
             }
 
             Console.WriteLine($"Wrote {Path.Combine(folder, "index.html")}: {level.WorldName}, " +
-                string.Join(", ", written.Select(d => $"{d.Name} {d.Regions.Count} region{(d.Regions.Count == 1 ? "" : "s")}")) + $" ({targets[0].Subtitle})");
+                string.Join(", ", written.Select(d => $"{d.Name} {d.Regions.Count} region{(d.Regions.Count == 1 ? "" : "s")}")) + $" ({targets[0].Subtitle})" +
+                (markup is { IsEmpty: false } ? $", {Count(markup.Pins.Count, "pin")} and {Count(markup.Zones.Count, "zone")}" : ""));
             return 0;
         }
 
@@ -204,12 +235,13 @@ namespace Mapee.Cli
             return new ProgramDomain();
         }
 
-        private static Level OpenWorld(string world)
+        // The world, and what it was opened from: a folder or a .mcworld, as Mapee remembers it
+        private static (Level Level, string Source) OpenWorld(string world)
         {
             string path = WorldLocation.IsWorld(world) ? world : FindNamedWorld(world);
             Level level = WorldLocation.Read(path) ?? throw new InvalidDataException($"Couldn't read the world at {path}");
             Scene.DetectAlphaWorld(level);
-            return level;
+            return (level, path);
         }
 
         private static string FindNamedWorld(string name)
@@ -330,6 +362,9 @@ namespace Mapee.Cli
         public HeightCut? Cut { get; private set; }
         public BlockArea? Area { get; private set; }
         public bool Markers { get; private set; } = true;
+        // Drawing pins and zones: render only does when asked; the web map does unless markers are left out
+        public bool Markup { get; private set; }
+        public string? MarkupFile { get; private set; }
         public bool Force { get; private set; }
 
         private static readonly string[] Commands = ["render", "webmap", "worlds", "styles"];
@@ -365,6 +400,11 @@ namespace Mapee.Cli
                     if (i + 1 >= args.Length) throw new UsageException($"{option} needs a value");
                     value = args[++i];
                 }
+                // A file after --markup is optional
+                else if (option == "--markup" && i + 1 < args.Length && !args[i + 1].StartsWith("--") && args[i + 1].EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                {
+                    value = args[++i];
+                }
 
                 if (!drawing) throw new UsageException($"{command} takes no options");
                 switch (option)
@@ -392,6 +432,14 @@ namespace Mapee.Cli
                     case "--no-markers" when command == "webmap":
                         line.Markers = false;
                         break;
+                    case "--markup":
+                        line.Markup = true;
+                        if (value.Length > 0)
+                        {
+                            if (!File.Exists(value)) throw new UsageException($"There's no markup file at {value}");
+                            line.MarkupFile = Path.GetFullPath(value);
+                        }
+                        break;
                     case "--force" when command == "webmap":
                         line.Force = true;
                         break;
@@ -399,6 +447,9 @@ namespace Mapee.Cli
                         throw new UsageException($"{command} has no option {option}");
                 }
             }
+
+            if (command == "webmap" && line.Markers) line.Markup = true;
+            if (command == "webmap" && !line.Markers && line.MarkupFile is not null) throw new UsageException("--no-markers leaves the pins and zones out; give --markup or --no-markers, not both");
 
             if (drawing)
             {

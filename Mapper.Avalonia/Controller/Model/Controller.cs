@@ -26,6 +26,8 @@ namespace Mapper.Gui.Controller
         public HeightWidget HeightWidget { get; private set; }
 
         public TextPainter TextPainter { get; }
+        public MarkupPainter MarkupPainter { get; private set; }
+        public MarkupBar MarkupBar { get; private set; }
 
         public MapViewer MainWindow { get; }
 
@@ -116,6 +118,7 @@ namespace Mapper.Gui.Controller
             args.Widgets.Add(CreateZoomControl());
             args.Widgets.Add(CreateStylebarControl());
             args.Widgets.Add(CreateToolbarControl());
+            args.Widgets.Add(CreateMarkupBar());
             args.Widgets.Add(CreateDimensionControl());
             args.Widgets.Add(CreateHeightControl());
             // Last, so it lies over the other widgets
@@ -167,6 +170,22 @@ namespace Mapper.Gui.Controller
             {
                 VerticalAlignment = VerticalAlignment.Top,
                 Margin = new Thickness(0, 5, 0, 0)
+            };
+        }
+        // Under the toolbar while the Markup button is on; the markup itself is drawn over the toolbar's overlays
+        private Control CreateMarkupBar()
+        {
+            MarkupTool tool = ToolbarWidget.MarkupTool;
+            MarkupPainter = new MarkupPainter(tool, GraphicsCanvas);
+            ImplementedRenderer.AddPainter(MarkupPainter);
+            ImplementedRenderer.MarkupPainter = MarkupPainter;
+            _ = new MarkupInput(tool, GraphicsCanvas);
+
+            return MarkupBar = new MarkupBar(tool, GraphicsCanvas)
+            {
+                VerticalAlignment = VerticalAlignment.Top,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(0, 47, 0, 0)
             };
         }
         private Control CreateDimensionControl() 

@@ -242,16 +242,20 @@ namespace Mapper
         }
     }
 
-    // The page over the dimensions: index.html, the viewer with the dimensions' data in it
+    // The page over the dimensions: index.html, the viewer with the dimensions' data in it,
+    // and, when given, the world's pins and zones
     public static class WebMapPage
     {
-        public static void Write(string directory, string title, IList<WebMapDimension> dimensions, string? initial = null)
+        public static void Write(string directory, string title, IList<WebMapDimension> dimensions, string? initial = null, MarkupDocument? markup = null)
         {
+            bool In(MarkupItem item, WebMapDimension dimension) => WebMapFolder.IdOf(new Dimension(item.Dimension)) == dimension.Id;
+
             var data = new
             {
                 title,
                 tileSize = WebMapWriter.TileSize,
                 initial = dimensions.Any(d => d.Id == initial) ? initial : dimensions.FirstOrDefault()?.Id,
+                icons = PinIcons.All.ToDictionary(i => i.Id, i => i.Path),
                 dimensions = dimensions.Select(d => new
                 {
                     id = d.Id,
@@ -259,7 +263,22 @@ namespace Mapper
                     subtitle = d.Subtitle,
                     minLevel = d.MinLevel,
                     regions = d.Regions.OrderBy(c => c.Z).ThenBy(c => c.X).SelectMany(c => new[] { c.X, c.Z }),
-                    markers = d.Markers.Select(m => new { name = m.Name, x = m.X, z = m.Z })
+                    markers = d.Markers.Select(m => new { name = m.Name, x = m.X, z = m.Z }),
+                    pins = (markup?.Pins ?? []).Where(p => In(p, d)).Select(p => new { label = p.Label, x = p.X, z = p.Z, color = p.Color, icon = p.Icon, note = p.Note }),
+                    // Largest first, so smaller zones lie on top
+                    zones = (markup?.Zones ?? []).Where(z => In(z, d)).OrderByDescending(z => ZoneGeometry.Area(z.Points)).Select(z =>
+                    {
+                        var (lx, lz) = ZoneGeometry.LabelPoint(z.Points);
+                        return new
+                        {
+                            label = z.Label,
+                            color = z.Color,
+                            note = z.Note,
+                            size = ZoneGeometry.Describe(z.Points),
+                            labelAt = new[] { Math.Round(lx, 2), Math.Round(lz, 2) },
+                            points = z.Points.SelectMany(p => new[] { p.X, p.Z })
+                        };
+                    })
                 })
             };
             string json = JsonSerializer.Serialize(data).Replace("</", "<\\/");

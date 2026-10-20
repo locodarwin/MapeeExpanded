@@ -20,7 +20,10 @@
   #tiles, #markers { position: absolute; inset: 0; }
   #tiles { z-index: 0; }
   #grid { z-index: 1; }
-  #markers { z-index: 2; pointer-events: none; }
+  #zoneLayer { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+  #zones { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; }
+  #zones polygon { stroke-width: 2; stroke-linejoin: round; }
+  #markers { z-index: 3; pointer-events: none; }
   #tiles img { position: absolute; display: block; max-width: none; pointer-events: none; -webkit-user-drag: none; }
   #tiles.pixelated img { image-rendering: pixelated; image-rendering: crisp-edges; }
   #grid { position: absolute; inset: 0; pointer-events: none; }
@@ -32,7 +35,7 @@
   #status { bottom: 12px; left: 12px; font-variant-numeric: tabular-nums; color: var(--muted); }
   #status b { color: var(--text); font-weight: 600; }
   #controls { top: 12px; right: 12px; padding: 4px; display: flex; flex-direction: column; gap: 4px; }
-  #controls button { width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 4px; background: #2c2c2c;
+  #controls button { width: 42px; height: 34px; border: 1px solid var(--border); border-radius: 4px; background: #2c2c2c;
     color: var(--text); font: 600 18px/1 system-ui, sans-serif; cursor: pointer; padding: 0; }
   #controls button.small { font-size: 11px; }
   #controls button:hover { background: #383838; }
@@ -40,7 +43,20 @@
   .marker { position: absolute; transform: translate(-50%, -50%); pointer-events: none; display: flex; align-items: center; }
   .marker i { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); border: 2px solid #1a1a1a; box-sizing: border-box; flex: none; }
   .marker span { margin-left: 5px; padding: 1px 5px; border-radius: 3px; background: rgba(20, 20, 20, 0.8); white-space: nowrap; font-size: 12px; }
-  #markers.hidden, #grid.hidden { display: none; }
+  #markers.hidden, #grid.hidden, #zoneLayer.hidden { display: none; }
+  /* The world's markup: zone labels, and pins with their symbols */
+  .zlabel { position: absolute; transform: translate(-50%, -50%); padding: 1px 6px; border-radius: 3px; background: rgba(20, 20, 20, 0.78);
+    font-weight: 600; white-space: nowrap; }
+  .pin { position: absolute; transform: translate(-9px, -50%); display: flex; align-items: center; }
+  .pin b { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid #1a1a1a; box-sizing: border-box; flex: none;
+    display: flex; align-items: center; justify-content: center; }
+  .pin b i { width: 5px; height: 5px; border-radius: 50%; }
+  .pin svg { width: 12px; height: 12px; }
+  .pin span { margin-left: 4px; padding: 1px 5px; border-radius: 3px; background: rgba(20, 20, 20, 0.8); white-space: nowrap; font-size: 12px; font-weight: 600; }
+  #card { display: none; z-index: 4; max-width: 260px; pointer-events: none; }
+  #card h2 { font-size: 14px; margin: 0; font-weight: 600; }
+  #card p { margin: 2px 0 0; color: var(--muted); }
+  #card p.note { color: var(--text); white-space: pre-wrap; margin-top: 5px; }
   #dims { display: flex; gap: 4px; margin-top: 6px; }
   #dims:empty { display: none; }
   #dims button { border: 1px solid var(--border); border-radius: 4px; background: #2c2c2c; color: var(--text);
@@ -57,17 +73,20 @@
 <div id="map">
   <div id="tiles"></div>
   <canvas id="grid" class="hidden"></canvas>
+  <div id="zoneLayer"><svg id="zones"></svg></div>
   <div id="markers"></div>
 </div>
 <div id="info" class="panel"><h1></h1><p></p><div id="dims"></div></div>
 <div id="tip"></div>
+<div id="card" class="panel"></div>
 <div id="status" class="panel"><span id="cursor">&nbsp;</span> &nbsp; <span id="scale"></span></div>
 <div id="controls" class="panel">
   <button id="zoomIn" title="Zoom in (+)">+</button>
   <button id="zoomOut" title="Zoom out (&minus;)">&minus;</button>
   <button id="fit" class="small" title="Show the whole map (Home)">ALL</button>
   <button id="gridToggle" class="small" title="Region and chunk grid (G)">GRID</button>
-  <button id="markerToggle" class="small on" title="Markers (M)">PINS</button>
+  <button id="markerToggle" class="small on" title="Pins and markers (M)">PINS</button>
+  <button id="zoneToggle" class="small on" title="Zones (Z)">ZONES</button>
 </div>
 <script>
 "use strict";
@@ -111,6 +130,9 @@ const gridEl = document.getElementById("grid");
 const cursorEl = document.getElementById("cursor");
 const scaleEl = document.getElementById("scale");
 
+const zoneLayerEl = document.getElementById("zoneLayer");
+const zonesEl = document.getElementById("zones");
+const cardEl = document.getElementById("card");
 const tipEl = document.getElementById("tip");
 const dimsEl = document.getElementById("dims");
 
@@ -197,6 +219,7 @@ function draw() {
 
   tilesEl.classList.toggle("pixelated", view.zoom > 0.01);
   drawMarkers();
+  drawMarkup();
   drawGrid(left, top, right, bottom);
   drawStatus();
 }
@@ -237,6 +260,143 @@ function drawMarkers() {
     markerEls[i].style.top = Math.round(y) + "px";
   });
 }
+
+// The world's pins and zones, of the dimension shown. Pins share the markers' layer and switch; zones have their own
+const SVG = "http://www.w3.org/2000/svg";
+let pinEls = [], zoneEls = [], hovered = null;
+const isLight = hex => {
+  const v = parseInt(hex.slice(1), 16);
+  return ((v >> 16) & 255) * 0.299 + ((v >> 8) & 255) * 0.587 + (v & 255) * 0.114 > 170;
+};
+function createMarkup() {
+  zonesEl.replaceChildren();
+  for (const label of zoneLayerEl.querySelectorAll(".zlabel")) label.remove();
+  zoneEls = (dim.zones || []).map(z => {
+    const shape = document.createElementNS(SVG, "polygon");
+    shape.setAttribute("fill", z.color);
+    shape.setAttribute("stroke", z.color);
+    zonesEl.appendChild(shape);
+    let label = null;
+    if (z.label) {
+      label = document.createElement("div");
+      label.className = "zlabel";
+      label.textContent = z.label;
+      zoneLayerEl.appendChild(label);
+    }
+    return { kind: "zone", item: z, shape, label, labelSize: null, area: zoneArea(z.points) };
+  });
+  pinEls = (dim.pins || []).map(p => {
+    const el = document.createElement("div");
+    el.className = "pin";
+    const disc = document.createElement("b");
+    disc.style.background = p.color;
+    const glyph = isLight(p.color) ? "#202020" : "#ffffff";
+    if (p.icon && MAP.icons && MAP.icons[p.icon]) {
+      const svg = document.createElementNS(SVG, "svg");
+      svg.setAttribute("viewBox", "0 0 16 16");
+      const path = document.createElementNS(SVG, "path");
+      path.setAttribute("d", MAP.icons[p.icon]);
+      path.setAttribute("fill", glyph);
+      path.setAttribute("fill-rule", "evenodd");
+      svg.appendChild(path);
+      disc.appendChild(svg);
+    } else {
+      const dot = document.createElement("i");
+      dot.style.background = glyph;
+      disc.appendChild(dot);
+    }
+    el.appendChild(disc);
+    if (p.label) {
+      const label = document.createElement("span");
+      label.textContent = p.label;
+      el.appendChild(label);
+    }
+    markersEl.appendChild(el);
+    return { kind: "pin", item: p, el };
+  });
+}
+function zoneArea(points) {
+  let sum = 0;
+  for (let i = 0; i < points.length; i += 2) {
+    const j = (i + 2) % points.length;
+    sum += points[i] * points[j + 1] - points[j] * points[i + 1];
+  }
+  return Math.abs(sum) / 2;
+}
+function drawMarkup() {
+  for (const zone of zoneEls) {
+    const points = zone.item.points, corners = [];
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (let i = 0; i < points.length; i += 2) {
+      const [x, y] = toScreen(points[i], points[i + 1]);
+      corners.push(x.toFixed(1) + "," + y.toFixed(1));
+      minX = Math.min(minX, x); maxX = Math.max(maxX, x); minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+    }
+    zone.shape.setAttribute("points", corners.join(" "));
+    zone.shape.setAttribute("fill-opacity", zone === hovered ? "0.36" : "0.22");
+    if (zone.label) {
+      // A label shows once the zone is big enough on screen to hold it
+      // Hidden by visibility rather than display, so it can still be measured; the layer may have been off at first
+      if (!zone.labelSize || !zone.labelSize[0]) zone.labelSize = [zone.label.offsetWidth, zone.label.offsetHeight];
+      const fits = zone.labelSize[0] + 8 <= maxX - minX && zone.labelSize[1] + 4 <= maxY - minY;
+      zone.label.style.visibility = fits || zone === hovered ? "" : "hidden";
+      const [lx, ly] = toScreen(zone.item.labelAt[0], zone.item.labelAt[1]);
+      zone.label.style.left = Math.round(lx) + "px";
+      zone.label.style.top = Math.round(ly) + "px";
+    }
+  }
+  for (const pin of pinEls) {
+    const [x, y] = toScreen(pin.item.x + 0.5, pin.item.z + 0.5);
+    pin.el.style.left = Math.round(x) + "px";
+    pin.el.style.top = Math.round(y) + "px";
+  }
+}
+// The pin or zone at a point on the screen: pins first, then the smallest zone holding it
+function markupAt(sx, sy) {
+  if (!markersEl.classList.contains("hidden")) {
+    for (let i = pinEls.length - 1; i >= 0; i--) {
+      const [x, y] = toScreen(pinEls[i].item.x + 0.5, pinEls[i].item.z + 0.5);
+      if (Math.hypot(sx - x, sy - y) <= 12) return pinEls[i];
+    }
+  }
+  if (zoneLayerEl.classList.contains("hidden")) return null;
+  const [wx, wz] = toWorld(sx, sy);
+  let best = null;
+  for (const zone of zoneEls) {
+    if (contains(zone.item.points, wx, wz) && (!best || zone.area < best.area)) best = zone;
+  }
+  return best;
+}
+function contains(points, x, z) {
+  let inside = false;
+  for (let i = 0, j = points.length - 2; i < points.length; j = i, i += 2) {
+    const ax = points[i], az = points[i + 1], bx = points[j], bz = points[j + 1];
+    if ((az > z) !== (bz > z) && x < (bx - ax) * (z - az) / (bz - az) + ax) inside = !inside;
+  }
+  return inside;
+}
+function showCard(found, sx, sy) {
+  const item = found.item;
+  cardEl.replaceChildren();
+  const title = document.createElement("h2");
+  title.textContent = item.label || (found.kind === "pin" ? "Unnamed pin" : "Unnamed zone");
+  const detail = document.createElement("p");
+  detail.textContent = found.kind === "pin" ? "X " + item.x + "   Z " + item.z : item.size;
+  cardEl.append(title, detail);
+  if (item.note) {
+    const note = document.createElement("p");
+    note.className = "note";
+    note.textContent = item.note;
+    cardEl.appendChild(note);
+  }
+  cardEl.style.display = "block";
+  let x = sx + 14, y = sy + 14;
+  if (x + cardEl.offsetWidth > width()) x = sx - cardEl.offsetWidth - 8;
+  if (y + cardEl.offsetHeight > height()) y = sy - cardEl.offsetHeight - 8;
+  cardEl.style.left = Math.max(4, x) + "px";
+  cardEl.style.top = Math.max(4, y) + "px";
+}
+function hideCard() { cardEl.style.display = "none"; }
 
 // Grid: region lines once they're far enough apart, then chunk lines
 function drawGrid(left, top, right, bottom) {
@@ -326,8 +486,11 @@ function fit() {
 const pointers = new Map();
 let pinch = null;
 
+let pressedAt = null;
 mapEl.addEventListener("pointerdown", e => {
   hideTip();
+  hideCard();
+  pressedAt = pointers.size === 0 ? [e.clientX, e.clientY] : null;
   if (e.button !== 0 && e.pointerType === "mouse") return;
   mapEl.setPointerCapture(e.pointerId);
   pointers.set(e.pointerId, [e.clientX, e.clientY]);
@@ -340,6 +503,9 @@ mapEl.addEventListener("pointermove", e => {
   const last = pointers.get(e.pointerId);
   if (!last) {
     if (e.pointerType === "mouse" && e.buttons === 0) restartTip(); else hideTip();
+    const over = e.pointerType === "mouse" ? markupAt(e.clientX, e.clientY) : null;
+    mapEl.style.cursor = over ? "pointer" : "";
+    if ((over && over.kind === "zone" ? over : null) !== hovered) hovered = over && over.kind === "zone" ? over : null;
     scheduleDraw();
     return;
   }
@@ -365,6 +531,12 @@ mapEl.addEventListener("pointermove", e => {
   scheduleDraw();
 });
 function endPointer(e) {
+  // A press that didn't move is a click: on a pin or zone, it shows what it is
+  if (e.type === "pointerup" && pressedAt && pointers.size === 1 && Math.hypot(e.clientX - pressedAt[0], e.clientY - pressedAt[1]) < 5) {
+    const found = markupAt(e.clientX, e.clientY);
+    if (found) showCard(found, e.clientX, e.clientY);
+  }
+  pressedAt = null;
   pointers.delete(e.pointerId);
   pinch = pointers.size === 2 ? pinchState() : null;
   if (pointers.size === 0) mapEl.classList.remove("dragging");
@@ -396,10 +568,13 @@ document.getElementById("fit").onclick = fit;
 
 const gridButton = document.getElementById("gridToggle");
 const markerButton = document.getElementById("markerToggle");
+const zoneButton = document.getElementById("zoneToggle");
 function toggleGrid() { gridButton.classList.toggle("on", !gridEl.classList.toggle("hidden")); scheduleDraw(); }
-function toggleMarkers() { markerButton.classList.toggle("on", !markersEl.classList.toggle("hidden")); }
+function toggleMarkers() { markerButton.classList.toggle("on", !markersEl.classList.toggle("hidden")); hideCard(); }
+function toggleZones() { zoneButton.classList.toggle("on", !zoneLayerEl.classList.toggle("hidden")); hideCard(); }
 gridButton.onclick = toggleGrid;
 markerButton.onclick = toggleMarkers;
+zoneButton.onclick = toggleZones;
 
 // Switching dimensions: each keeps where it was looked at
 function showDimension(next, nextView) {
@@ -409,7 +584,11 @@ function showDimension(next, nextView) {
   for (const tile of tiles.values()) tile.img.remove();
   tiles.clear();
   createMarkers();
-  markerButton.style.display = dim.markers.length === 0 ? "none" : "";
+  createMarkup();
+  hovered = null;
+  hideCard();
+  markerButton.style.display = dim.markers.length === 0 && pinEls.length === 0 ? "none" : "";
+  zoneButton.style.display = zoneEls.length === 0 ? "none" : "";
   document.querySelector("#info p").textContent = dim.subtitle;
   for (const button of dimsEl.children) button.classList.toggle("on", button.dataset.id === dim.id);
   hideTip();
@@ -444,6 +623,8 @@ document.addEventListener("keydown", e => {
     case "Home": fit(); break;
     case "g": case "G": toggleGrid(); break;
     case "m": case "M": toggleMarkers(); break;
+    case "z": case "Z": toggleZones(); break;
+    case "Escape": hideCard(); break;
     default:
       if (e.key >= "1" && e.key <= "9" && MAP.dimensions[e.key - 1]) { showDimension(MAP.dimensions[e.key - 1]); break; }
       return;

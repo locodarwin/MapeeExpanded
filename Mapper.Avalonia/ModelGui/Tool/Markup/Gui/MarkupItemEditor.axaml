@@ -1,0 +1,79 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Mapper.Gui.MarkupItemEditor"
+             Width="262">
+
+    <UserControl.Styles>
+        <Style Selector="Button.swatch">
+            <Setter Property="Width" Value="24" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="BorderBrush" Value="#FF303030" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.swatch.selected">
+            <Setter Property="BorderBrush" Value="White" />
+        </Style>
+        <Style Selector="Button.icon">
+            <Setter Property="Width" Value="25" />
+            <Setter Property="Height" Value="25" />
+            <Setter Property="Margin" Value="0,0,3,0" />
+            <Setter Property="Background" Value="#FF303030" />
+            <Setter Property="BorderBrush" Value="#FF3F3F3F" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.icon.selected">
+            <Setter Property="BorderBrush" Value="Gold" />
+        </Style>
+        <Style Selector="Button.icon Path">
+            <Setter Property="Fill" Value="#FFDDDDDD" />
+        </Style>
+        <Style Selector="Button.icon.selected Path">
+            <Setter Property="Fill" Value="Gold" />
+        </Style>
+        <Style Selector="Button.dialog">
+            <Setter Property="Height" Value="25" />
+            <Setter Property="Margin" Value="6,0,0,0" />
+            <Setter Property="MinWidth" Value="64" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBlock.caption">
+            <Setter Property="Foreground" Value="#FFAAAAAA" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Margin" Value="0,8,0,3" />
+        </Style>
+    </UserControl.Styles>
+
+    <Border Background="#FF1C1C1C" BorderBrush="#FF707070" BorderThickness="1" Padding="10,8,10,10">
+        <StackPanel>
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock x:Name="TitleText" Classes="heading" FontSize="14" Text="New pin" />
+                <TextBlock x:Name="WhereText" Grid.Column="1" Foreground="#FFAAAAAA" FontSize="11" VerticalAlignment="Center" />
+            </Grid>
+
+            <TextBlock Classes="caption" Text="Label" />
+            <TextBox x:Name="LabelBox" Height="26" FontSize="13" Padding="4,2" MaxLength="80" />
+
+            <TextBlock Classes="caption" Text="Colour" />
+            <StackPanel x:Name="Swatches" Orientation="Horizontal" />
+
+            <StackPanel x:Name="IconSection">
+                <TextBlock Classes="caption" Text="Symbol" />
+                <StackPanel x:Name="IconButtons" Orientation="Horizontal" />
+            </StackPanel>
+
+            <TextBlock Classes="caption" Text="Note" />
+            <TextBox x:Name="NoteBox" Height="52" FontSize="12" Padding="4,2" AcceptsReturn="True" TextWrapping="Wrap"
+                     VerticalContentAlignment="Top" MaxLength="1000" />
+
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,10,0,0">
+                <Button x:Name="DeleteButton" Classes="dialog" Margin="0" Content="Delete" Click="DeleteButton_Click" />
+                <Button x:Name="CancelButton" Grid.Column="2" Classes="dialog" Content="Cancel" Click="CancelButton_Click" />
+                <Button x:Name="SaveButton" Grid.Column="3" Classes="dialog" Content="Save" Click="SaveButton_Click" />
+            </Grid>
+        </StackPanel>
+    </Border>
+</UserControl>

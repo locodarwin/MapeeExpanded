@@ -12,6 +12,8 @@ namespace Mapper.Gui.Logic
 
         public IBackgroundPainter BackgroundPainter { get; }
         public IScenePainter ScenePainter { get; }
+        // Set once the toolbar exists; the image export draws markup with it
+        public MarkupPainter? MarkupPainter { get; set; }
 
         public event RenderUpdate? OnRenderUpdate;
 

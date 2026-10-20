@@ -16,7 +16,10 @@ namespace Mapper.Gui.Model
         Size GetScreenshotSize();
         Size GetFullResolutionSize(FullResolutionImageArgs args);
 
-        void SaveAsScreenshot(string path);
+        // Whether there's markup on show that an image could leave out
+        bool HasMarkup { get; }
+
+        void SaveAsScreenshot(string path, bool includeMarkup = true);
         void SaveAsFullResolution(string path, FullResolutionImageArgs args);
 
         bool CanSaveWebMap { get; }

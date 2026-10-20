@@ -16,6 +16,8 @@ namespace Mapper.Gui.Controller
         // The tools that draw over the map and stay on until turned off, by the name the settings keep them under
         public IDictionary<string, IToggleableTool> Overlays { get; } = new Dictionary<string, IToggleableTool>();
         public WorldOpener WorldOpener { get; }
+        public MarkupTool MarkupTool { get; private set; } = null!;
+        private MeasureLengthTool _measureLengthTool = null!;
 
         public MapViewer MainWindow { get; }
         public Renderer Renderer { get; }
@@ -36,6 +38,7 @@ namespace Mapper.Gui.Controller
             shortSegment.Tools.Add(CreateAxisButton());
             shortSegment.Tools.Add(CreateChunkHighlightsButton());
             shortSegment.Tools.Add(CreateMeasureLengthButton());
+            shortSegment.Tools.Add(CreateMarkupButton());
             shortSegment.Tools.Add(CreateDayNightCycleButton());
             shortSegment.Tools.Add(CreateGoToButton());
             shortSegment.Tools.Add(CreateExportAsImageButton());
@@ -84,8 +87,24 @@ namespace Mapper.Gui.Controller
         private ToolButton CreateMeasureLengthButton()
         {
             MeasureLengthTool tool = new(ToolScene, RenderInvoker, Renderer.GraphicsCanvas);
+            _measureLengthTool = tool;
             Renderer.AddPainter(tool);
             return CreateButton(tool, "MeasureLength_22px.png", "Measure length");
+        }
+        // Both take clicks on the map, so only one is on at a time
+        private ToolButton CreateMarkupButton()
+        {
+            MarkupTool tool = new(Renderer.Scene, WorldOpener, WorldOpener.Settings, RenderInvoker);
+            MarkupTool = tool;
+            tool.OnTurnedOn += isTurnedOn =>
+            {
+                if (isTurnedOn) _measureLengthTool.IsTurnedOn = false;
+            };
+            _measureLengthTool.OnTurnedOn += isTurnedOn =>
+            {
+                if (isTurnedOn) tool.IsTurnedOn = false;
+            };
+            return CreateButton(tool, "Markup_22px.png", "Mark the map with pins and zones");
         }
         private ToolButton CreateDayNightCycleButton() 
         {
@@ -100,7 +119,7 @@ namespace Mapper.Gui.Controller
         }
         private ToolButton CreateGoToButton()
         {
-            GoToTool tool = new(Renderer.Scene, Renderer.GraphicsCanvas);
+            GoToTool tool = new(Renderer.Scene, Renderer.GraphicsCanvas) { Markup = MarkupTool };
             ToolButton output = new(tool)
             {
                 ToolTip = "Go to position in world",

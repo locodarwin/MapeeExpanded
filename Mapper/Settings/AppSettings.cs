@@ -20,6 +20,8 @@ namespace Mapper
         public WindowSettings Window { get; set; } = new();
         public string? Style { get; set; }
         public List<string> Overlays { get; set; } = [];
+        // Markup is shown unless turned off, unlike the overlays
+        public bool ShowMarkup { get; set; } = true;
         public List<RecentWorld> RecentWorlds { get; set; } = [];
 
         private static readonly JsonSerializerOptions _options = new()

@@ -13,9 +13,10 @@ namespace Mapper
         private const int RegionSize = 512;
 
         // Writes the image and returns where it lies in block coordinates, or null without writing anything when
-        // no region is in the dimension (or the area)
+        // no region is in the dimension (or the area). An overlay draws over each band of rows before it's written,
+        // the empty stretches between regions included
         public static MapImageBounds? Export(MapperPack mapperPack, SceneInfo scene, string file, BlockArea? area = null,
-            IProgress<WebMapProgress>? progress = null, CancellationToken cancellation = default)
+            IProgress<WebMapProgress>? progress = null, CancellationToken cancellation = default, MapImageOverlay? overlay = null)
         {
             if (scene.RegionStore is IBackgroundRegionStore background) background.Ready.Wait(cancellation);
 
@@ -48,7 +49,7 @@ namespace Mapper
                     {
                         // The rows of the image this row of regions covers
                         int bandTop = Math.Max(row.Key * RegionSize, bounds.Z), bandBottom = Math.Min((row.Key + 1) * RegionSize, bounds.Z + bounds.Height);
-                        if (bandTop - bounds.Z > rowsWritten) WriteEmpty(png, bounds.Width, bandTop - bounds.Z - rowsWritten);
+                        if (bandTop - bounds.Z > rowsWritten) band = WriteEmpty(png, bounds, rowsWritten, bandTop - bounds.Z, band, overlay);
 
                         int bandHeight = bandBottom - bandTop;
                         if (band.Length < bounds.Width * 4 * bandHeight) band = new byte[bounds.Width * 4 * bandHeight];
@@ -79,10 +80,11 @@ namespace Mapper
                             progress?.Report(new WebMapProgress(WebMapStage.Rendering, done, regions.Length, scene.Dimension.Name));
                         }
 
+                        overlay?.Invoke(band, bounds.X, bandTop, bounds.Width, bandHeight);
                         for (int y = 0; y < bandHeight; y++) png.WriteRow(band.AsSpan(y * bounds.Width * 4, bounds.Width * 4));
                         rowsWritten = bandBottom - bounds.Z;
                     }
-                    if (rowsWritten < bounds.Height) WriteEmpty(png, bounds.Width, bounds.Height - rowsWritten);
+                    if (rowsWritten < bounds.Height) WriteEmpty(png, bounds, rowsWritten, bounds.Height, band, overlay);
                 }
 
                 File.Move(partial, file, overwrite: true);
@@ -125,12 +127,33 @@ namespace Mapper
             }
         }
 
-        private static void WriteEmpty(PngRowWriter png, int width, int rows)
+        // Rows of the image no region covers, from and to counted from its top. With an overlay they go a band at a
+        // time, so it can draw there too; returns the band buffer, which may have grown
+        private static byte[] WriteEmpty(PngRowWriter png, MapImageBounds bounds, int from, int to, byte[] band, MapImageOverlay? overlay)
         {
-            byte[] empty = new byte[width * 4];
-            for (int i = 0; i < rows; i++) png.WriteRow(empty);
+            if (overlay is null)
+            {
+                byte[] empty = new byte[bounds.Width * 4];
+                for (int i = from; i < to; i++) png.WriteRow(empty);
+                return band;
+            }
+
+            for (int top = from; top < to; top += RegionSize)
+            {
+                int height = Math.Min(RegionSize, to - top);
+                if (band.Length < bounds.Width * 4 * height) band = new byte[bounds.Width * 4 * height];
+                else Array.Clear(band);
+
+                overlay(band, bounds.X, bounds.Z + top, bounds.Width, height);
+                for (int y = 0; y < height; y++) png.WriteRow(band.AsSpan(y * bounds.Width * 4, bounds.Width * 4));
+            }
+            return band;
         }
     }
+
+    // Draws over a band of an exported image: RGBA rows, unpremultiplied, width by height, whose top left pixel is the
+    // block at left, top
+    public delegate void MapImageOverlay(byte[] rgba, int left, int top, int width, int height);
 
     // Where an exported image lies, in blocks: its top left (north-west) corner and size, a pixel per block
     public readonly record struct MapImageBounds(int X, int Z, int Width, int Height);

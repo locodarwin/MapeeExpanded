@@ -38,6 +38,9 @@
           </Grid>
         </Border>
 
+        <CheckBox x:Name="IncludeMarkupCheckBox" Grid.Row="3" IsChecked="True" Content="Include pins and zones"
+                  HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,10,12" />
+
         <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,13" HorizontalAlignment="Left" VerticalAlignment="Bottom">
             <Button x:Name="SaveButton" Content="Save as..." Classes="dialog" Width="100" Height="26" HorizontalContentAlignment="Center" Click="SaveButton_Click" />
             <TextBlock x:Name="SavingLabel" Margin="12,0,0,0" Foreground="#FFBBBBBB" VerticalAlignment="Center" IsVisible="False" Text="Saving" />

@@ -20,16 +20,22 @@
 //   info                              print what the info bar says about the block under the mouse
 //   height:<surface|slice|caves>[:<y>]  set the height panel
 //   drag:<x1>,<y1>,<x2>,<y2>          left-drag across the main window
-//   save:<screenshot|full>:<file>     export the map as the Export as image window would
+//   save:[plain-]<screenshot|full>:<file>  export the map as the Export as image window would (plain: without markup)
 //   webmap:<folder>                   export the dimension on screen as a web map
 //   check:<control name>              tick a radio button or check box in any open window
 //   close                             close every window but the main one
+//   click:<x>,<y>[:right|shift|double]  click on the main window (double: two clicks in quick succession)
+//   key:[ctrl+][shift+]<key>          press a key on the main window (Escape, Back, Delete, Enter, Z, ...)
+//   markup:<pin|zone|rectangle|select|view>  pick what a click on the map does (turning the Markup button on first)
+//   edit:<label>[|<colour hex>|<icon id>|<note>]  fill in the open pin or zone popup and save it; edit:!cancel, edit:!delete
+//   marks                             print the world's pins and zones, and the Places list
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.LogicalTree;
 using Avalonia.Threading;
 using Mapper;
 using Mapper.Gui;
@@ -173,15 +179,22 @@ foreach (string step in args.Skip(1))
             string[] save = value.Split(':', 2);
             IImageSaver saver = controller.ToolbarWidget.ToolButtonSegments.SelectMany(segment => segment.Tools)
                 .Select(tool => tool.Tool).OfType<ExportAsImageTool>().First().ImageSaver;
-            if (save[0] == "screenshot") saver.SaveAsScreenshot(save[1]);
-            else saver.SaveAsFullResolution(save[1], saver.DefaultFullResArgs);
+            bool plain = save[0].StartsWith("plain-");
+            if (save[0].EndsWith("screenshot")) saver.SaveAsScreenshot(save[1], !plain);
+            else
+            {
+                // Off the UI thread, as the export window saves it
+                Task saving = Task.Run(() => saver.SaveAsFullResolution(save[1], saver.DefaultFullResArgs with { IncludeMarkup = !plain }));
+                while (!saving.IsCompleted) Pump(50);
+                saving.GetAwaiter().GetResult();
+            }
             Pump(200);
             Console.WriteLine($"  saved {save[1]} ({new FileInfo(save[1]).Length:N0} bytes)");
             break;
         case "webmap":
             IImageSaver webSaver = controller.ToolbarWidget.ToolButtonSegments.SelectMany(segment => segment.Tools)
                 .Select(tool => tool.Tool).OfType<ExportAsImageTool>().First().ImageSaver;
-            var export = webSaver.PrepareWebMap(value, new WebMapOptions() { IncludeMarkers = true });
+            var export = webSaver.PrepareWebMap(value, new WebMapOptions() { IncludeMarkers = true, IncludeMarkup = true });
             var watch = System.Diagnostics.Stopwatch.StartNew();
             WebMapProgress last = default;
             Task exporting = Task.Run(() => export(new SynchronousProgress<WebMapProgress>(p => last = p), CancellationToken.None));
@@ -204,6 +217,60 @@ foreach (string step in args.Skip(1))
         case "close":
             CloseOthers();
             break;
+        case "click":
+            string[] click = value.Split(':');
+            Point at = ParsePoint(click[0]);
+            string how = click.Length > 1 ? click[1] : "";
+            RawInputModifiers held = how == "shift" ? RawInputModifiers.Shift : RawInputModifiers.None;
+            MouseButton which = how == "right" ? MouseButton.Right : MouseButton.Left;
+            for (int i = 0; i < (how == "double" ? 2 : 1); i++)
+            {
+                main.MouseMove(at, held);
+                main.MouseDown(at, which, held);
+                main.MouseUp(at, which, held);
+                Pump(how == "double" ? 30 : 250);
+            }
+            Pump(250);
+            break;
+        case "key":
+            string[] chord = value.Split('+');
+            RawInputModifiers keyModifiers = RawInputModifiers.None;
+            if (chord.Contains("ctrl")) keyModifiers |= RawInputModifiers.Control;
+            if (chord.Contains("shift")) keyModifiers |= RawInputModifiers.Shift;
+            main.KeyPress(Enum.Parse<Key>(chord[^1], true), keyModifiers, PhysicalKey.None, null);
+            main.KeyRelease(Enum.Parse<Key>(chord[^1], true), keyModifiers, PhysicalKey.None, null);
+            Pump(250);
+            break;
+        case "markup":
+            MarkupTool markup = controller.ToolbarWidget.MarkupTool;
+            MarkupMode mode = Enum.Parse<MarkupMode>(value, true);
+            markup.IsTurnedOn = mode != MarkupMode.View;
+            markup.Editor.Mode = mode;
+            Pump(300);
+            break;
+        case "edit":
+            MarkupItemEditor editor = controller.MarkupBar.ItemEditor ?? throw new InvalidOperationException("No markup popup is open");
+            if (value == "!cancel" || value == "!delete")
+            {
+                editor.FindControl<Button>(value == "!cancel" ? "CancelButton" : "DeleteButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            }
+            else
+            {
+                string[] fields = value.Split('|');
+                editor.FindControl<TextBox>("LabelBox")!.Text = fields[0];
+                if (fields.Length > 1 && fields[1].Length > 0) editor.Item.Color = fields[1];
+                if (fields.Length > 2 && editor.Item is MapPin editedPin) editedPin.Icon = fields[2].Length > 0 ? fields[2] : null;
+                if (fields.Length > 3) editor.FindControl<TextBox>("NoteBox")!.Text = fields[3];
+                editor.FindControl<Button>("SaveButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            }
+            Pump(300);
+            break;
+        case "marks":
+            MarkupTool marks = controller.ToolbarWidget.MarkupTool;
+            foreach (MapPin pin in marks.Editor.Document.Pins) Console.WriteLine($"  pin {pin.Label} at {pin.X}, {pin.Z} in {pin.Dimension}, {pin.Color} {pin.Icon ?? "dot"}{(pin.Note is null ? "" : $", note {pin.Note}")}");
+            foreach (MapZone zone in marks.Editor.Document.Zones) Console.WriteLine($"  zone {zone.Label} in {zone.Dimension}, {zone.Color}: {string.Join(" ", zone.Points.Select(p => $"{p.X},{p.Z}"))} ({ZoneGeometry.Describe(zone.Points)})");
+            Console.WriteLine($"  places: {string.Join(" | ", marks.Places().Select(MarkupTool.Title))}; mode {marks.Editor.Mode}, shown {marks.ShowMarkup}, file {marks.Store.FileFor(marks.Editor.Document.World ?? "?")}");
+            break;
         default:
             throw new ArgumentException($"Unknown step {step}");
     }
@@ -221,6 +288,8 @@ void Start(string? startupWorld)
         main.Width = 1250;
         main.Height = 800;
     }
+    // Popups drawn into the window, so screenshots show them
+    foreach (Popup popup in controller.MarkupBar.GetLogicalDescendants().OfType<Popup>()) popup.ShouldUseOverlayLayer = true;
     main.Show();
     Pump(1500);
 }

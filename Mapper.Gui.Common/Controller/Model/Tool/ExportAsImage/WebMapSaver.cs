@@ -15,6 +15,9 @@ namespace Mapper.Gui.Controller
     {
         public Scene Scene { get; }
 
+        // The world's markup, which the page can show
+        public Func<MarkupDocument?>? Markup { get; set; }
+
         public WebMapSaver(Scene scene)
         {
             Scene = scene;
@@ -41,14 +44,15 @@ namespace Mapper.Gui.Controller
             string title = world.Level.WorldName ?? "Map";
             string current = WebMapFolder.IdOf(world.CurrentDimension.Dimension);
             AssetPack assetPack = Scene.Domain.DefaultAssetPack;
+            MarkupDocument? markup = options.IncludeMarkup ? Markup?.Invoke()?.Clone() : null;
 
-            return (progress, cancellation) => _ = Export(assetPack, world.Level, targets, folder, title, current, progress, cancellation);
+            return (progress, cancellation) => _ = Export(assetPack, world.Level, targets, folder, title, current, progress, cancellation, markup);
         }
 
         // Writes the dimensions into the folder as one web map that opens on the current one, and returns those
         // written (a dimension with no regions is left out). Runs anywhere
         public static IList<WebMapDimension> Export(AssetPack defaultAssetPack, Level level, IList<WebMapTarget> targets, string folder, string title, string current,
-            IProgress<WebMapProgress>? progress, CancellationToken cancellation)
+            IProgress<WebMapProgress>? progress, CancellationToken cancellation, MarkupDocument? markup = null)
         {
             WebMapFolder.Clear(folder, targets.Select(t => WebMapFolder.IdOf(t.Dimension)));
 
@@ -65,7 +69,7 @@ namespace Mapper.Gui.Controller
                     is WebMapDimension dimension) dimensions.Add(dimension);
             }
 
-            WebMapPage.Write(folder, title, dimensions, current);
+            WebMapPage.Write(folder, title, dimensions, current, markup);
             progress?.Report(new WebMapProgress(WebMapStage.Done, 1, 1));
             return dimensions;
         }

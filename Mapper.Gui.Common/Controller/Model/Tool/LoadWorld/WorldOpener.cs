@@ -22,8 +22,11 @@ namespace Mapper.Gui.Controller
         // A world named on the command line, opened in place of the browser at startup
         public string? StartupWorld { get; set; }
 
-        // What the current world was opened from: its folder, or the .mcworld file
+        // What the current world was opened from: its folder, or the .mcworld file. Set before the scene hears of
+        // the world, so what keeps things per world (markup) can find it then
+        public string? CurrentSource => _currentSource;
         private string? _currentSource;
+        private Level? _currentLevel;
 
         public WorldOpener(Scene scene, AppSettings settings)
         {
@@ -36,8 +39,9 @@ namespace Mapper.Gui.Controller
             RememberView();
 
             StartupLog.Mark($"Opening world {source} ({level.Edition}), player at {level.Player.Position.X:F0}, {level.Player.Position.Z:F0}");
-            Scene.SetWorld(level);
             _currentSource = source;
+            _currentLevel = level;
+            Scene.SetWorld(level);
             LogView("World set");
 
             RecentWorld recent = Settings.Remember(source);
@@ -77,6 +81,9 @@ namespace Mapper.Gui.Controller
                 return false;
             }
         }
+
+        // What a world on show was opened from, if it was opened here
+        public string? SourceOf(Level level) => level == _currentLevel ? _currentSource : null;
 
         public void RememberView()
         {

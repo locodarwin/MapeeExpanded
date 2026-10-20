@@ -16,7 +16,7 @@
     </UserControl.Styles>
 
     <Border BorderBrush="#FF707070" BorderThickness="1">
-        <Grid RowDefinitions="31,25,25,25">
+        <Grid RowDefinitions="31,25,25,25,Auto">
             <Grid Margin="3,0,3,0" Grid.Row="0" ColumnDefinitions="*,86">
                 <TextBox x:Name="CoordinateTextBox" Text="0; 0" FontSize="15" Height="25" Padding="3,1,0,0" Margin="0,0,3,0" Grid.Column="0" />
                 <Button Content="Go to point" Classes="flat goto" Grid.Column="1" Click="GoToButton_Click" />
@@ -25,6 +25,14 @@
             <Button x:Name="PlayerPositionButton" Content="Player position" Classes="flat goto" Grid.Row="1" Click="PlayerPositionButton_Click" />
             <Button x:Name="PlayerSpawnButton" Content="Player spawn" Classes="flat goto" Grid.Row="2" Click="PlayerSpawnButton_Click" />
             <Button x:Name="WorldSpawnButton" Content="World spawn" Classes="flat goto" Grid.Row="3" Click="WorldSpawnButton_Click" />
+
+            <!-- The world's pins and zones, when it has any -->
+            <StackPanel x:Name="PlacesSection" Grid.Row="4" IsVisible="False">
+                <Border Height="1" Background="#FF707070" Margin="0,3,0,2" />
+                <ScrollViewer MaxHeight="200">
+                    <StackPanel x:Name="PlacesPanel" />
+                </ScrollViewer>
+            </StackPanel>
         </Grid>
     </Border>
 </UserControl>

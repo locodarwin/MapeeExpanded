@@ -1,6 +1,8 @@
 ﻿using Mapper.Gui.Model;
 using System;
+using System.Collections.Generic;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace Mapper.Gui
 {
@@ -32,6 +34,32 @@ namespace Mapper.Gui
             PlayerPositionButton.Content = $"Player position ({playerPosition})";
             PlayerSpawnButton.Content = $"Player spawn ({playerSpawn})";
             WorldSpawnButton.Content = $"World spawn ({worldSpawn})";
+        }
+
+        // Buttons like the spawn points' for each of the world's pins and zones
+        public void AddPlaces(IEnumerable<(string Title, XzPoint Point)> places)
+        {
+            foreach (var (title, point) in places)
+            {
+                Button button = new()
+                {
+                    Content = $"{title} ({(int)Math.Floor(point.X)}; {(int)Math.Floor(point.Z)})",
+                    Style = WorldSpawnButton.Style,
+                    Foreground = WorldSpawnButton.Foreground,
+                    BorderBrush = WorldSpawnButton.BorderBrush,
+                    Height = 25
+                };
+                button.Click += (sender, e) =>
+                {
+                    SelectedPoint = point;
+                    DialogClosed = false;
+
+                    _closing = true;
+                    Close();
+                };
+                PlacesPanel.Children.Add(button);
+            }
+            PlacesSection.Visibility = PlacesPanel.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private void GoToButton_Click(object sender, RoutedEventArgs e)

@@ -58,6 +58,7 @@ namespace Mapper.Gui
             SetScreenshotLabel();
             SetFullResolutionLabel();
             WebMapButton.IsEnabled = _imageSaver.CanSaveWebMap;
+            IncludeMarkupCheckBox.Visibility = _imageSaver.HasMarkup ? Visibility.Visible : Visibility.Collapsed;
             WebMapDescriptionLabel.Text = _imageSaver.WebMapDescription;
         }
 
@@ -212,7 +213,7 @@ namespace Mapper.Gui
             Action<IProgress<WebMapProgress>?, CancellationToken> export;
             try
             {
-                export = _imageSaver.PrepareWebMap(folder, new WebMapOptions() { IncludeMarkers = IncludeMarkersCheckBox.IsChecked == true });
+                export = _imageSaver.PrepareWebMap(folder, new WebMapOptions() { IncludeMarkers = IncludeMarkersCheckBox.IsChecked == true, IncludeMarkup = IncludeMarkupCheckBox.IsChecked == true });
             }
             catch (Exception exception)
             {
@@ -315,6 +316,7 @@ namespace Mapper.Gui
             FullResolutionButton.IsEnabled = enabled;
             WebMapButton.IsEnabled = enabled;
             IncludeMarkersCheckBox.IsEnabled = enabled;
+            IncludeMarkupCheckBox.IsEnabled = enabled;
             OpenWhenDoneCheckBox.IsEnabled = enabled;
             ClipAreaCheckBox.IsEnabled = enabled;
             CheckerPatternRadioBox.IsEnabled = enabled;
@@ -349,7 +351,7 @@ namespace Mapper.Gui
 
         private void SaveScreenshot(string path)
         {
-            _imageSaver.SaveAsScreenshot(path);
+            _imageSaver.SaveAsScreenshot(path, IncludeMarkupCheckBox.IsChecked == true);
         }
         private void SaveFullResolution(string path, FullResolutionImageArgs args)
         {
@@ -362,7 +364,8 @@ namespace Mapper.Gui
             {
                 ClipArea = ClipAreaCheckBox.IsChecked is not null && ClipAreaCheckBox.IsChecked.Value,
                 CheckerPatternEnabled = CheckerPatternRadioBox.IsChecked is not null && CheckerPatternRadioBox.IsChecked.Value,
-                BackgroundColor = BlackColorRadioBox.IsChecked is not null && BlackColorRadioBox.IsChecked.Value ? Colors.Black : Color.FromArgb(0, 0, 0, 0)
+                BackgroundColor = BlackColorRadioBox.IsChecked is not null && BlackColorRadioBox.IsChecked.Value ? Colors.Black : Color.FromArgb(0, 0, 0, 0),
+                IncludeMarkup = IncludeMarkupCheckBox.IsChecked == true
             };
         }
     }

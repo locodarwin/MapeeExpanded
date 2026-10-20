@@ -42,6 +42,7 @@ namespace Mapper.Gui.Controller
             RenderInvoker = new RenderInvoker(Renderer);
 
             ToolButtonSegment shortSegment = new();
+            shortSegment.Tools.Add(CreateShortcutsButton());
             shortSegment.Tools.Add(CreateGridToolButton());
             shortSegment.Tools.Add(CreateSlimeChunkButton());
             shortSegment.Tools.Add(CreateAxisButton());
@@ -51,7 +52,6 @@ namespace Mapper.Gui.Controller
             shortSegment.Tools.Add(CreateDayNightCycleButton());
             shortSegment.Tools.Add(CreateGoToButton());
             shortSegment.Tools.Add(CreateExportAsImageButton());
-            shortSegment.Tools.Add(CreateShortcutsButton());
 
             ToolButtonSegment longSegment = new()
             {

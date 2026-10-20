@@ -45,7 +45,7 @@ Markup is saved as you go, one file per world in the settings folder (`%APPDATA%
 
 # Keyboard shortcuts
 
-Press **F1** or **?** in the app, or the keyboard button at the end of the toolbar's icons, for this list. None of them work while you're typing in a box, and the ones that need a world do nothing until one is open.
+Press **F1** or **?** in the app, or the keyboard button at the left end of the toolbar, for this list. None of them work while you're typing in a box, and the ones that need a world do nothing until one is open.
 
 | Keys | Does |
 |---|---|

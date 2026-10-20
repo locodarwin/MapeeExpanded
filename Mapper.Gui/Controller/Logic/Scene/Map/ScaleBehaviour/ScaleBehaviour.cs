@@ -73,12 +73,6 @@ namespace Mapper.Gui.Logic
 
             _outputControl.MouseWheel += OnCanvasMouseWheel;
             _outputControl.SizeChanged += OnCanvasSizeChanged;
-            _outputControl.KeyDown += Window_OnKeyDown;
-
-            _outputControl.Loaded += (sender, e) =>
-            {
-                Window.GetWindow(_outputControl).KeyDown += Window_OnKeyDown;
-            };
         }
 
         private void MouseDown(object? sender, Point point)
@@ -161,26 +155,6 @@ namespace Mapper.Gui.Logic
             Point move = new(current.X - prev.X, current.Y - prev.Y);
 
             Offset = new(_offset.X + move.X, _offset.Y + move.Y);
-        }
-
-        private static readonly Key[] _directionKeys = new Key[] { Key.Up, Key.Right, Key.Down, Key.Left };
-        private static readonly int[,] _directionVectors = new int[,] { { 0, 1 }, { -1, 0 }, { 0, -1 }, { 1, 0 } };
-        private static readonly int _moveBy = 16;
-
-        private void Window_OnKeyDown(object sender, KeyEventArgs e)
-        {
-            if (Keyboard.IsKeyDown(Key.LeftCtrl) && Keyboard.IsKeyDown(Key.R))
-            {
-                ResetZoom();
-            }
-
-            for (int i = 0; i < _directionKeys.Length; i++)
-            {
-                if (Keyboard.IsKeyDown(_directionKeys[i]))
-                {
-                    Offset = new(_offset.X + _moveBy * _directionVectors[i, 0], _offset.Y + _moveBy * _directionVectors[i, 1]);
-                }
-            }
         }
 
         public void ResetZoom()

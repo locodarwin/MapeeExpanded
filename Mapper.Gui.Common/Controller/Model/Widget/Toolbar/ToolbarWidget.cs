@@ -17,7 +17,15 @@ namespace Mapper.Gui.Controller
         public IDictionary<string, IToggleableTool> Overlays { get; } = new Dictionary<string, IToggleableTool>();
         public WorldOpener WorldOpener { get; }
         public MarkupTool MarkupTool { get; private set; } = null!;
-        private MeasureLengthTool _measureLengthTool = null!;
+        // The rest of the buttons' tools, for the keyboard shortcuts
+        public MeasureLengthTool MeasureLengthTool { get; private set; } = null!;
+        public DayNightCycleTool NightTool { get; private set; } = null!;
+        public GoToTool GoToTool { get; private set; } = null!;
+        public ExportAsImageTool ExportTool { get; private set; } = null!;
+        public FilterTool FilterTool { get; private set; } = null!;
+        public BrowseTool BrowseTool { get; private set; } = null!;
+
+        private static KeyMap Keys => KeyMap.Default;
 
         public MapViewer MainWindow { get; }
         public Renderer Renderer { get; }
@@ -61,35 +69,35 @@ namespace Mapper.Gui.Controller
             GridTool tool = new(ToolScene);
             Overlays["grid"] = tool;
             Renderer.AddPainter(tool);
-            return CreateButton(tool, "Grid_22px.png", "Grid lines");
+            return CreateButton(tool, "Grid_22px.png", Keys.WithKey("Grid lines", ShortcutAction.Grid));
         }
         private ToolButton CreateSlimeChunkButton() 
         {
             SlimeChunkTool tool = new(ToolScene, new SlimeChunkChecker(Renderer.Scene.Domain));
             Overlays["slime_chunks"] = tool;
             Renderer.AddPainter(tool);
-            return CreateButton(tool, "Slime_22px.png", "Slime chunk viewer");
+            return CreateButton(tool, "Slime_22px.png", Keys.WithKey("Slime chunk viewer", ShortcutAction.SlimeChunks));
         }
         private ToolButton CreateAxisButton() 
         {
             AxisTool tool = new(ToolScene);
             Overlays["axes"] = tool;
             Renderer.AddPainter(tool);
-            return CreateButton(tool, "Axis_22px.png", "Cardinal (x; z) axes");
+            return CreateButton(tool, "Axis_22px.png", Keys.WithKey("Cardinal (x; z) axes", ShortcutAction.Axes));
         }
         private ToolButton CreateChunkHighlightsButton()
         {
             HighlightChunkTool tool = new(ToolScene, RenderInvoker, Renderer.GraphicsCanvas);
             Overlays["chunk_highlight"] = tool;
             Renderer.AddPainter(tool);
-            return CreateButton(tool, "ChunkHighlight_22px.png", "Chunk cursor highlighter");
+            return CreateButton(tool, "ChunkHighlight_22px.png", Keys.WithKey("Chunk cursor highlighter", ShortcutAction.ChunkHighlight));
         }
         private ToolButton CreateMeasureLengthButton()
         {
             MeasureLengthTool tool = new(ToolScene, RenderInvoker, Renderer.GraphicsCanvas);
-            _measureLengthTool = tool;
+            MeasureLengthTool = tool;
             Renderer.AddPainter(tool);
-            return CreateButton(tool, "MeasureLength_22px.png", "Measure length");
+            return CreateButton(tool, "MeasureLength_22px.png", Keys.WithKey("Measure length", ShortcutAction.MeasureLength));
         }
         // Both take clicks on the map, so only one is on at a time
         private ToolButton CreateMarkupButton()
@@ -98,20 +106,21 @@ namespace Mapper.Gui.Controller
             MarkupTool = tool;
             tool.OnTurnedOn += isTurnedOn =>
             {
-                if (isTurnedOn) _measureLengthTool.IsTurnedOn = false;
+                if (isTurnedOn) MeasureLengthTool.IsTurnedOn = false;
             };
-            _measureLengthTool.OnTurnedOn += isTurnedOn =>
+            MeasureLengthTool.OnTurnedOn += isTurnedOn =>
             {
                 if (isTurnedOn) tool.IsTurnedOn = false;
             };
-            return CreateButton(tool, "Markup_22px.png", "Mark the map with pins and zones");
+            return CreateButton(tool, "Markup_22px.png", Keys.WithKey("Mark the map with pins and zones", ShortcutAction.Markup));
         }
         private ToolButton CreateDayNightCycleButton() 
         {
             DayNightCycleTool tool = new(Renderer.Scene);
+            NightTool = tool;
             ToolButton output = new(tool)
             {
-                ToolTip = "Night mode",
+                ToolTip = Keys.WithKey("Night mode", ShortcutAction.NightMode),
                 Icon = AppImages.Load("/Resources/Image/ToolButton/DayNightCycle_22px.png")
             };
 
@@ -120,9 +129,10 @@ namespace Mapper.Gui.Controller
         private ToolButton CreateGoToButton()
         {
             GoToTool tool = new(Renderer.Scene, Renderer.GraphicsCanvas) { Markup = MarkupTool };
+            GoToTool = tool;
             ToolButton output = new(tool)
             {
-                ToolTip = "Go to position in world",
+                ToolTip = Keys.WithKey("Go to position in world", ShortcutAction.GoTo),
                 Icon = AppImages.Load("/Resources/Image/ToolButton/GoTo_22px.png")
             };
 
@@ -133,9 +143,10 @@ namespace Mapper.Gui.Controller
         private ToolButton CreateExportAsImageButton()
         {
             ExportAsImageTool tool = new(Renderer, MainWindow);
+            ExportTool = tool;
             ToolButton output = new(tool)
             {
-                ToolTip = "Export as image or web map",
+                ToolTip = Keys.WithKey("Export as image or web map", ShortcutAction.Export),
                 Icon = AppImages.Load("/Resources/Image/ToolButton/ExportAsImage_22px.png")
             };
 
@@ -144,11 +155,12 @@ namespace Mapper.Gui.Controller
         private ToolButton CreateFilterButton()
         {
             FilterTool tool = new(Renderer.Scene);
+            FilterTool = tool;
             ToolButton output = new(tool)
             {
                 Icon = AppImages.Load("/Resources/Image/ToolButton/Filter_22px.png"),
                 Name = "Block filter",
-                ToolTip = "Filter blocks"
+                ToolTip = Keys.WithKey("Filter blocks", ShortcutAction.BlockFilter)
             };
 
             return output;
@@ -168,11 +180,12 @@ namespace Mapper.Gui.Controller
         private ToolButton CreateBrowseButton()
         {
             BrowseTool tool = new(Renderer.Scene, MainWindow, WorldOpener);
+            BrowseTool = tool;
             ToolButton output = new(tool)
             {
                 Icon = AppImages.Load("/Resources/Image/ToolButton/LoadWorld_22px.png"),
                 Name = "Load world ",
-                ToolTip = "Load a new world"
+                ToolTip = Keys.WithKey("Load a new world", ShortcutAction.LoadWorld)
             };
 
             return output;

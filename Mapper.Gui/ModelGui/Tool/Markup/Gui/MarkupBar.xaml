@@ -61,10 +61,10 @@
 
     <StackPanel Background="#FF1C1C1C">
         <StackPanel Orientation="Horizontal" Margin="6, 5, 2, 4">
-            <Button x:Name="PinButton" Style="{StaticResource ModeButton}" Content="Pin" Click="PinButton_Click" ToolTip="Click the map to drop a pin"/>
-            <Button x:Name="ZoneButton" Style="{StaticResource ModeButton}" Content="Zone" Click="ZoneButton_Click" ToolTip="Click the corners of a zone"/>
-            <Button x:Name="RectangleButton" Style="{StaticResource ModeButton}" Content="Rectangle" Click="RectangleButton_Click" ToolTip="Drag out a rectangular zone"/>
-            <Button x:Name="SelectButton" Style="{StaticResource ModeButton}" Content="Select" Click="SelectButton_Click" ToolTip="Pick, move and edit pins and zones"/>
+            <Button x:Name="PinButton" Style="{StaticResource ModeButton}" Content="Pin" Click="PinButton_Click" ToolTip="Click the map to drop a pin (P)"/>
+            <Button x:Name="ZoneButton" Style="{StaticResource ModeButton}" Content="Zone" Click="ZoneButton_Click" ToolTip="Click the corners of a zone (Z)"/>
+            <Button x:Name="RectangleButton" Style="{StaticResource ModeButton}" Content="Rectangle" Click="RectangleButton_Click" ToolTip="Drag out a rectangular zone (R)"/>
+            <Button x:Name="SelectButton" Style="{StaticResource ModeButton}" Content="Select" Click="SelectButton_Click" ToolTip="Pick, move and edit pins and zones (V)"/>
             <Border Style="{StaticResource Gap}"/>
             <Button x:Name="PlacesButton" Style="{StaticResource ModeButton}" Content="Places" Click="PlacesButton_Click" ToolTip="Every pin and zone in this dimension"/>
             <Button x:Name="UndoButton" Style="{StaticResource ModeButton}" Content="Undo" Click="UndoButton_Click" ToolTip="Undo (Ctrl+Z)"/>
@@ -72,7 +72,7 @@
             <Border Style="{StaticResource Gap}"/>
             <Button x:Name="ExportButton" Style="{StaticResource ModeButton}" Content="Export..." Click="ExportButton_Click" ToolTip="Save this world's markup to a file"/>
             <Button x:Name="ImportButton" Style="{StaticResource ModeButton}" Content="Import..." Click="ImportButton_Click" ToolTip="Add the markup saved in a file"/>
-            <Button x:Name="HideButton" Style="{StaticResource ModeButton}" Content="Hide" Click="HideButton_Click" ToolTip="Hide markup until the Markup button is pressed again"/>
+            <Button x:Name="HideButton" Style="{StaticResource ModeButton}" Content="Hide" Click="HideButton_Click" ToolTip="Hide pins and zones until the Markup button or Shift+M brings them back"/>
         </StackPanel>
         <TextBlock x:Name="HintText" Foreground="#FFAAAAAA" FontSize="11" Margin="7, 0, 7, 5" TextWrapping="Wrap" MaxWidth="560" HorizontalAlignment="Left"/>
 

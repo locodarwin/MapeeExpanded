@@ -17,6 +17,7 @@ Upstream website: [mapee.net](https://www.mapee.net/home)
 - Coordinates beside the mouse: rest the mouse over the map for a moment and a small label gives the block's X, Y and Z
 - Command line: `mapee-cli` draws a world without opening a window, a dimension into one PNG or the whole world into a web map, with the same styles and height cuts as the app (see "Command line" below)
 - Markup: mark the map with labelled **pins** and labelled **zones** (territories, claims, farms, towns), each with a colour, a note, and for pins one of eight symbols. They're kept per world and per dimension, show in the Go to window and the web map, and can be drawn into exported images (see "Markup" below)
+- Keyboard shortcuts for the dimensions, zoom, styles, height panel, overlays, markup and windows; F1 or ? lists them, and each toolbar button's tooltip names its key (see "Keyboard shortcuts" below)
 
 **Version 1.4.0**
 - Opens Bedrock Edition worlds: the world browser lists them next to Java worlds, and the open button takes a `level.dat` or a `.mcworld` file
@@ -38,9 +39,36 @@ The toolbar's **Markup** button (the flag) opens a bar under the toolbar with wh
 - **Rectangle**: drag out a rectangular zone; hold Shift to take in whole chunks.
 - **Select**: click a pin or zone to pick it, double-click to change it, Delete to remove it; drag a pin, or a picked zone's corners, to move them. On a picked zone, double-click an edge to add a corner there, or a corner to remove it.
 
-Dragging still moves the map in every mode, and a right-click on any pin or zone changes it even with the bar closed. Hovering over a zone shows its size in blocks and chunks. Ctrl+Z and Ctrl+Y undo and redo while the bar is open. **Places** lists the dimension's pins and zones (click one to go there), and the Go to window lists them too. **Export** and **Import** move markup between machines or onto a copy of a world; **Hide** hides it until the Markup button is pressed again.
+Dragging still moves the map in every mode, and a right-click on any pin or zone changes it even with the bar closed. Hovering over a zone shows its size in blocks and chunks. Ctrl+Z and Ctrl+Y undo and redo while the bar is open. **Places** lists the dimension's pins and zones (click one to go there), and the Go to window lists them too. **Export** and **Import** move markup between machines or onto a copy of a world; **Hide** hides it until the Markup button (or Shift+M) brings it back. P, Z, R and V pick the four modes from the keyboard, opening the bar if it's closed.
 
 Markup is saved as you go, one file per world in the settings folder (`%APPDATA%\Mapee\Markup` on Windows, `~/.config/Mapee/Markup` on Linux), never in the world itself. It follows the path the world was opened from, as the recent worlds do, so a copied world starts without it until you import it. The export window's **Include pins and zones** puts it in screenshots, full-resolution images and web maps; in a web map, click a pin or zone to see its note, and **PINS** and **ZONES** (M and Z) switch them off.
+
+# Keyboard shortcuts
+
+Press **F1** or **?** in the app for this list. None of them work while you're typing in a box, and the ones that need a world do nothing until one is open.
+
+| Keys | Does |
+|---|---|
+| Arrows | Move the map; with Shift, a quarter of the screen at a time |
+| + − | Zoom in, out |
+| 0 or Ctrl+R | Back to 100% |
+| 1 2 3 | Overworld, Nether, End |
+| 4 – 9 | Custom dimensions, in their list's order |
+| , . | Previous, next style |
+| H | Height panel: Surface, Slice, Caves in turn |
+| [ ] | Height down, up; with Shift, by 10 |
+| G S A C | Grid lines, slime chunks, axes, chunk highlighter |
+| L | Measure length |
+| N | Night mode |
+| M | Markup bar |
+| Shift+M | Show or hide pins and zones |
+| P Z R V | Markup: Pin, Zone, Rectangle, Select |
+| Ctrl+Z Ctrl+Y | Undo, redo markup (while the bar is open) |
+| Ctrl+G | Go to a place, with the cursor in the coordinate box |
+| Ctrl+E | Export as image or web map |
+| Ctrl+O | Load a world |
+| Ctrl+F | Filter blocks |
+| F11 | Full screen, on Windows (Esc leaves it); on Linux the window manager's own key does this |
 
 # Command line
 

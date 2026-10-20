@@ -26,6 +26,8 @@ namespace Mapper.Gui.Controller
         public TextPainter TextPainter { get; }
         public MarkupPainter MarkupPainter { get; private set; }
         public MarkupBar MarkupBar { get; private set; }
+        public ShortcutRunner Shortcuts { get; private set; }
+        public ShortcutsPanel ShortcutsPanel { get; private set; }
 
         public MapViewer MainWindow { get; }
 
@@ -60,6 +62,14 @@ namespace Mapper.Gui.Controller
             MainWindow.Initialize(CreateMainWindowArgs());
             MainWindow.ApplySettings(Settings.Window);
             WorldOpener.DimensionWidget = DimensionWidget;
+
+            Shortcuts = new ShortcutRunner(KeyMap.Default, ToolbarWidget!, DimensionWidget!, StylebarWidget!, HeightWidget!, ImplementedScene.Map.ScaleBehaviour, GraphicsCanvas)
+            {
+                Paused = () => MarkupBar!.ItemEditor is not null,
+                ToggleFullScreen = MainWindow.ToggleFullScreen,
+                LeaveFullScreen = MainWindow.LeaveFullScreen
+            };
+            _ = new ShortcutInput(Shortcuts, ShortcutsPanel!, MainWindow);
 
             TextPainter = new TextPainter(new RenderInvoker(ImplementedRenderer), GraphicsCanvas);
             ImplementedRenderer.AddPainter(TextPainter);
@@ -123,6 +133,8 @@ namespace Mapper.Gui.Controller
             args.Widgets.Add(CreateHeightControl());
             // Last, so it lies over the other widgets
             args.Widgets.Add(new CoordinatesTip(InformationWidget, ImplementedScene));
+            // Over everything, while it's open
+            args.Widgets.Add(ShortcutsPanel = new ShortcutsPanel(KeyMap.Default.Help(fullScreen: true)));
 
             return args;
         }

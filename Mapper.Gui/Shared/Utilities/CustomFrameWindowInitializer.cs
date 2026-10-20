@@ -86,6 +86,18 @@ namespace Mapper.Gui
             CloseButton.Click += CloseButtonClick;
         }
 
+        // The title bar sits in the template's first row, which has a fixed height; full screen folds it away
+        private GridLength? _frameHeight;
+        public void ShowFrame(bool show)
+        {
+            if (Frame.Parent is not FrameworkElement border || border.Parent is not Grid grid) return;
+
+            RowDefinition row = grid.RowDefinitions[0];
+            if (!show && _frameHeight is null) _frameHeight = row.Height;
+            row.Height = show ? _frameHeight ?? row.Height : new GridLength(0);
+            border.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+        }
+
         public void SetSecondaryTitle(string secondaryTitle) 
         {
             Label secondaryTitleLabel = (Label)Template.FindName("SecondaryTitle", Window);

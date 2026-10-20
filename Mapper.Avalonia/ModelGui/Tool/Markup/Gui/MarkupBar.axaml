@@ -37,13 +37,13 @@
     <StackPanel Background="#FF1C1C1C">
         <StackPanel Orientation="Horizontal" Margin="6,5,2,4">
             <Button x:Name="PinButton" Classes="flat mode" Content="Pin" Click="PinButton_Click"
-                    ToolTip.Tip="Click the map to drop a pin" />
+                    ToolTip.Tip="Click the map to drop a pin (P)" />
             <Button x:Name="ZoneButton" Classes="flat mode" Content="Zone" Click="ZoneButton_Click"
-                    ToolTip.Tip="Click the corners of a zone" />
+                    ToolTip.Tip="Click the corners of a zone (Z)" />
             <Button x:Name="RectangleButton" Classes="flat mode" Content="Rectangle" Click="RectangleButton_Click"
-                    ToolTip.Tip="Drag out a rectangular zone" />
+                    ToolTip.Tip="Drag out a rectangular zone (R)" />
             <Button x:Name="SelectButton" Classes="flat mode" Content="Select" Click="SelectButton_Click"
-                    ToolTip.Tip="Pick, move and edit pins and zones" />
+                    ToolTip.Tip="Pick, move and edit pins and zones (V)" />
             <Border Classes="gap" />
             <Button x:Name="PlacesButton" Classes="flat mode" Content="Places" Click="PlacesButton_Click"
                     ToolTip.Tip="Every pin and zone in this dimension" />
@@ -55,7 +55,7 @@
             <Button x:Name="ImportButton" Classes="flat mode" Content="Import..." Click="ImportButton_Click"
                     ToolTip.Tip="Add the markup saved in a file" />
             <Button x:Name="HideButton" Classes="flat mode" Content="Hide" Click="HideButton_Click"
-                    ToolTip.Tip="Hide markup until the Markup button is pressed again" />
+                    ToolTip.Tip="Hide pins and zones until the Markup button or Shift+M brings them back" />
         </StackPanel>
         <TextBlock x:Name="HintText" Foreground="#FFAAAAAA" FontSize="11" Margin="7,0,7,5" TextWrapping="Wrap" MaxWidth="560"
                    HorizontalAlignment="Left" />

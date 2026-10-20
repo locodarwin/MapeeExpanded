@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace Mapper.Gui
 {
@@ -34,6 +35,27 @@ namespace Mapper.Gui
             PlayerPositionButton.Content = $"Player position ({playerPosition})";
             PlayerSpawnButton.Content = $"Player spawn ({playerSpawn})";
             WorldSpawnButton.Content = $"World spawn ({worldSpawn})";
+
+            // Ready to type a place, whether opened by its button or Ctrl+G; Enter goes there and Esc closes it
+            Loaded += (sender, e) =>
+            {
+                CoordinateTextBox.Focus();
+                CoordinateTextBox.SelectAll();
+            };
+            PreviewKeyDown += (sender, e) =>
+            {
+                if (e.Key == Key.Escape)
+                {
+                    _closing = true;
+                    Close();
+                    e.Handled = true;
+                }
+                else if (e.Key == Key.Enter && e.OriginalSource == CoordinateTextBox)
+                {
+                    GoToButton_Click(CoordinateTextBox, e);
+                    e.Handled = true;
+                }
+            };
         }
 
         // Buttons like the spawn points' for each of the world's pins and zones

@@ -102,6 +102,11 @@ foreach (string step in args.Skip(1))
             Console.WriteLine($"  style {controller.Domain.CurrentStyle.Metadata.Id}; overlays on: {string.Join(",", controller.ToolbarWidget.Overlays.Where(o => o.Value.IsTurnedOn).Select(o => o.Key))}; window {main.Width}x{main.Height}");
             Console.WriteLine(world is null ? "  no world" : $"  world {world.Level.WorldName}, {world.CurrentDimension.Dimension.Name}, centre {world.CurrentDimension.Scaling.CenterPoint}, zoom {world.CurrentDimension.Scaling.ZoomLevel}");
             Console.WriteLine($"  recent: {string.Join(" | ", controller.Settings.RecentWorlds.Select(w => Path.GetFileName(w.Path)))}");
+            var view = controller.ImplementedScene.Map.ScaleBehaviour;
+            var tools = controller.ToolbarWidget;
+            Console.WriteLine($"  view zoom level {view.CurrentZoomLevel}, offset {view.Offset}; height {controller.HeightWidget.Mode} {controller.HeightWidget.Y}; " +
+                $"markup {(tools.MarkupTool.IsTurnedOn ? tools.MarkupTool.Editor.Mode : "off")}, {(tools.MarkupTool.ShowMarkup ? "shown" : "hidden")}; " +
+                $"measure {(tools.MeasureLengthTool.IsTurnedOn ? "on" : "off")}; night {(tools.NightTool.IsTurnedOn ? "on" : "off")}; key list {(controller.ShortcutsPanel.IsOpen ? "open" : "closed")}");
             break;
         case "wait":
             Pump(int.Parse(value));

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 
 namespace Mapper.Gui
 {
@@ -38,6 +39,12 @@ namespace Mapper.Gui
             {
                 if (e.Key == Key.Enter) GoToButton_Click(sender, e);
             };
+            // Ready to type a place, whether opened by its button or Ctrl+G
+            AttachedToVisualTree += (sender, e) => Dispatcher.UIThread.Post(() =>
+            {
+                CoordinateTextBox.Focus();
+                CoordinateTextBox.SelectAll();
+            }, DispatcherPriority.Input);
         }
 
         public void AddPlaces(IEnumerable<(string Title, XzPoint Point)> places)

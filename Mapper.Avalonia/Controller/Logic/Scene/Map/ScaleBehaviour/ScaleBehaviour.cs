@@ -71,11 +71,6 @@ namespace Mapper.Gui.Logic
 
             _outputControl.PointerWheelChanged += OnCanvasMouseWheel;
             _outputControl.SizeChanged += OnCanvasSizeChanged;
-
-            _outputControl.AttachedToVisualTree += (sender, e) =>
-            {
-                if (TopLevel.GetTopLevel(_outputControl) is TopLevel window) window.KeyDown += Window_OnKeyDown;
-            };
         }
 
         private void MouseDown(object? sender, Point point)
@@ -158,30 +153,6 @@ namespace Mapper.Gui.Logic
             Point move = new(current.X - prev.X, current.Y - prev.Y);
 
             Offset = new(_offset.X + move.X, _offset.Y + move.Y);
-        }
-
-        private static readonly Key[] _directionKeys = new Key[] { Key.Up, Key.Right, Key.Down, Key.Left };
-        private static readonly int[,] _directionVectors = new int[,] { { 0, 1 }, { -1, 0 }, { 0, -1 }, { 1, 0 } };
-        private static readonly int _moveBy = 16;
-
-        private void Window_OnKeyDown(object? sender, KeyEventArgs e)
-        {
-            // Text boxes keep their own arrow keys
-            if (e.Source is TextBox) return;
-
-            if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key == Key.R)
-            {
-                ResetZoom();
-            }
-
-            for (int i = 0; i < _directionKeys.Length; i++)
-            {
-                if (e.Key == _directionKeys[i])
-                {
-                    Offset = new(_offset.X + _moveBy * _directionVectors[i, 0], _offset.Y + _moveBy * _directionVectors[i, 1]);
-                    e.Handled = true;
-                }
-            }
         }
 
         public void ResetZoom()

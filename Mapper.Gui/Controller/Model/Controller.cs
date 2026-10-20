@@ -28,6 +28,8 @@ namespace Mapper.Gui.Controller
         public MarkupBar MarkupBar { get; private set; }
         public ShortcutRunner Shortcuts { get; private set; }
         public ShortcutsPanel ShortcutsPanel { get; private set; }
+        public DropOverlay DropOverlay { get; private set; }
+        public WorldDrop WorldDrop { get; private set; }
 
         public MapViewer MainWindow { get; }
 
@@ -71,6 +73,9 @@ namespace Mapper.Gui.Controller
             };
             _ = new ShortcutInput(Shortcuts, ShortcutsPanel!, MainWindow);
             ToolbarWidget!.ShortcutsTool.Show = ShortcutsPanel!.Open;
+
+            WorldDrop = new WorldDrop(WorldOpener, ToolbarWidget.MarkupTool, MainWindow, DropOverlay!);
+            _ = new DropInput(WorldDrop, MainWindow);
 
             TextPainter = new TextPainter(new RenderInvoker(ImplementedRenderer), GraphicsCanvas);
             ImplementedRenderer.AddPainter(TextPainter);
@@ -136,6 +141,7 @@ namespace Mapper.Gui.Controller
             args.Widgets.Add(new CoordinatesTip(InformationWidget, ImplementedScene));
             // Over everything, while it's open
             args.Widgets.Add(ShortcutsPanel = new ShortcutsPanel(KeyMap.Default.Help(fullScreen: true)));
+            args.Widgets.Add(DropOverlay = new DropOverlay());
 
             return args;
         }

@@ -25,6 +25,7 @@ namespace Mapper.Gui.Controller
         public FilterTool FilterTool { get; private set; } = null!;
         public BrowseTool BrowseTool { get; private set; } = null!;
         public ShortcutsTool ShortcutsTool { get; private set; } = null!;
+        public RecentWorldsTool RecentTool { get; private set; } = null!;
 
         private static KeyMap Keys => KeyMap.Default;
 
@@ -61,6 +62,7 @@ namespace Mapper.Gui.Controller
             longSegment.Tools.Add(CreateFilterButton());
             longSegment.Tools.Add(CreateRenderSettingsButton());
             longSegment.Tools.Add(CreateBrowseButton());
+            longSegment.Tools.Add(CreateRecentButton());
 
             ToolButtonSegments.Add(shortSegment);
             ToolButtonSegments.Add(longSegment);
@@ -201,6 +203,21 @@ namespace Mapper.Gui.Controller
                 Name = "Load world ",
                 ToolTip = Keys.WithKey("Load a new world", ShortcutAction.LoadWorld)
             };
+
+            return output;
+        }
+
+        private ToolButton CreateRecentButton()
+        {
+            RecentWorldsTool tool = new(WorldOpener, MainWindow);
+            RecentTool = tool;
+            ToolButton output = new(tool)
+            {
+                Icon = AppImages.Load("/Resources/Image/ToolButton/Recent_22px.png"),
+                Name = "Recent",
+                ToolTip = Keys.WithKey("Worlds opened lately", ShortcutAction.RecentWorlds)
+            };
+            tool.Owner = output;
 
             return output;
         }

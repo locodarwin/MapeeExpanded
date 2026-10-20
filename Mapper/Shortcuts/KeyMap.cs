@@ -27,7 +27,7 @@ namespace Mapper
         HeightMode, HeightDown, HeightUp,
         Grid, SlimeChunks, Axes, ChunkHighlight, MeasureLength, NightMode,
         Markup, ShowMarkup, PinMode, ZoneMode, RectangleMode, SelectMode,
-        GoTo, Export, LoadWorld, BlockFilter,
+        GoTo, Export, LoadWorld, RecentWorlds, BlockFilter,
         Help, FullScreen, LeaveFullScreen
     }
 
@@ -94,6 +94,7 @@ namespace Mapper
                 new(Keys(ShortcutAction.GoTo), "Go to a place"),
                 new(Keys(ShortcutAction.Export), "Export as image or web map"),
                 new(Keys(ShortcutAction.LoadWorld), "Load a world"),
+                new(Keys(ShortcutAction.RecentWorlds), "Recent worlds"),
                 new(Keys(ShortcutAction.BlockFilter), "Filter blocks"),
             ];
             if (fullScreen) window.Add(new(Keys(ShortcutAction.FullScreen), "Full screen (Esc leaves it)"));
@@ -183,6 +184,7 @@ namespace Mapper
             yield return new(ShortcutKey.G, control, ShortcutAction.GoTo);
             yield return new(ShortcutKey.E, control, ShortcutAction.Export);
             yield return new(ShortcutKey.O, control, ShortcutAction.LoadWorld);
+            yield return new(ShortcutKey.O, control | shift, ShortcutAction.RecentWorlds);
             yield return new(ShortcutKey.F, control, ShortcutAction.BlockFilter);
 
             yield return new(ShortcutKey.F1, none, ShortcutAction.Help);

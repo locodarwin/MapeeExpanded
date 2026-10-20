@@ -1,0 +1,38 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Mapper.Gui.RecentWorldsMenu"
+             Background="#FF232323"
+             Width="320">
+
+    <UserControl.Styles>
+        <Style Selector="Button.recent">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Padding" Value="8,4" />
+        </Style>
+        <Style Selector="Button.remove">
+            <Setter Property="Width" Value="28" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Foreground" Value="#FFAAAAAA" />
+        </Style>
+        <Style Selector="Button.clear">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="Height" Value="25" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+    </UserControl.Styles>
+
+    <StackPanel>
+        <TextBlock Text="Recent worlds" FontSize="11" Foreground="#FFAAAAAA" Margin="8,6,8,3" />
+        <ScrollViewer MaxHeight="420">
+            <StackPanel x:Name="Rows" />
+        </ScrollViewer>
+        <TextBlock x:Name="EmptyText" Text="No recent worlds. Load world opens one, or drop a world on the window."
+                   FontSize="12" Foreground="#FFAAAAAA" TextWrapping="Wrap" Margin="8,2,8,8" IsVisible="False" />
+        <StackPanel x:Name="ClearSection">
+            <Border Height="1" Background="#FF707070" Margin="0,3,0,0" />
+            <Button x:Name="ClearButton" Classes="flat clear" Content="Clear the list" Click="ClearButton_Click"
+                    ToolTip.Tip="Forget every world here but the one open; the worlds themselves aren't touched" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>

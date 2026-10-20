@@ -18,6 +18,8 @@ Upstream website: [mapee.net](https://www.mapee.net/home)
 - Command line: `mapee-cli` draws a world without opening a window, a dimension into one PNG or the whole world into a web map, with the same styles and height cuts as the app (see "Command line" below)
 - Markup: mark the map with labelled **pins** and labelled **zones** (territories, claims, farms, towns), each with a colour, a note, and for pins one of eight symbols. They're kept per world and per dimension, show in the Go to window and the web map, and can be drawn into exported images (see "Markup" below)
 - Keyboard shortcuts for the dimensions, zoom, styles, height panel, overlays, markup and windows; F1, ? or the toolbar's keyboard button lists them, and each toolbar button's tooltip names its key (see "Keyboard shortcuts" below)
+- **Recent** button beside Load world: the worlds opened lately, newest first, with their edition and when they were last opened; picking one opens it where the map was left. An × takes a world off the list (the world itself is never touched), **Clear the list** forgets all but the open one, and a world that has been moved or deleted shows dimmed and offers to come off the list. Ctrl+Shift+O opens it from the keyboard (Up, Down, Enter)
+- Drag and drop: drop a world folder, its `level.dat` or a `.mcworld` on the window to open it, or a markup `.json` file to add its pins and zones to the world on show. While dragging, the window says what dropping would do
 
 **Version 1.4.0**
 - Opens Bedrock Edition worlds: the world browser lists them next to Java worlds, and the open button takes a `level.dat` or a `.mcworld` file
@@ -67,6 +69,7 @@ Press **F1** or **?** in the app, or the keyboard button at the left end of the 
 | Ctrl+G | Go to a place, with the cursor in the coordinate box |
 | Ctrl+E | Export as image or web map |
 | Ctrl+O | Load a world |
+| Ctrl+Shift+O | Recent worlds (Up, Down and Enter pick one) |
 | Ctrl+F | Filter blocks |
 | F11 | Full screen, on Windows (Esc leaves it); on Linux the window manager's own key does this |
 

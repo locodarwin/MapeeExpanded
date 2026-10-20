@@ -45,6 +45,8 @@ namespace Mapper.Gui.Controller
             LogView("World set");
 
             RecentWorld recent = Settings.Remember(source);
+            recent.Name = level.WorldName;
+            recent.Edition = level.Edition.ToString();
             StartupLog.Mark($"Remembered view: {recent.Dimension ?? "none"} at {recent.X?.ToString("F0") ?? "-"}, {recent.Z?.ToString("F0") ?? "-"}, zoom {recent.Zoom?.ToString() ?? "-"}");
             RestoreView(recent);
             LogView("View restored");

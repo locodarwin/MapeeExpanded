@@ -87,6 +87,14 @@ namespace Mapper
             return world;
         }
 
+        // Off the list only; the world itself is left alone
+        public bool Forget(string path)
+        {
+            if (FindRecent(path) is not RecentWorld world) return false;
+            RecentWorlds.Remove(world);
+            return true;
+        }
+
         public bool IsOverlayOn(string name) => Overlays.Contains(name);
         public void SetOverlay(string name, bool on)
         {
@@ -110,6 +118,9 @@ namespace Mapper
         // What was opened: the world folder, or the .mcworld file
         public string Path { get; set; } = string.Empty;
         public DateTime Opened { get; set; }
+        // As the world called itself when last opened, for the Recent menu, which doesn't read the world
+        public string? Name { get; set; }
+        public string? Edition { get; set; }
 
         // Where the map was left: the dimension's namespace, and the block at the centre of the view
         public string? Dimension { get; set; }

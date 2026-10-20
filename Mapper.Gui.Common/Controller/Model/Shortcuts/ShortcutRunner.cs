@@ -120,6 +120,7 @@ namespace Mapper.Gui.Controller
                 case ShortcutAction.GoTo: return Open(Toolbar.GoToTool);
                 case ShortcutAction.Export: return Open(Toolbar.ExportTool);
                 case ShortcutAction.LoadWorld: return Open(Toolbar.BrowseTool);
+                case ShortcutAction.RecentWorlds: return Open(Toolbar.RecentTool);
                 case ShortcutAction.BlockFilter: return Open(Toolbar.FilterTool);
 
                 case ShortcutAction.Help:

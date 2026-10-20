@@ -29,6 +29,12 @@
 //   markup:<pin|zone|rectangle|select|view>  pick what a click on the map does (turning the Markup button on first)
 //   edit:<label>[|<colour hex>|<icon id>|<note>]  fill in the open pin or zone popup and save it; edit:!cancel, edit:!delete
 //   marks                             print the world's pins and zones, and the Places list
+//   recent                            open the Recent menu and print its rows, and how many menus are open
+//   recent:<world name>               pick that row in the open Recent menu
+//   recent-x:<world name>             press that row's × (take it off the list); recent-x:!clear, Clear the list
+//   dragover:<path>[|<path>]          drag files over the middle of the main window and hold them there
+//   dragleave                         drag them back out
+//   drop:<path>[|<path>]              drag files onto the middle of the main window and drop them
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
@@ -36,7 +42,9 @@ using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Mapper;
 using Mapper.Gui;
 using Mapper.Gui.Controller;
@@ -69,6 +77,8 @@ MapViewer main = null!;
 CursorColumn? lastColumn = null;
 Start(null);
 
+// The files held over the window by dragover, for dragleave
+DataTransfer? heldDrag = null;
 foreach (string step in args.Skip(1))
 {
     string[] parts = step.Split(':', 2);
@@ -273,6 +283,55 @@ foreach (string step in args.Skip(1))
             }
             Pump(300);
             break;
+        case "recent":
+            if (value.Length == 0)
+            {
+                controller.ToolbarWidget.RecentTool.IsTurnedOn = true;
+                Pump(500);
+                foreach (Button row in RecentRows()) Console.WriteLine($"  {string.Join(" | ", ((StackPanel)row.Content!).Children.OfType<TextBlock>().Select(t => t.Text))}  [{ToolTip.GetTip(row)}]");
+                if (!RecentRows().Any()) Console.WriteLine("  (no rows)");
+                Console.WriteLine($"  {main.GetVisualDescendants().OfType<RecentWorldsMenu>().Count()} menu(s) open");
+            }
+            else
+            {
+                RecentRow(value).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                Pump(1500);
+            }
+            break;
+        case "recent-x":
+            Button pressed = value == "!clear"
+                ? main.GetVisualDescendants().OfType<RecentWorldsMenu>().Single().FindControl<Button>("ClearButton")!
+                : ((Grid)RecentRow(value).Parent!).Children.OfType<Button>().Last();
+            pressed.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Pump(300);
+            break;
+        case "dragover":
+        case "drop":
+            DataTransfer dragged = new();
+            foreach (string path in value.Split('|'))
+            {
+                DataTransferItem item = new();
+                item.SetFile(LocalItem(main, Path.GetFullPath(path)));
+                dragged.Add(item);
+            }
+            Point middle = new(main.Bounds.Width / 2, main.Bounds.Height / 2);
+            main.DragDrop(middle, Avalonia.Input.Raw.RawDragEventType.DragEnter, dragged, DragDropEffects.Copy, RawInputModifiers.None);
+            main.DragDrop(middle, Avalonia.Input.Raw.RawDragEventType.DragOver, dragged, DragDropEffects.Copy, RawInputModifiers.None);
+            Pump(300);
+            Console.WriteLine($"  overlay: {controller.DropOverlay.Text ?? "(hidden)"}");
+            if (parts[0] == "drop")
+            {
+                main.DragDrop(middle, Avalonia.Input.Raw.RawDragEventType.Drop, dragged, DragDropEffects.Copy, RawInputModifiers.None);
+                Pump(2500);
+                Console.WriteLine($"  after the drop: {controller.DropOverlay.Text ?? "(overlay hidden)"}");
+            }
+            heldDrag = dragged;
+            break;
+        case "dragleave":
+            main.DragDrop(new Point(-5, -5), Avalonia.Input.Raw.RawDragEventType.DragLeave, heldDrag ?? new DataTransfer(), DragDropEffects.Copy, RawInputModifiers.None);
+            Pump(300);
+            Console.WriteLine($"  overlay: {controller.DropOverlay.Text ?? "(hidden)"}");
+            break;
         case "marks":
             MarkupTool marks = controller.ToolbarWidget.MarkupTool;
             foreach (MapPin pin in marks.Editor.Document.Pins) Console.WriteLine($"  pin {pin.Label} at {pin.X}, {pin.Z} in {pin.Dimension}, {pin.Color} {pin.Icon ?? "dot"}{(pin.Note is null ? "" : $", note {pin.Note}")}");
@@ -343,6 +402,10 @@ void Shot(string name)
     }
 }
 
+IEnumerable<Button> RecentRows() => main.GetVisualDescendants().OfType<RecentWorldsMenu>().SelectMany(menu => menu.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("recent")));
+Button RecentRow(string name) => RecentRows().FirstOrDefault(row => ((StackPanel)row.Content!).Children.OfType<TextBlock>().First().Text == name)
+    ?? throw new InvalidOperationException($"The Recent menu has no row {name}");
+
 void CloseOthers()
 {
     foreach (Window window in windows.Where(window => window != main).ToList()) window.Close();
@@ -361,6 +424,21 @@ static Point ParsePoint(string text)
 {
     double[] values = text.Split(',').Select(double.Parse).ToArray();
     return new Point(values[0], values[1]);
+}
+
+// A file or folder on this machine, as the system's drag would hand one over: the platform's own storage item if it
+// gives one, else Avalonia's plain local-file one (which user code can't make, its interfaces being closed)
+static IStorageItem LocalItem(TopLevel top, string path)
+{
+    IStorageItem? item = Directory.Exists(path)
+        ? top.StorageProvider.TryGetFolderFromPathAsync(path).GetAwaiter().GetResult()
+        : top.StorageProvider.TryGetFileFromPathAsync(path).GetAwaiter().GetResult();
+    if (item is not null) return item;
+
+    Type type = typeof(IStorageItem).Assembly.GetType(Directory.Exists(path) ? "Avalonia.Platform.Storage.FileIO.BclStorageFolder" : "Avalonia.Platform.Storage.FileIO.BclStorageFile")
+        ?? throw new InvalidOperationException("No local storage item type in this Avalonia");
+    object info = Directory.Exists(path) ? new DirectoryInfo(path) : new FileInfo(path);
+    return (IStorageItem)Activator.CreateInstance(type, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic, null, [info], null)!;
 }
 
 class SynchronousProgress<T>(Action<T> report) : IProgress<T>

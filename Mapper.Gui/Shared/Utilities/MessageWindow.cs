@@ -13,5 +13,11 @@ namespace Mapper.Gui
 
             return Task.CompletedTask;
         }
+
+        // True for Yes. The message box has its own Yes and No, so the Avalonia GUI's button names go unused here
+        public static Task<bool> Confirm(string message, string title, string yes, string no, Window owner)
+        {
+            return Task.FromResult(MessageBox.Show(owner, message, title, MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes);
+        }
     }
 }

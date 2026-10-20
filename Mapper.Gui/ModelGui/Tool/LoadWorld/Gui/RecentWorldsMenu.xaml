@@ -1,0 +1,67 @@
+<UserControl x:Class="Mapper.Gui.RecentWorldsMenu"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="#FF232323" BorderBrush="#FF707070" BorderThickness="1" Width="320">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Resources/Template/ToolTip.xaml"/>
+                <ResourceDictionary Source="/Resources/Template/ScrollBarStyle.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Flat, lighter on hover, press and keyboard focus (Up and Down move it) -->
+            <Style x:Key="FlatButton" TargetType="{x:Type Button}">
+                <Setter Property="Foreground" Value="#FFE0E0E0"/>
+                <Setter Property="Background" Value="#FF232323"/>
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                <Setter Property="ToolTipService.InitialShowDelay" Value="400"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type Button}">
+                            <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="#FF404040"/>
+                    </Trigger>
+                    <Trigger Property="IsKeyboardFocused" Value="True">
+                        <Setter Property="Background" Value="#FF404040"/>
+                    </Trigger>
+                    <Trigger Property="IsPressed" Value="True">
+                        <Setter Property="Background" Value="#FF505050"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+            <Style x:Key="RowButton" TargetType="{x:Type Button}" BasedOn="{StaticResource FlatButton}">
+                <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                <Setter Property="Padding" Value="8, 4"/>
+            </Style>
+            <Style x:Key="RemoveButton" TargetType="{x:Type Button}" BasedOn="{StaticResource FlatButton}">
+                <Setter Property="Width" Value="28"/>
+                <Setter Property="FontSize" Value="14"/>
+                <Setter Property="Foreground" Value="#FFAAAAAA"/>
+                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <StackPanel>
+        <TextBlock Text="Recent worlds" FontSize="11" Foreground="#FFAAAAAA" Margin="8, 6, 8, 3"/>
+        <ScrollViewer MaxHeight="420" VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="Rows"/>
+        </ScrollViewer>
+        <TextBlock x:Name="EmptyText" Text="No recent worlds. Load world opens one, or drop a world on the window."
+                   FontSize="12" Foreground="#FFAAAAAA" TextWrapping="Wrap" Margin="8, 2, 8, 8" Visibility="Collapsed"/>
+        <StackPanel x:Name="ClearSection">
+            <Border Height="1" Background="#FF707070" Margin="0, 3, 0, 0"/>
+            <Button x:Name="ClearButton" Style="{StaticResource FlatButton}" Content="Clear the list" Height="25" FontSize="12"
+                    HorizontalContentAlignment="Center" Click="ClearButton_Click"
+                    ToolTip="Forget every world here but the one open; the worlds themselves aren't touched"/>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

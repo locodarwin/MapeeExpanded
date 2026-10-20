@@ -129,6 +129,7 @@
     <Resource Include="Resources\Image\ToolButton\MeasureLength_22px.png" />
     <Resource Include="Resources\Image\ToolButton\Markup_22px.png" />
     <Resource Include="Resources\Image\ToolButton\Shortcuts_22px.png" />
+    <Resource Include="Resources\Image\ToolButton\Recent_22px.png" />
     <Resource Include="Resources\Image\ToolButton\RenderSettings_22px.png" />
     <Resource Include="Resources\Image\ToolButton\Slime_22px.png" />
     <Resource Include="Resources\Image\WindowFrame\Close_16px.png" />

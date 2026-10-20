@@ -17,7 +17,7 @@ Upstream website: [mapee.net](https://www.mapee.net/home)
 - Coordinates beside the mouse: rest the mouse over the map for a moment and a small label gives the block's X, Y and Z
 - Command line: `mapee-cli` draws a world without opening a window, a dimension into one PNG or the whole world into a web map, with the same styles and height cuts as the app (see "Command line" below)
 - Markup: mark the map with labelled **pins** and labelled **zones** (territories, claims, farms, towns), each with a colour, a note, and for pins one of eight symbols. They're kept per world and per dimension, show in the Go to window and the web map, and can be drawn into exported images (see "Markup" below)
-- Keyboard shortcuts for the dimensions, zoom, styles, height panel, overlays, markup and windows; F1 or ? lists them, and each toolbar button's tooltip names its key (see "Keyboard shortcuts" below)
+- Keyboard shortcuts for the dimensions, zoom, styles, height panel, overlays, markup and windows; F1, ? or the toolbar's keyboard button lists them, and each toolbar button's tooltip names its key (see "Keyboard shortcuts" below)
 
 **Version 1.4.0**
 - Opens Bedrock Edition worlds: the world browser lists them next to Java worlds, and the open button takes a `level.dat` or a `.mcworld` file
@@ -45,7 +45,7 @@ Markup is saved as you go, one file per world in the settings folder (`%APPDATA%
 
 # Keyboard shortcuts
 
-Press **F1** or **?** in the app for this list. None of them work while you're typing in a box, and the ones that need a world do nothing until one is open.
+Press **F1** or **?** in the app, or the keyboard button at the end of the toolbar's icons, for this list. None of them work while you're typing in a box, and the ones that need a world do nothing until one is open.
 
 | Keys | Does |
 |---|---|

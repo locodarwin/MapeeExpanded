@@ -70,6 +70,7 @@ namespace Mapper.Gui.Controller
                 Paused = () => MarkupBar!.ItemEditor is not null
             };
             _ = new ShortcutInput(Shortcuts, ShortcutsPanel!, MainWindow);
+            ToolbarWidget!.ShortcutsTool.Show = ShortcutsPanel!.Open;
 
             TextPainter = new TextPainter(new RenderInvoker(ImplementedRenderer), GraphicsCanvas);
             ImplementedRenderer.AddPainter(TextPainter);

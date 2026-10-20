@@ -142,7 +142,10 @@ foreach (string step in args.Skip(1))
             break;
         case "tool":
             IToolButton button = controller.ToolbarWidget.ToolButtonSegments.SelectMany(segment => segment.Tools)
-                .First(tool => string.Equals(tool.ToolTip, value, StringComparison.OrdinalIgnoreCase) || string.Equals(tool.Name?.Trim(), value, StringComparison.OrdinalIgnoreCase));
+                .FirstOrDefault(tool => string.Equals(tool.ToolTip, value, StringComparison.OrdinalIgnoreCase) || string.Equals(tool.Name?.Trim(), value, StringComparison.OrdinalIgnoreCase) ||
+                    // without the key a tooltip ends with, "Grid lines" for "Grid lines (G)"
+                    tool.ToolTip?.StartsWith(value + " (", StringComparison.OrdinalIgnoreCase) == true)
+                ?? throw new InvalidOperationException($"No toolbar button is called {value}; there are: {string.Join(" | ", controller.ToolbarWidget.ToolButtonSegments.SelectMany(segment => segment.Tools).Select(t => t.ToolTip))}");
             button.Button!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Pump(800);
             break;

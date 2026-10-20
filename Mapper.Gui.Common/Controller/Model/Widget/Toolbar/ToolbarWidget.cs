@@ -24,6 +24,7 @@ namespace Mapper.Gui.Controller
         public ExportAsImageTool ExportTool { get; private set; } = null!;
         public FilterTool FilterTool { get; private set; } = null!;
         public BrowseTool BrowseTool { get; private set; } = null!;
+        public ShortcutsTool ShortcutsTool { get; private set; } = null!;
 
         private static KeyMap Keys => KeyMap.Default;
 
@@ -50,6 +51,7 @@ namespace Mapper.Gui.Controller
             shortSegment.Tools.Add(CreateDayNightCycleButton());
             shortSegment.Tools.Add(CreateGoToButton());
             shortSegment.Tools.Add(CreateExportAsImageButton());
+            shortSegment.Tools.Add(CreateShortcutsButton());
 
             ToolButtonSegment longSegment = new()
             {
@@ -148,6 +150,18 @@ namespace Mapper.Gui.Controller
             {
                 ToolTip = Keys.WithKey("Export as image or web map", ShortcutAction.Export),
                 Icon = AppImages.Load("/Resources/Image/ToolButton/ExportAsImage_22px.png")
+            };
+
+            return output;
+        }
+        private ToolButton CreateShortcutsButton()
+        {
+            ShortcutsTool tool = new();
+            ShortcutsTool = tool;
+            ToolButton output = new(tool)
+            {
+                ToolTip = Keys.WithKey("Keyboard shortcuts", ShortcutAction.Help),
+                Icon = AppImages.Load("/Resources/Image/ToolButton/Shortcuts_22px.png")
             };
 
             return output;

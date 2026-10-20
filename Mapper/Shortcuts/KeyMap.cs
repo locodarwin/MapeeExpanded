@@ -97,7 +97,7 @@ namespace Mapper
                 new(Keys(ShortcutAction.BlockFilter), "Filter blocks"),
             ];
             if (fullScreen) window.Add(new(Keys(ShortcutAction.FullScreen), "Full screen (Esc leaves it)"));
-            window.Add(new($"{KeyText(ShortcutAction.Help)}  ?", "This list"));
+            window.Add(new($"{KeyText(ShortcutAction.Help)}  ?", "This list, also on the toolbar's keyboard button"));
 
             return
             [

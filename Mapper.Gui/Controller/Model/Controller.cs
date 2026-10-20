@@ -70,6 +70,7 @@ namespace Mapper.Gui.Controller
                 LeaveFullScreen = MainWindow.LeaveFullScreen
             };
             _ = new ShortcutInput(Shortcuts, ShortcutsPanel!, MainWindow);
+            ToolbarWidget!.ShortcutsTool.Show = ShortcutsPanel!.Open;
 
             TextPainter = new TextPainter(new RenderInvoker(ImplementedRenderer), GraphicsCanvas);
             ImplementedRenderer.AddPainter(TextPainter);

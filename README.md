@@ -7,6 +7,9 @@ Upstream website: [mapee.net](https://www.mapee.net/home)
 [Download the latest release](https://github.com/locodarwin/MapeeExpanded/releases/latest): for Windows x64, unzip and run `Mapee.exe`; for Linux x86-64, the AppImage (see "Linux" below). Neither needs installing.
 
 # What's New?
+**Since 1.5.0** (not in a release yet)
+- Change any shortcut key: click it in the key list and press the new one (see "Keyboard shortcuts" below)
+
 **Version 1.5.0**
 - Linux: an AppImage of Mapee, a second GUI written in Avalonia that looks and works like the Windows one (see "Linux" below)
 - Remembers between runs: the window size, the style, which overlays are on (grid, slime chunks, axes, chunk highlight), and the worlds you opened recently, which head the world browser even when they live outside the usual folders. Reopening a world returns to the dimension, place and zoom you left it at. Settings are kept in `%APPDATA%\Mapee\Settings.json` (Windows) or `~/.config/Mapee/Settings.json` (Linux)
@@ -67,6 +70,7 @@ With **Live** on (the circling arrows on the toolbar, on by default and remember
 Each region keeps its old picture until the new one is ready, so the map doesn't flash. Only the dimension on screen is watched; the others catch up when you switch to them. The player's position (Go to's **Player position**) follows `level.dat`. If the game keeps its files locked, the info bar says Mapee can't read the world and it tries again.
 
 
+# Keyboard shortcuts
 Press **F1** or **?** in the app, or the keyboard button at the left end of the toolbar, for this list. None of them work while you're typing in a box, and the ones that need a world do nothing until one is open.
 
 | Keys | Does |
@@ -93,6 +97,19 @@ Press **F1** or **?** in the app, or the keyboard button at the left end of the 
 | Ctrl+Shift+O | Recent worlds (Up, Down and Enter pick one) |
 | Ctrl+F | Filter blocks |
 | F11 | Full screen, on Windows (Esc leaves it); on Linux the window manager's own key does this |
+
+To change a key, click it in that list and press the new one, with Ctrl or Shift if you like (Esc cancels). If another action had that key, it moves, and the list says which action lost it; that action has no key until you give it one. **Reset** beside a changed key gives back the one it came with, and **Reset all keys** undoes every change. The arrows, the 1 – 9 dimension keys and Esc can't be changed, and the height keys bring their Shift step of 10 with them. Tooltips and the list always show the keys as they are now.
+
+Only your changes are saved, under `"Keys"` in `Settings.json`, by action name, with `""` for an action you've left without a key:
+
+```json
+"Keys": {
+  "Grid": "Shift+G",
+  "Axes": "G"
+}
+```
+
+An entry Mapee can't read is skipped, and that action keeps its usual key.
 
 # Command line
 

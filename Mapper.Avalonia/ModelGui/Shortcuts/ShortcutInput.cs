@@ -32,18 +32,22 @@ namespace Mapper.Gui
 
         private void Window_KeyDown(object? sender, KeyEventArgs e)
         {
-            // While the key list is up, any key only closes it
+            // No shortcut uses Alt, and the window manager may
+            if (e.KeyModifiers.HasFlag(KeyModifiers.Alt)) return;
+            bool control = e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Meta);
+            bool shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
+
+            // While the key list is up, keys are for it: a new key for the one being changed, or any key closes it
             if (Panel.IsOpen)
             {
-                if (e.Key is Key.LeftShift or Key.RightShift or Key.LeftCtrl or Key.RightCtrl) return;
-                Panel.Close();
+                if (ShortcutRunner.IsModifier(e.Key)) return;
+                Panel.Press(ShortcutRunner.KeyOf(e.Key), ShortcutRunner.ModifiersOf(control, shift));
                 e.Handled = true;
                 return;
             }
             if (e.Handled || !ForTheMap(e.Source)) return;
 
-            bool control = e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Meta);
-            if (Runner.Run(e.Key, control, e.KeyModifiers.HasFlag(KeyModifiers.Shift))) e.Handled = true;
+            if (Runner.Run(e.Key, control, shift)) e.Handled = true;
         }
 
         private bool ForTheMap(object? source)

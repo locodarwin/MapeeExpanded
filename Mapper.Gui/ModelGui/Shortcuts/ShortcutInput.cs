@@ -22,11 +22,13 @@ namespace Mapper.Gui
 
             runner.ShowHelp = panel.Open;
 
-            // While the key list is up, any key only closes it
+            // While the key list is up, keys are for it: a new key for the one being changed, or any key closes it
             window.PreviewKeyDown += (sender, e) =>
             {
-                if (!Panel.IsOpen || e.Key is Key.LeftShift or Key.RightShift or Key.LeftCtrl or Key.RightCtrl) return;
-                Panel.Close();
+                Key key = KeyOf(e);
+                ModifierKeys modifiers = Keyboard.Modifiers;
+                if (!Panel.IsOpen || ShortcutRunner.IsModifier(key) || modifiers.HasFlag(ModifierKeys.Alt)) return;
+                Panel.Press(ShortcutRunner.KeyOf(key), ShortcutRunner.ModifiersOf(modifiers.HasFlag(ModifierKeys.Control), modifiers.HasFlag(ModifierKeys.Shift)));
                 e.Handled = true;
             };
             window.KeyDown += Window_KeyDown;
@@ -36,9 +38,14 @@ namespace Mapper.Gui
         {
             if (e.Handled || !ForTheMap(e.OriginalSource)) return;
 
+            // No shortcut uses Alt, which opens the window's menu
             ModifierKeys modifiers = Keyboard.Modifiers;
-            if (Runner.Run(e.Key, modifiers.HasFlag(ModifierKeys.Control), modifiers.HasFlag(ModifierKeys.Shift))) e.Handled = true;
+            if (modifiers.HasFlag(ModifierKeys.Alt)) return;
+            if (Runner.Run(KeyOf(e), modifiers.HasFlag(ModifierKeys.Control), modifiers.HasFlag(ModifierKeys.Shift))) e.Handled = true;
         }
+
+        // F10 comes as a system key, as keys held with Alt do
+        private static Key KeyOf(KeyEventArgs e) => e.Key == Key.System ? e.SystemKey : e.Key;
 
         // Keys from a pop-up (the markup popup, Places) reach the window too, through the pop-up's owner
         private bool ForTheMap(object source)

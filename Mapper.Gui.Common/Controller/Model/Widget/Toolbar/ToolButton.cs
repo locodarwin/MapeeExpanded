@@ -26,5 +26,17 @@ namespace Mapper.Gui.Controller
         {
             Button = button;
         }
+
+        // A new tooltip on the button already made, as when its key is changed
+        public void ShowToolTip(string toolTip)
+        {
+            ToolTip = toolTip;
+            if (Button is null) return;
+#if AVALONIA
+            Avalonia.Controls.ToolTip.SetTip(Button, toolTip);
+#else
+            Button.ToolTip = toolTip;
+#endif
+        }
     }
 }

@@ -18,7 +18,7 @@ namespace Mapper.Gui.Controller
     // decides which keys reach it (none while typing) and supplies what only it has: the key list and full screen
     public class ShortcutRunner
     {
-        public KeyMap Keys { get; }
+        public ShortcutKeys Keys { get; }
         public ToolbarWidget Toolbar { get; }
         public DimensionWidget Dimensions { get; }
         public StylebarWidget Styles { get; }
@@ -36,7 +36,7 @@ namespace Mapper.Gui.Controller
         // How far the arrow keys move the map, in screen units
         private const double Step = 16;
 
-        public ShortcutRunner(KeyMap keys, ToolbarWidget toolbar, DimensionWidget dimensions, StylebarWidget styles, HeightWidget height, ScaleBehaviour view, CanvasControl canvas)
+        public ShortcutRunner(ShortcutKeys keys, ToolbarWidget toolbar, DimensionWidget dimensions, StylebarWidget styles, HeightWidget height, ScaleBehaviour view, CanvasControl canvas)
         {
             Keys = keys;
             Toolbar = toolbar;
@@ -51,8 +51,7 @@ namespace Mapper.Gui.Controller
         public bool Run(Key key, bool control, bool shift)
         {
             if (Paused?.Invoke() == true) return false;
-            ShortcutModifiers modifiers = (control ? ShortcutModifiers.Control : 0) | (shift ? ShortcutModifiers.Shift : 0);
-            return Keys.Find(KeyOf(key), modifiers) is KeyBinding binding && Run(binding.Action, binding.Argument);
+            return Keys.Map.Find(KeyOf(key), ModifiersOf(control, shift)) is KeyBinding binding && Run(binding.Action, binding.Argument);
         }
 
         public bool Run(ShortcutAction action, int argument = 0)
@@ -180,6 +179,10 @@ namespace Mapper.Gui.Controller
             return true;
         }
 
+        public static ShortcutModifiers ModifiersOf(bool control, bool shift) => (control ? ShortcutModifiers.Control : 0) | (shift ? ShortcutModifiers.Shift : 0);
+
+        public static bool IsModifier(Key key) => key is Key.LeftShift or Key.RightShift or Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt or Key.LWin or Key.RWin;
+
         // WPF's and Avalonia's keys share their names
         public static ShortcutKey KeyOf(Key key) => key switch
         {
@@ -193,13 +196,16 @@ namespace Mapper.Gui.Controller
             Key.OemOpenBrackets => ShortcutKey.OpenBracket,
             Key.OemCloseBrackets => ShortcutKey.CloseBracket,
             Key.OemQuestion => ShortcutKey.Question,
+            Key.OemSemicolon => ShortcutKey.Semicolon,
+            Key.OemQuotes => ShortcutKey.Apostrophe,
+            Key.OemPipe or Key.OemBackslash => ShortcutKey.Backslash,
+            Key.OemTilde => ShortcutKey.Backtick,
             Key.Up => ShortcutKey.Up,
             Key.Down => ShortcutKey.Down,
             Key.Left => ShortcutKey.Left,
             Key.Right => ShortcutKey.Right,
             Key.Escape => ShortcutKey.Escape,
-            Key.F1 => ShortcutKey.F1,
-            Key.F11 => ShortcutKey.F11,
+            >= Key.F1 and <= Key.F12 => ShortcutKey.F1 + (key - Key.F1),
             _ => ShortcutKey.None
         };
     }

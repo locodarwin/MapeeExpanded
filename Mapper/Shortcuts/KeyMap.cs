@@ -7,9 +7,9 @@ namespace Mapper
         None,
         A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z,
         D0, D1, D2, D3, D4, D5, D6, D7, D8, D9,
-        Plus, Minus, Comma, Period, OpenBracket, CloseBracket, Question,
+        Plus, Minus, Comma, Period, OpenBracket, CloseBracket, Question, Semicolon, Apostrophe, Backslash, Backtick,
         Up, Down, Left, Right,
-        Escape, F1, F11
+        Escape, F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12
     }
 
     [Flags]
@@ -31,13 +31,71 @@ namespace Mapper
         Help, FullScreen, LeaveFullScreen
     }
 
-    public record KeyBinding(ShortcutKey Key, ShortcutModifiers Modifiers, ShortcutAction Action, int Argument = 0);
+    public record KeyBinding(ShortcutKey Key, ShortcutModifiers Modifiers, ShortcutAction Action, int Argument = 0)
+    {
+        public KeyChord Chord => new(Key, Modifiers);
+    }
 
-    // A line of the key list: the keys as shown, and what they do
-    public record ShortcutHelp(string Keys, string Description);
+    // A key with the modifiers held. + and ? are typed with Shift on most keyboards, so on those Shift is dropped and
+    // the key works with and without it
+    public readonly record struct KeyChord
+    {
+        public ShortcutKey Key { get; }
+        public ShortcutModifiers Modifiers { get; }
+
+        public KeyChord(ShortcutKey key, ShortcutModifiers modifiers)
+        {
+            Key = key;
+            Modifiers = key is ShortcutKey.Plus or ShortcutKey.Question ? modifiers & ~ShortcutModifiers.Shift : modifiers;
+        }
+
+        public KeyChord WithShift => new(Key, Modifiers | ShortcutModifiers.Shift);
+
+        public override string ToString() => KeyMap.Describe(Key, Modifiers);
+
+        // As the settings file keeps it: "Ctrl+Shift+O", "-" for the minus key
+        public string Stored => ToString().Replace('−', '-');
+
+        // Reads what Stored and ToString write; null for anything else
+        public static KeyChord? Parse(string text)
+        {
+            ShortcutModifiers modifiers = ShortcutModifiers.None;
+            string rest = text.Trim();
+            while (true)
+            {
+                if (rest.StartsWith("Ctrl+", StringComparison.OrdinalIgnoreCase)) modifiers |= ShortcutModifiers.Control;
+                else if (rest.StartsWith("Shift+", StringComparison.OrdinalIgnoreCase)) modifiers |= ShortcutModifiers.Shift;
+                else break;
+                rest = rest[(rest.IndexOf('+') + 1)..];
+            }
+
+            ShortcutKey key = rest switch
+            {
+                "+" => ShortcutKey.Plus,
+                "-" or "−" => ShortcutKey.Minus,
+                "," => ShortcutKey.Comma,
+                "." => ShortcutKey.Period,
+                "[" => ShortcutKey.OpenBracket,
+                "]" => ShortcutKey.CloseBracket,
+                "?" or "/" => ShortcutKey.Question,
+                ";" => ShortcutKey.Semicolon,
+                "'" => ShortcutKey.Apostrophe,
+                "\\" => ShortcutKey.Backslash,
+                "`" => ShortcutKey.Backtick,
+                "Esc" => ShortcutKey.Escape,
+                [>= '0' and <= '9'] => ShortcutKey.D0 + (rest[0] - '0'),
+                _ when rest.Length > 0 && char.IsLetter(rest[0]) && Enum.TryParse(rest, true, out ShortcutKey named) && named is not (ShortcutKey.None or >= ShortcutKey.D0 and <= ShortcutKey.D9) => named,
+                _ => ShortcutKey.None
+            };
+            return key == ShortcutKey.None ? null : new KeyChord(key, modifiers);
+        }
+    }
+
+    // A line of the key list: the keys as shown, and what they do. Action is set on lines whose key can be changed
+    public record ShortcutHelp(string Keys, string Description, ShortcutAction? Action = null);
     public record ShortcutHelpGroup(string Title, IReadOnlyList<ShortcutHelp> Lines);
 
-    // Which key does what. One fixed table for now; reading changes to it from the settings would start here
+    // Which key does what: the built-in table, or that table with the user's changes (ShortcutKeys)
     public class KeyMap
     {
         public static KeyMap Default { get; } = new(DefaultBindings());
@@ -49,8 +107,11 @@ namespace Mapper
             Bindings = [.. bindings];
         }
 
-        public KeyBinding? Find(ShortcutKey key, ShortcutModifiers modifiers) =>
-            Bindings.FirstOrDefault(b => b.Key == key && b.Modifiers == modifiers);
+        public KeyBinding? Find(ShortcutKey key, ShortcutModifiers modifiers)
+        {
+            KeyChord chord = new(key, modifiers);
+            return Bindings.FirstOrDefault(b => b.Chord == chord);
+        }
 
         // The first key for an action, as a tooltip shows it ("G", "Ctrl+G"), or null when it has none; argument narrows
         // it to one dimension or step
@@ -60,8 +121,14 @@ namespace Mapper
             return binding is null ? null : Describe(binding.Key, binding.Modifiers);
         }
 
+        // Every key for an action, as the key list shows them ("F1  ?"); for the height steps, the one-block keys only
+        public string KeysText(ShortcutAction action) =>
+            string.Join("  ", Bindings.Where(b => b.Action == action && !IsBigStep(b)).Select(b => Describe(b.Key, b.Modifiers)));
+
         // A tooltip with its key after it, if it has one: "Grid lines (G)"
         public string WithKey(string text, ShortcutAction action) => KeyText(action) is string key ? $"{text} ({key})" : text;
+
+        public static bool IsBigStep(KeyBinding binding) => binding.Action is ShortcutAction.HeightDown or ShortcutAction.HeightUp && binding.Argument != 1;
 
         public static string Describe(ShortcutKey key, ShortcutModifiers modifiers)
         {
@@ -75,62 +142,95 @@ namespace Mapper
                 ShortcutKey.OpenBracket => "[",
                 ShortcutKey.CloseBracket => "]",
                 ShortcutKey.Question => "?",
+                ShortcutKey.Semicolon => ";",
+                ShortcutKey.Apostrophe => "'",
+                ShortcutKey.Backslash => "\\",
+                ShortcutKey.Backtick => "`",
                 ShortcutKey.Escape => "Esc",
                 _ => key.ToString()
             };
-            // ? is typed with Shift already, so it isn't named
-            if (modifiers.HasFlag(ShortcutModifiers.Shift) && key != ShortcutKey.Question) name = "Shift+" + name;
+            // + and ? are typed with Shift already, so it isn't named
+            if (modifiers.HasFlag(ShortcutModifiers.Shift) && key is not (ShortcutKey.Question or ShortcutKey.Plus)) name = "Shift+" + name;
             if (modifiers.HasFlag(ShortcutModifiers.Control)) name = "Ctrl+" + name;
             return name;
         }
 
-        // The key list, in the order it's shown. fullScreen: whether this GUI has a full-screen key
+        // What an action is called in the messages about changing keys
+        public static string Name(ShortcutAction action) => action switch
+        {
+            ShortcutAction.ZoomIn => "Zoom in",
+            ShortcutAction.ZoomOut => "Zoom out",
+            ShortcutAction.ResetZoom => "Back to 100%",
+            ShortcutAction.PreviousStyle => "Previous style",
+            ShortcutAction.NextStyle => "Next style",
+            ShortcutAction.HeightMode => "Height mode",
+            ShortcutAction.HeightDown => "Height down",
+            ShortcutAction.HeightUp => "Height up",
+            ShortcutAction.Grid => "Grid lines",
+            ShortcutAction.SlimeChunks => "Slime chunks",
+            ShortcutAction.Axes => "Axes",
+            ShortcutAction.ChunkHighlight => "Chunk highlighter",
+            ShortcutAction.MeasureLength => "Measure length",
+            ShortcutAction.NightMode => "Night mode",
+            ShortcutAction.LiveReload => "Live reload",
+            ShortcutAction.Markup => "Markup bar",
+            ShortcutAction.ShowMarkup => "Show or hide pins and zones",
+            ShortcutAction.PinMode => "Pin mode",
+            ShortcutAction.ZoneMode => "Zone mode",
+            ShortcutAction.RectangleMode => "Rectangle mode",
+            ShortcutAction.SelectMode => "Select mode",
+            ShortcutAction.GoTo => "Go to a place",
+            ShortcutAction.Export => "Export as image or web map",
+            ShortcutAction.LoadWorld => "Load a world",
+            ShortcutAction.RecentWorlds => "Recent worlds",
+            ShortcutAction.BlockFilter => "Filter blocks",
+            ShortcutAction.Help => "Key list",
+            ShortcutAction.FullScreen => "Full screen",
+            ShortcutAction.Dimension => "Pick a dimension",
+            ShortcutAction.LeaveFullScreen => "Leave full screen",
+            _ => "Move the map"
+        };
+
+        // The key list, in the order it's shown, a line for each key that can be changed. fullScreen: whether this
+        // GUI has a full-screen key
         public IReadOnlyList<ShortcutHelpGroup> Help(bool fullScreen)
         {
-            string Keys(params ShortcutAction[] actions) => string.Join("  ", actions.Select(a => KeyText(a)).OfType<string>());
+            ShortcutHelp Line(ShortcutAction action)
+            {
+                string name = action switch
+                {
+                    ShortcutAction.HeightMode => "Surface, Slice, Caves in turn",
+                    ShortcutAction.LiveReload => "Live: redraw what the game saves",
+                    ShortcutAction.Help => "This list, also on the toolbar's keyboard button",
+                    ShortcutAction.FullScreen => "Full screen (Esc leaves it)",
+                    _ => Name(action)
+                };
+                // The Shift steps follow the one-block keys, so they're only there when those keys don't use Shift
+                if (action is ShortcutAction.HeightDown or ShortcutAction.HeightUp && Bindings.Any(b => b.Action == action && IsBigStep(b))) name += "; with Shift, by 10";
+                return new(KeysText(action), name, action);
+            }
+            IReadOnlyList<ShortcutHelp> Lines(params ShortcutAction[] actions) => [.. actions.Select(Line)];
 
-            List<ShortcutHelp> window =
-            [
-                new(Keys(ShortcutAction.GoTo), "Go to a place"),
-                new(Keys(ShortcutAction.Export), "Export as image or web map"),
-                new(Keys(ShortcutAction.LoadWorld), "Load a world"),
-                new(Keys(ShortcutAction.RecentWorlds), "Recent worlds"),
-                new(Keys(ShortcutAction.BlockFilter), "Filter blocks"),
-            ];
-            if (fullScreen) window.Add(new(Keys(ShortcutAction.FullScreen), "Full screen (Esc leaves it)"));
-            window.Add(new($"{KeyText(ShortcutAction.Help)}  ?", "This list, also on the toolbar's keyboard button"));
+            List<ShortcutHelp> window = [.. Lines(ShortcutAction.GoTo, ShortcutAction.Export, ShortcutAction.LoadWorld, ShortcutAction.RecentWorlds, ShortcutAction.BlockFilter)];
+            if (fullScreen) window.Add(Line(ShortcutAction.FullScreen));
+            window.Add(Line(ShortcutAction.Help));
 
             return
             [
                 new("Map",
                 [
                     new("Arrows", "Move the map; with Shift, a quarter of the screen"),
-                    new($"{KeyText(ShortcutAction.ZoomIn)}  {KeyText(ShortcutAction.ZoomOut)}", "Zoom in, out"),
-                    new($"{KeyText(ShortcutAction.ResetZoom)}  Ctrl+R", "Back to 100%"),
+                    .. Lines(ShortcutAction.ZoomIn, ShortcutAction.ZoomOut, ShortcutAction.ResetZoom),
                     new("1  2  3", "Overworld, Nether, End"),
                     new("4 – 9", "Custom dimensions, in their list's order"),
-                    new(Keys(ShortcutAction.PreviousStyle, ShortcutAction.NextStyle), "Previous, next style"),
+                    .. Lines(ShortcutAction.PreviousStyle, ShortcutAction.NextStyle),
                 ]),
-                new("Height panel",
-                [
-                    new(Keys(ShortcutAction.HeightMode), "Surface, Slice, Caves in turn"),
-                    new(Keys(ShortcutAction.HeightDown, ShortcutAction.HeightUp), "Height down, up; with Shift, by 10"),
-                ]),
-                new("Overlays and tools",
-                [
-                    new(Keys(ShortcutAction.Grid), "Grid lines"),
-                    new(Keys(ShortcutAction.SlimeChunks), "Slime chunks"),
-                    new(Keys(ShortcutAction.Axes), "Axes"),
-                    new(Keys(ShortcutAction.ChunkHighlight), "Chunk highlighter"),
-                    new(Keys(ShortcutAction.MeasureLength), "Measure length"),
-                    new(Keys(ShortcutAction.NightMode), "Night mode"),
-                    new(Keys(ShortcutAction.LiveReload), "Live: redraw what the game saves"),
-                ]),
+                new("Height panel", Lines(ShortcutAction.HeightMode, ShortcutAction.HeightDown, ShortcutAction.HeightUp)),
+                new("Overlays and tools", Lines(ShortcutAction.Grid, ShortcutAction.SlimeChunks, ShortcutAction.Axes, ShortcutAction.ChunkHighlight,
+                    ShortcutAction.MeasureLength, ShortcutAction.NightMode, ShortcutAction.LiveReload)),
                 new("Markup",
                 [
-                    new(Keys(ShortcutAction.Markup), "Markup bar"),
-                    new(Keys(ShortcutAction.ShowMarkup), "Show or hide pins and zones"),
-                    new(Keys(ShortcutAction.PinMode, ShortcutAction.ZoneMode, ShortcutAction.RectangleMode, ShortcutAction.SelectMode), "Pin, Zone, Rectangle, Select"),
+                    .. Lines(ShortcutAction.Markup, ShortcutAction.ShowMarkup, ShortcutAction.PinMode, ShortcutAction.ZoneMode, ShortcutAction.RectangleMode, ShortcutAction.SelectMode),
                     new("Ctrl+Z  Ctrl+Y", "Undo, redo (while the bar is open)"),
                 ]),
                 new("Windows", window)
@@ -143,9 +243,8 @@ namespace Mapper
 
             for (int i = 0; i < 9; i++) yield return new(ShortcutKey.D1 + i, none, ShortcutAction.Dimension, i);
 
-            // + is Shift+= on most keyboards, so the key works with and without Shift
+            // + is Shift+= on most keyboards; the key works with and without Shift (KeyChord)
             yield return new(ShortcutKey.Plus, none, ShortcutAction.ZoomIn);
-            yield return new(ShortcutKey.Plus, shift, ShortcutAction.ZoomIn);
             yield return new(ShortcutKey.Minus, none, ShortcutAction.ZoomOut);
             yield return new(ShortcutKey.D0, none, ShortcutAction.ResetZoom);
             yield return new(ShortcutKey.R, control, ShortcutAction.ResetZoom);
@@ -190,8 +289,7 @@ namespace Mapper
             yield return new(ShortcutKey.F, control, ShortcutAction.BlockFilter);
 
             yield return new(ShortcutKey.F1, none, ShortcutAction.Help);
-            // ? is Shift+/ on most keyboards; the key alone is taken too
-            yield return new(ShortcutKey.Question, shift, ShortcutAction.Help);
+            // ? is Shift+/ on most keyboards
             yield return new(ShortcutKey.Question, none, ShortcutAction.Help);
             yield return new(ShortcutKey.F11, none, ShortcutAction.FullScreen);
             yield return new(ShortcutKey.Escape, none, ShortcutAction.LeaveFullScreen);

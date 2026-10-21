@@ -4,8 +4,8 @@ using WorldEditor;
 
 namespace Mapper
 {
-    // What the GUIs remember between runs: the window, the style, which overlays are on, and the worlds opened
-    // recently with where the map was left in each. Kept in the user's settings folder, since the app's own
+    // What the GUIs remember between runs: the window, the style, which overlays are on, changed keys, and the worlds
+    // opened recently with where the map was left in each. Kept in the user's settings folder, since the app's own
     // folder may be read-only (an AppImage is) or replaced by an update
     public class AppSettings
     {
@@ -25,6 +25,8 @@ namespace Mapper
         // Redraws what the game saves while a world is open, unless turned off
         public bool LiveReload { get; set; } = true;
         public List<RecentWorld> RecentWorlds { get; set; } = [];
+        // The shortcut keys changed from the built-in ones, by action name (ShortcutKeys)
+        public Dictionary<string, string>? Keys { get; set; }
 
         private static readonly JsonSerializerOptions _options = new()
         {

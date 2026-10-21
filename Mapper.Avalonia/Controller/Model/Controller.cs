@@ -28,6 +28,7 @@ namespace Mapper.Gui.Controller
         public TextPainter TextPainter { get; }
         public MarkupPainter MarkupPainter { get; private set; }
         public MarkupBar MarkupBar { get; private set; }
+        public ShortcutKeys Keys { get; }
         public ShortcutRunner Shortcuts { get; private set; }
         public ShortcutsPanel ShortcutsPanel { get; private set; }
         public DropOverlay DropOverlay { get; private set; }
@@ -45,6 +46,13 @@ namespace Mapper.Gui.Controller
         {
             Settings = settings ?? AppSettings.Load();
             StartupLog.Mark("Settings read");
+            Keys = new ShortcutKeys(Settings.Keys);
+            foreach (string problem in Keys.Problems) System.Console.WriteLine($"Shortcut keys in {Settings.File}: {problem}");
+            Keys.Changed += () =>
+            {
+                Settings.Keys = Keys.Stored();
+                Settings.Save();
+            };
             GraphicsCanvas = new CanvasControl();
 
             Domain = new ProgramDomain();
@@ -67,7 +75,7 @@ namespace Mapper.Gui.Controller
             WorldOpener.DimensionWidget = DimensionWidget;
 
             // No full-screen key here: the window manager has its own (Super+F on Hyprland)
-            Shortcuts = new ShortcutRunner(KeyMap.Default, ToolbarWidget!, DimensionWidget!, StylebarWidget!, HeightWidget!, ImplementedScene.Map.ScaleBehaviour, GraphicsCanvas)
+            Shortcuts = new ShortcutRunner(Keys, ToolbarWidget!, DimensionWidget!, StylebarWidget!, HeightWidget!, ImplementedScene.Map.ScaleBehaviour, GraphicsCanvas)
             {
                 Paused = () => MarkupBar!.ItemEditor is not null
             };
@@ -140,7 +148,7 @@ namespace Mapper.Gui.Controller
             // Last, so it lies over the other widgets
             args.Widgets.Add(new CoordinatesTip(InformationWidget, ImplementedScene));
             // Over everything, while it's open
-            args.Widgets.Add(ShortcutsPanel = new ShortcutsPanel(KeyMap.Default.Help(fullScreen: false)));
+            args.Widgets.Add(ShortcutsPanel = new ShortcutsPanel(Keys, fullScreen: false));
             args.Widgets.Add(DropOverlay = new DropOverlay());
 
             return args;
@@ -183,7 +191,7 @@ namespace Mapper.Gui.Controller
         }
         private Control CreateToolbarControl() 
         {
-            ToolbarWidget = new ToolbarWidget(MainWindow, ImplementedRenderer, WorldOpener);
+            ToolbarWidget = new ToolbarWidget(MainWindow, ImplementedRenderer, WorldOpener, Keys);
 
             return new ToolbarControl(ToolbarWidget)
             {
@@ -200,7 +208,7 @@ namespace Mapper.Gui.Controller
             ImplementedRenderer.MarkupPainter = MarkupPainter;
             _ = new MarkupInput(tool, GraphicsCanvas);
 
-            return MarkupBar = new MarkupBar(tool, GraphicsCanvas)
+            return MarkupBar = new MarkupBar(tool, GraphicsCanvas, Keys)
             {
                 VerticalAlignment = VerticalAlignment.Top,
                 HorizontalAlignment = HorizontalAlignment.Center,

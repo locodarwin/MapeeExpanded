@@ -35,6 +35,9 @@
 //   dragover:<path>[|<path>]          drag files over the middle of the main window and hold them there
 //   dragleave                         drag them back out
 //   drop:<path>[|<path>]              drag files onto the middle of the main window and drop them
+//   keys                              print the key list's state, the changed keys kept, and tooltips that name keys
+//   keys:<action>                     click that action's key in the key list (Grid, HeightUp, ...); keys:reset:<action>,
+//                                     keys:reset-all, keys:card, keys:outside (the dimmed map around it)
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
@@ -282,6 +285,32 @@ foreach (string step in args.Skip(1))
                 editor.FindControl<Button>("SaveButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             }
             Pump(300);
+            break;
+        case "keys":
+            if (value.Length == 0)
+            {
+                ShortcutsPanel panel = controller.ShortcutsPanel;
+                Console.WriteLine($"  key list {(panel.IsOpen ? "open" : "closed")}; editing {panel.Editing?.ToString() ?? "-"}; message: {panel.Message ?? "-"}");
+                Console.WriteLine($"  kept: {(controller.Settings.Keys is { } kept ? string.Join(", ", kept.Select(k => $"{k.Key}={k.Value}")) : "(none)")}");
+                string ToolTipOf(string start) => controller.ToolbarWidget.ToolButtonSegments.SelectMany(segment => segment.Tools).First(t => t.ToolTip!.StartsWith(start)).ToolTip!;
+                Console.WriteLine($"  tooltips: {ToolTipOf("Grid")} | {ToolTipOf("Cardinal")} | {ToolTipOf("Keyboard")} | pin: {ToolTip.GetTip(controller.MarkupBar.FindControl<Button>("PinButton")!)} | hide: {ToolTip.GetTip(controller.MarkupBar.FindControl<Button>("HideButton")!)}");
+                foreach (ShortcutHelp line in controller.Keys.Map.Help(false).SelectMany(g => g.Lines).Where(l => l.Action is not null && controller.Keys.IsChanged(l.Action.Value)))
+                {
+                    Console.WriteLine($"  changed: {line.Keys} - {line.Description}");
+                }
+            }
+            else
+            {
+                Control target = main.GetVisualDescendants().OfType<Control>().FirstOrDefault(c => c.IsEffectivelyVisible && c.Tag as string == value)
+                    ?? throw new InvalidOperationException($"Nothing in the key list is tagged {value}");
+                // A corner, for the dimmed map and the card, clear of what's on them; the middle otherwise
+                Point local = value is "outside" or "card" ? new Point(5, 5) : new Point(target.Bounds.Width / 2, target.Bounds.Height / 2);
+                Point onMain = target.TranslatePoint(local, main) ?? throw new InvalidOperationException($"{value} isn't on the main window");
+                main.MouseMove(onMain, RawInputModifiers.None);
+                main.MouseDown(onMain, MouseButton.Left, RawInputModifiers.None);
+                main.MouseUp(onMain, MouseButton.Left, RawInputModifiers.None);
+                Pump(250);
+            }
             break;
         case "recent":
             if (value.Length == 0)

@@ -27,7 +27,7 @@ namespace Mapper.Gui
         private bool _finished;
         private DispatcherTimer? _messageTimer;
 
-        public MarkupBar(MarkupTool tool, CanvasControl canvas)
+        public MarkupBar(MarkupTool tool, CanvasControl canvas, ShortcutKeys keys)
         {
             InitializeComponent();
 
@@ -76,6 +76,21 @@ namespace Mapper.Gui
 
             ShowMode();
             ShowHistory();
+            ShowKeys(keys.Map);
+            keys.Changed += () => ShowKeys(keys.Map);
+        }
+
+        // The mode buttons' tooltips name their keys, as they are now
+        private void ShowKeys(KeyMap keys)
+        {
+            void Tip(Button button, string text, ShortcutAction action) => ToolTip.SetTip(button, keys.WithKey(text, action));
+
+            Tip(PinButton, "Click the map to drop a pin", ShortcutAction.PinMode);
+            Tip(ZoneButton, "Click the corners of a zone", ShortcutAction.ZoneMode);
+            Tip(RectangleButton, "Drag out a rectangular zone", ShortcutAction.RectangleMode);
+            Tip(SelectButton, "Pick, move and edit pins and zones", ShortcutAction.SelectMode);
+            string show = keys.KeyText(ShortcutAction.ShowMarkup) is string key ? $" or {key}" : "";
+            ToolTip.SetTip(HideButton, $"Hide pins and zones until the Markup button{show} brings them back");
         }
 
         private void ShowMode()

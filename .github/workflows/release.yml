@@ -1,0 +1,132 @@
+# Pushing a tag such as v1.6.0 builds the Windows zip and the Linux AppImage and attaches them to a draft release,
+# which is published by hand once its notes are written. Run by hand (Actions > Release > Run workflow) it builds
+# both downloads for the version in the project files and keeps them as workflow artifacts, with no release.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: 1
+
+jobs:
+  version:
+    name: Check the version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      # Both GUIs' Version, AssemblyVersion and FileVersion must agree, and match the tag when there is one
+      - id: check
+        shell: bash
+        run: |
+          set -euo pipefail
+          versions=$(sed -n 's:.*<\(Version\|AssemblyVersion\|FileVersion\)>\(.*\)</.*:\2:p' Mapper.Gui/Mapper.Gui.csproj Mapper.Avalonia/Mapper.Avalonia.csproj | sort -u)
+          if [[ $(wc -l <<< "$versions") -ne 1 ]]; then
+            echo "::error::The project files don't agree on the version: $(tr '\n' ' ' <<< "$versions")"
+            exit 1
+          fi
+          if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" != "v$versions" ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME doesn't match version $versions in Mapper.Gui.csproj and Mapper.Avalonia.csproj"
+            exit 1
+          fi
+          echo "version=$versions" >> "$GITHUB_OUTPUT"
+          echo "Version $versions"
+
+  test:
+    name: Build and test
+    uses: ./.github/workflows/build.yml
+
+  windows:
+    name: Windows zip
+    needs: [version, test]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      # One folder, MapeeExpanded-<version>, holding Mapee.exe, mapee-cli.exe and Resources. The command line is
+      # published apart and only its exe copied, as its publish would drop the GUI's deps and runtimeconfig files
+      - name: Publish
+        shell: pwsh
+        run: |
+          $version = '${{ needs.version.outputs.version }}'
+          $folder = "out/MapeeExpanded-$version"
+          dotnet publish Mapper.Gui/Mapper.Gui.csproj -c Release -r win-x64 --self-contained true -p:Platform=x64 -o $folder
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          dotnet publish Mapee.Cli/Mapee.Cli.csproj -c Release -r win-x64 --self-contained true -o out/cli
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Copy-Item out/cli/mapee-cli.exe $folder
+          Get-ChildItem $folder | Format-Table Name, Length
+          Compress-Archive -Path $folder -DestinationPath "out/MapeeExpanded-$version-win-x64.zip"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows
+          path: out/MapeeExpanded-${{ needs.version.outputs.version }}-win-x64.zip
+          if-no-files-found: error
+
+  linux:
+    name: Linux AppImage
+    needs: [version, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - name: Get appimagetool
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/appimagetool" https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
+          chmod +x "$RUNNER_TEMP/appimagetool"
+      - name: Build the AppImage
+        run: APPIMAGETOOL="$RUNNER_TEMP/appimagetool" packaging/build-appimage.sh "${{ needs.version.outputs.version }}"
+      # It runs its command line without needing FUSE or a display
+      - name: Try it
+        run: artifacts/MapeeExpanded-${{ needs.version.outputs.version }}-x86_64.AppImage --appimage-extract-and-run --version
+      - uses: actions/upload-artifact@v7
+        with:
+          name: linux
+          path: artifacts/MapeeExpanded-${{ needs.version.outputs.version }}-x86_64.AppImage
+          if-no-files-found: error
+
+  release:
+    name: Draft release
+    if: github.ref_type == 'tag'
+    needs: [version, windows, linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: downloads
+          merge-multiple: true
+      - name: Make the draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          cat > notes.md <<NOTES
+          **New**
+          - (write the notes, then publish)
+
+          **Downloads**
+          - \`MapeeExpanded-$VERSION-win-x64.zip\`: Windows x64, self-contained. Unzip and run \`Mapee.exe\`.
+          - \`MapeeExpanded-$VERSION-x86_64.AppImage\`: Linux x86-64, self-contained. \`chmod +x\` it and run it; if FUSE is missing, run it with \`--appimage-extract-and-run\`.
+          NOTES
+          # Run again for the same tag, the draft's downloads are replaced
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" downloads/* --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" downloads/* --repo "$GITHUB_REPOSITORY" --draft --verify-tag \
+              --title "Mapee Expanded $VERSION" --notes-file notes.md
+          fi

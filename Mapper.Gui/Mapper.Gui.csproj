@@ -15,9 +15,9 @@
     <AllowUnsafeBlocks>False</AllowUnsafeBlocks>
     <ApplicationIcon>Resources\Image\Logo\LogoIcon_48px.ico</ApplicationIcon>
     <AssemblyName>Mapee</AssemblyName>
-    <AssemblyVersion>1.4.0</AssemblyVersion>
-    <FileVersion>1.4.0</FileVersion>
-    <Version>1.4.0</Version>
+    <AssemblyVersion>1.5.0</AssemblyVersion>
+    <FileVersion>1.5.0</FileVersion>
+    <Version>1.5.0</Version>
 
     <!-- A published build is Mapee.exe beside the Resources folder: the assemblies and WPF's native libraries go
          inside the exe (the native ones are unpacked to %TEMP%\.net on first run), and WPF's translated messages

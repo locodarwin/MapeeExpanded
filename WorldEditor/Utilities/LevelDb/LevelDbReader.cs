@@ -9,6 +9,10 @@ namespace WorldEditor
     {
         public string Directory { get; }
 
+        // The newest write this view holds. A later view's records numbered above it were written after this one
+        // was opened, since every write gets the next sequence number and compaction keeps the numbers
+        public ulong LastSequence { get; private set; }
+
         // Tables open on first use, so a lookup touching a few of them doesn't open them all
         private readonly Lazy<LevelDbTable>[] _tables;
         private readonly LevelDbManifest.FileEntry[] _tableEntries;
@@ -19,6 +23,7 @@ namespace WorldEditor
             Directory = directory;
 
             LevelDbManifest manifest = LevelDbManifest.Read(directory);
+            LastSequence = manifest.LastSequence;
             _tableEntries = [.. manifest.Files];
             _tables = new Lazy<LevelDbTable>[_tableEntries.Length];
 
@@ -101,6 +106,30 @@ namespace WorldEditor
             }
         }
 
+        // Visits once each key accepted by filter that was written, or deleted, after older was opened. Only tables
+        // older didn't have can hold such writes (tables are never changed once written), plus the logs
+        public void ForEachChangeSince(LevelDbReader older, LevelDbKeyFilter filter, Action<byte[]> body)
+        {
+            ulong since = older.LastSequence;
+            HashSet<ulong> known = [.. older._tableEntries.Select(entry => entry.Number)];
+            HashSet<byte[]> changed = new(ByteArrayComparer.Instance);
+
+            for (int i = 0; i < _tables.Length; i++)
+            {
+                if (known.Contains(_tableEntries[i].Number)) continue;
+                _tables[i].Value.ScanKeys((key, sequence, isDeletion) =>
+                {
+                    if (sequence > since && filter(key)) changed.Add(key.ToArray());
+                });
+            }
+            foreach (var entry in _memory)
+            {
+                if (entry.Value.Sequence > since && filter(entry.Key)) changed.Add(entry.Key);
+            }
+
+            foreach (byte[] key in changed) body(key);
+        }
+
         private static void Keep(Dictionary<byte[], (ulong Sequence, byte[]? Value)> found, byte[] key, ulong sequence, byte[]? value)
         {
             if (found.TryGetValue(key, out var existing) && existing.Sequence >= sequence) return;
@@ -144,6 +173,7 @@ namespace WorldEditor
                     byte[] key = LevelDbUtilities.ReadLengthPrefixed(data, ref position);
                     byte[]? value = type == 1 ? LevelDbUtilities.ReadLengthPrefixed(data, ref position) : null;
 
+                    if (sequence > LastSequence) LastSequence = sequence;
                     if (_memory.TryGetValue(key, out var existing) && existing.Sequence >= sequence) continue;
                     _memory[key] = (sequence, value);
                 }

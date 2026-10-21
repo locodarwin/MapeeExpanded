@@ -22,6 +22,8 @@ namespace Mapper
         public List<string> Overlays { get; set; } = [];
         // Markup is shown unless turned off, unlike the overlays
         public bool ShowMarkup { get; set; } = true;
+        // Redraws what the game saves while a world is open, unless turned off
+        public bool LiveReload { get; set; } = true;
         public List<RecentWorld> RecentWorlds { get; set; } = [];
 
         private static readonly JsonSerializerOptions _options = new()

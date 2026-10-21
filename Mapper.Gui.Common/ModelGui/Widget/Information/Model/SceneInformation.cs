@@ -13,5 +13,7 @@ namespace Mapper.Gui.Model
         public int LoadedRegions { get; set; }
 
         public Level? WorldInformation { get; set; }
+        // What live reload last did, when it's watching the world
+        public string? LiveNote { get; set; }
     }
 }

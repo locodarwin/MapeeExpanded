@@ -19,6 +19,18 @@ namespace Mapper.Gui.Controller
         private readonly SceneInformation _information = new();
 
         public Scene Scene { get; }
+
+        // Shown beside the world's name; a new note updates the bar straight away
+        public LiveReloadTool? Live
+        {
+            get => _live;
+            set
+            {
+                _live = value;
+                if (value is not null) value.NoteChanged += (sender, e) => InformationUpdate?.Invoke(this, GetInformation());
+            }
+        }
+        private LiveReloadTool? _live;
         public Renderer Renderer { get; }
 
         private readonly BlockInspector _inspector = new();
@@ -104,6 +116,7 @@ namespace Mapper.Gui.Controller
             };
             _information.LoadedRegions = Scene.Domain.CurrentWorld?.CurrentDimension.Scene.RenderedRegions.Count ?? 0;
             _information.WorldInformation = Scene.Domain.CurrentWorld?.Level;
+            _information.LiveNote = _live?.Note;
             _information.CurrentDimension = Scene.Domain.CurrentWorld?.CurrentDimension.Dimension;
 
             return _information;

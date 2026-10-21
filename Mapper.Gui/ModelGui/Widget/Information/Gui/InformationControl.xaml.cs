@@ -90,6 +90,7 @@ namespace Mapper.Gui
 
                 WorldNameLabel.Text = information.WorldInformation.WorldName;
                 WorldVersionLabel.Text = information.WorldInformation.Version.VersionName;
+                LiveLabel.Text = information.LiveNote is string note ? "; " + note : string.Empty;
             }
             else
             {

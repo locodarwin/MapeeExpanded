@@ -116,7 +116,7 @@ foreach (string step in args.Skip(1))
             var tools = controller.ToolbarWidget;
             Console.WriteLine($"  view zoom level {view.CurrentZoomLevel}, offset {view.Offset}; height {controller.HeightWidget.Mode} {controller.HeightWidget.Y}; " +
                 $"markup {(tools.MarkupTool.IsTurnedOn ? tools.MarkupTool.Editor.Mode : "off")}, {(tools.MarkupTool.ShowMarkup ? "shown" : "hidden")}; " +
-                $"measure {(tools.MeasureLengthTool.IsTurnedOn ? "on" : "off")}; night {(tools.NightTool.IsTurnedOn ? "on" : "off")}; key list {(controller.ShortcutsPanel.IsOpen ? "open" : "closed")}");
+                $"measure {(tools.MeasureLengthTool.IsTurnedOn ? "on" : "off")}; night {(tools.NightTool.IsTurnedOn ? "on" : "off")}; key list {(controller.ShortcutsPanel.IsOpen ? "open" : "closed")}; live {(tools.LiveTool.IsTurnedOn ? "on" : "off")}{(tools.LiveTool.Enabled ? "" : " (unavailable)")}: {tools.LiveTool.Note ?? "-"}");
             break;
         case "wait":
             Pump(int.Parse(value));

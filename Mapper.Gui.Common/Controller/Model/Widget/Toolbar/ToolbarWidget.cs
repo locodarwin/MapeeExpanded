@@ -26,6 +26,7 @@ namespace Mapper.Gui.Controller
         public BrowseTool BrowseTool { get; private set; } = null!;
         public ShortcutsTool ShortcutsTool { get; private set; } = null!;
         public RecentWorldsTool RecentTool { get; private set; } = null!;
+        public LiveReloadTool LiveTool { get; private set; } = null!;
 
         private static KeyMap Keys => KeyMap.Default;
 
@@ -51,6 +52,7 @@ namespace Mapper.Gui.Controller
             shortSegment.Tools.Add(CreateMeasureLengthButton());
             shortSegment.Tools.Add(CreateMarkupButton());
             shortSegment.Tools.Add(CreateDayNightCycleButton());
+            shortSegment.Tools.Add(CreateLiveButton());
             shortSegment.Tools.Add(CreateGoToButton());
             shortSegment.Tools.Add(CreateExportAsImageButton());
 
@@ -129,6 +131,12 @@ namespace Mapper.Gui.Controller
             };
 
             return output;
+        }
+        private ToolButton CreateLiveButton()
+        {
+            LiveReloadTool tool = new(Renderer.Scene, WorldOpener, WorldOpener.Settings);
+            LiveTool = tool;
+            return CreateButton(tool, "Live_22px.png", Keys.WithKey("Live: redraw what the game saves while the world is open (not for .mcworld files, which are copies)", ShortcutAction.LiveReload));
         }
         private ToolButton CreateGoToButton()
         {

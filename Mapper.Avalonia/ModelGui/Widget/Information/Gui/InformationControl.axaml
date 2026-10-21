@@ -38,7 +38,7 @@
 
         <!-- The world name gives way first when the window is narrow, since the cursor details change and it doesn't -->
         <TextBlock x:Name="WorldTextBlock" Margin="0,0,10,0" Grid.Column="5" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis">
-            <Run Text="World name: " Foreground="{StaticResource LabelColor}"/><Run x:Name="WorldNameLabel" Foreground="{StaticResource LabelInformationColor}"/><Run Text="; Version: " Foreground="{StaticResource LabelColor}"/><Run x:Name="WorldVersionLabel" Foreground="{StaticResource LabelInformationColor}"/>
+            <Run Text="World name: " Foreground="{StaticResource LabelColor}"/><Run x:Name="WorldNameLabel" Foreground="{StaticResource LabelInformationColor}"/><Run Text="; Version: " Foreground="{StaticResource LabelColor}"/><Run x:Name="WorldVersionLabel" Foreground="{StaticResource LabelInformationColor}"/><Run x:Name="LiveLabel" Foreground="{StaticResource LabelColor}"/>
         </TextBlock>
     </Grid>
 </UserControl>

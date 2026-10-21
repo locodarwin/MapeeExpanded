@@ -49,7 +49,7 @@
         <!-- The world name gives way first when the window is narrow, since the cursor details change and it doesn't -->
         <TextBlock x:Name="WorldTextBlock" Padding="0,4,0,0" Grid.Column="5" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis">
                 <Run Text="World name: " Foreground="{DynamicResource LabelColor}"/><Run x:Name="WorldNameLabel" Foreground="{DynamicResource LabelInformationColor}"/><Run Text="; Version:" Foreground="{DynamicResource LabelColor}"/>
-                <Run x:Name="WorldVersionLabel" Foreground="{DynamicResource LabelInformationColor}"/>
+                <Run x:Name="WorldVersionLabel" Foreground="{DynamicResource LabelInformationColor}"/><Run x:Name="LiveLabel" Foreground="{DynamicResource LabelColor}"/>
         </TextBlock>
     </Grid>
 </UserControl>

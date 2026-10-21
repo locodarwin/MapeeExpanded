@@ -2,7 +2,7 @@ namespace WorldEditor
 {
     // Bedrock has no region files. Chunks are found by indexing the world database in the background,
     // then grouped into the same 32x32 regions Java uses so the rest of Mapee can treat them alike
-    public class BedrockRegionStore : IChunkSourceRegionStore, IBackgroundRegionStore, IBedrockNeighborSource
+    public class BedrockRegionStore : IChunkSourceRegionStore, IBackgroundRegionStore, IBedrockNeighborSource, IRefreshableRegionStore
     {
         public int Dimension { get; }
         public int Count => Regions.Count;
@@ -40,6 +40,33 @@ namespace WorldEditor
         public bool Exists(Coords coords)
         {
             return Regions.ContainsKey(coords);
+        }
+
+        public string Stamp() => _world?.CurrentStamp() ?? string.Empty;
+
+        public RegionChanges? Refresh()
+        {
+            if (_world?.Reopen() is not { } next) return null;
+            _world = next.World;
+
+            List<Coords> chunks = [.. next.Changed.Where(chunk => chunk.Dimension == Dimension).Select(chunk => new Coords(chunk.X, chunk.Z))];
+            if (chunks.Count == 0) return null;
+
+            HashSet<Coords> regions = [];
+            foreach (Coords chunk in chunks)
+            {
+                _blocks.TryRemove(chunk, out _);
+
+                // Light reaches across chunk edges, so a chunk on a region's edge changes the region beside it too
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    for (int dz = -1; dz <= 1; dz++)
+                    {
+                        regions.Add(new Coords((chunk.X + dx) >> 5, (chunk.Z + dz) >> 5));
+                    }
+                }
+            }
+            return new RegionChanges(regions, chunks.Count);
         }
 
         public bool GetData(Coords coords, out byte[]? buffer, out StorageFormat format)

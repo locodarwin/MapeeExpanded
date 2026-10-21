@@ -12,6 +12,8 @@ namespace WorldEditor
 
         public ulong LogNumber { get; private set; }
         public ulong PrevLogNumber { get; private set; }
+        // The newest write the tables hold; newer ones are only in the logs
+        public ulong LastSequence { get; private set; }
         public IList<FileEntry> Files { get; private set; } = [];
 
         public static LevelDbManifest Read(string directory)
@@ -48,8 +50,10 @@ namespace WorldEditor
                         LogNumber = LevelDbUtilities.ReadVarint64(data, ref position);
                         break;
                     case 3: // next file number
-                    case 4: // last sequence
                         LevelDbUtilities.ReadVarint64(data, ref position);
+                        break;
+                    case 4:
+                        LastSequence = LevelDbUtilities.ReadVarint64(data, ref position);
                         break;
                     case 5: // compaction pointer
                         LevelDbUtilities.ReadVarint32(data, ref position);

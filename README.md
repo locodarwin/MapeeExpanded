@@ -19,6 +19,7 @@ Upstream website: [mapee.net](https://www.mapee.net/home)
 - Markup: mark the map with labelled **pins** and labelled **zones** (territories, claims, farms, towns), each with a colour, a note, and for pins one of eight symbols. They're kept per world and per dimension, show in the Go to window and the web map, and can be drawn into exported images (see "Markup" below)
 - Keyboard shortcuts for the dimensions, zoom, styles, height panel, overlays, markup and windows; F1, ? or the toolbar's keyboard button lists them, and each toolbar button's tooltip names its key (see "Keyboard shortcuts" below)
 - **Recent** button beside Load world: the worlds opened lately, newest first, with their edition and when they were last opened; picking one opens it where the map was left. An × takes a world off the list (the world itself is never touched), **Clear the list** forgets all but the open one, and a world that has been moved or deleted shows dimmed and offers to come off the list. Ctrl+Shift+O opens it from the keyboard (Up, Down, Enter)
+- Live reload: while a world is open, the map redraws what the game saves, chunk by chunk, and the info bar says what was updated and when. The toolbar's **Live** button (or W) turns it off and on. Java saves every five minutes, when the game is paused, or on `/save-all`, so that's how far behind Java can be; Bedrock writes more often. Worlds opened from a `.mcworld` are copies and don't change (see "Live reload" below)
 - Drag and drop: drop a world folder, its `level.dat` or a `.mcworld` on the window to open it, or a markup `.json` file to add its pins and zones to the world on show. While dragging, the window says what dropping would do
 
 **Version 1.4.0**
@@ -45,7 +46,15 @@ Dragging still moves the map in every mode, and a right-click on any pin or zone
 
 Markup is saved as you go, one file per world in the settings folder (`%APPDATA%\Mapee\Markup` on Windows, `~/.config/Mapee/Markup` on Linux), never in the world itself. It follows the path the world was opened from, as the recent worlds do, so a copied world starts without it until you import it. The export window's **Include pins and zones** puts it in screenshots, full-resolution images and web maps; in a web map, click a pin or zone to see its note, and **PINS** and **ZONES** (M and Z) switch them off.
 
-# Keyboard shortcuts
+# Live reload
+
+With **Live** on (the circling arrows on the toolbar, on by default and remembered), Mapee looks at the open world's files every two seconds. That look is only a folder listing; nothing is read until the files have stopped changing for a whole look, so a save in progress is never read halfway (if the game keeps writing for ten seconds, Mapee reads anyway). Then:
+
+- **Java**: each region file that changed is drawn again; the save times inside it say how many chunks the game wrote. Newly explored regions appear.
+- **Bedrock**: Mapee opens the world's database again and reads only the records written since its last look (every record carries a sequence number), so it knows exactly which chunks changed without reading the rest of the world. Light reaches across chunk edges, so a chunk on a region's edge redraws the region beside it too.
+
+Each region keeps its old picture until the new one is ready, so the map doesn't flash. Only the dimension on screen is watched; the others catch up when you switch to them. The player's position (Go to's **Player position**) follows `level.dat`. If the game keeps its files locked, the info bar says Mapee can't read the world and it tries again.
+
 
 Press **F1** or **?** in the app, or the keyboard button at the left end of the toolbar, for this list. None of them work while you're typing in a box, and the ones that need a world do nothing until one is open.
 
@@ -62,6 +71,7 @@ Press **F1** or **?** in the app, or the keyboard button at the left end of the 
 | G S A C | Grid lines, slime chunks, axes, chunk highlighter |
 | L | Measure length |
 | N | Night mode |
+| W | Live reload on or off |
 | M | Markup bar |
 | Shift+M | Show or hide pins and zones |
 | P Z R V | Markup: Pin, Zone, Rectangle, Select |

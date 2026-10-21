@@ -20,6 +20,11 @@ namespace Mapper.Gui.Logic
         private object _lock = new();
         private int _added = 0;
 
+        // Regions of the dimension on show to draw again because the world changed under them, each with whether its
+        // new drawing has been queued yet: a drawing that was already under way when the change came in shows the old
+        // world, so only one queued afterwards replaces the picture
+        private readonly Dictionary<XzPoint, bool> _stale = [];
+
         public RegionLoader(Scene scene)
         {
             Scene = scene;
@@ -43,6 +48,7 @@ namespace Mapper.Gui.Logic
 
         private void Scene_WorldBeginChange(WorldDomain? old, WorldDomain current)
         {
+            ForgetStale();
             if (old is not null)
             {
                 _inSceneChangingProcess = true;
@@ -56,6 +62,7 @@ namespace Mapper.Gui.Logic
         }
         private void Scene_DimensionBeginChange(DimensionDomain old, DimensionDomain current)
         {
+            ForgetStale();
             _inSceneChangingProcess = true;
             WorldMapper.Invoke(WorldMapper.Stop);
 
@@ -81,6 +88,7 @@ namespace Mapper.Gui.Logic
 
         private void Scene_StyleReset(Style old, Style current)
         {
+            ForgetStale();
             if (Scene.Domain.CurrentWorld is null) return;
 
             foreach (DimensionDomain domain in Scene.Domain.CurrentWorld.Dimensions)
@@ -94,6 +102,7 @@ namespace Mapper.Gui.Logic
             if (_currentScene is null || Scene.Domain.CurrentWorld is null) return;
 
             _inSceneChangingProcess = true;
+            ForgetStale();
 
             SetCurrentScene(Scene.Domain.CurrentWorld, dimension);
             _currentScene.Reset();
@@ -104,6 +113,22 @@ namespace Mapper.Gui.Logic
                 WorldMapper.SetScene(dimension.Scene.SceneParameter);
                 _inSceneChangingProcess = false;
             });
+        }
+
+        // Draws these regions of the dimension on show again, each picture staying until its new one is ready. Safe
+        // from any thread; the regions are queued with the next look at what's visible
+        public void Refresh(IEnumerable<Coords> regions)
+        {
+            lock (_lock)
+            {
+                foreach (Coords region in regions) _stale[new XzPoint(region.X, region.Z)] = false;
+            }
+            if (_currentScene is SceneCache scene) scene.PrevRange = XzRange.Empty;
+        }
+
+        private void ForgetStale()
+        {
+            lock (_lock) _stale.Clear();
         }
 
         private void SetCurrentScene(WorldDomain world, DimensionDomain dimension)
@@ -128,7 +153,8 @@ namespace Mapper.Gui.Logic
                 if (StartupLog.Active) StartupLog.Mark($"  region {coords.X},{coords.Z} rendered but dropped: {(_currentScene is null ? "no scene" : Scene.Domain.CurrentWorld is null ? "no world" : "scene changing")}");
                 return;
             }
-            if (!IsSafeToAdd(coords.X, coords.Z))
+            bool replace = TakeStale(coords);
+            if (!replace && !IsSafeToAdd(coords.X, coords.Z))
             {
                 if (StartupLog.Active) StartupLog.Mark($"  region {coords.X},{coords.Z} rendered but already there");
                 return;
@@ -153,11 +179,23 @@ namespace Mapper.Gui.Logic
                     canvas.PixelHeight - 1);
 
                 RenderedRegion output = new(new XzPoint(coords.X, coords.Z), areaInRegion, bitmap);
-                AddSafely(output);
+                AddSafely(output, replace);
             }
             else
             {
-                AddSafely(new RenderedRegion(new XzPoint(coords.X, coords.Z), null, null));
+                AddSafely(new RenderedRegion(new XzPoint(coords.X, coords.Z), null, null), replace);
+            }
+        }
+
+        // Whether this drawing is the one a refresh asked for
+        private bool TakeStale(Coords coords)
+        {
+            XzPoint point = new(coords.X, coords.Z);
+            lock (_lock)
+            {
+                if (!_stale.TryGetValue(point, out bool queued) || !queued) return false;
+                _stale.Remove(point);
+                return true;
             }
         }
 
@@ -170,14 +208,23 @@ namespace Mapper.Gui.Logic
                 return !Scene.Domain.CurrentWorld.CurrentDimension.Scene.RenderedRegions.ContainsKey(new XzPoint(x, z));
             }
         }
-        private void AddSafely(IRenderedRegion region)
+        // replace: the region is being drawn again, so its new picture takes the old one's place
+        private void AddSafely(IRenderedRegion region, bool replace = false)
         {
             if (Scene.Domain.CurrentWorld is null) return;
 
             lock (_lock)
             {
-                if (Scene.Domain.CurrentWorld.CurrentDimension.Scene.RenderedRegions.ContainsKey(region.Coords)) return;
-                Scene.Domain.CurrentWorld.CurrentDimension.Scene.RenderedRegions.Add(region.Coords, region);
+                var regions = Scene.Domain.CurrentWorld.CurrentDimension.Scene.RenderedRegions;
+                if (regions.ContainsKey(region.Coords))
+                {
+                    if (!replace) return;
+                    regions[region.Coords] = region;
+                }
+                else
+                {
+                    regions.Add(region.Coords, region);
+                }
                 _added++;
             }
             if (StartupLog.Active && (_added <= 10 || _added % 25 == 0))
@@ -223,9 +270,12 @@ namespace Mapper.Gui.Logic
                 {
                     continue;
                 }
-                if (renderedScene.RenderedRegions.ContainsKey(new XzPoint(regionCoords.X, regionCoords.Z)))
+                // Drawn already, unless the world has changed there since
+                XzPoint point = new(regionCoords.X, regionCoords.Z);
+                lock (_lock)
                 {
-                    continue;
+                    if (_stale.ContainsKey(point)) _stale[point] = true;
+                    else if (renderedScene.RenderedRegions.ContainsKey(point)) continue;
                 }
 
                 queueSpan[index++] = regionCoords;

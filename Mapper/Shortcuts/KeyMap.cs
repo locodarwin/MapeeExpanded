@@ -25,7 +25,7 @@ namespace Mapper
         PreviousStyle, NextStyle,
         // Argument for HeightDown and HeightUp: how many blocks
         HeightMode, HeightDown, HeightUp,
-        Grid, SlimeChunks, Axes, ChunkHighlight, MeasureLength, NightMode,
+        Grid, SlimeChunks, Axes, ChunkHighlight, MeasureLength, NightMode, LiveReload,
         Markup, ShowMarkup, PinMode, ZoneMode, RectangleMode, SelectMode,
         GoTo, Export, LoadWorld, RecentWorlds, BlockFilter,
         Help, FullScreen, LeaveFullScreen
@@ -124,6 +124,7 @@ namespace Mapper
                     new(Keys(ShortcutAction.ChunkHighlight), "Chunk highlighter"),
                     new(Keys(ShortcutAction.MeasureLength), "Measure length"),
                     new(Keys(ShortcutAction.NightMode), "Night mode"),
+                    new(Keys(ShortcutAction.LiveReload), "Live: redraw what the game saves"),
                 ]),
                 new("Markup",
                 [
@@ -173,6 +174,7 @@ namespace Mapper
             yield return new(ShortcutKey.C, none, ShortcutAction.ChunkHighlight);
             yield return new(ShortcutKey.L, none, ShortcutAction.MeasureLength);
             yield return new(ShortcutKey.N, none, ShortcutAction.NightMode);
+            yield return new(ShortcutKey.W, none, ShortcutAction.LiveReload);
 
             yield return new(ShortcutKey.M, none, ShortcutAction.Markup);
             yield return new(ShortcutKey.M, shift, ShortcutAction.ShowMarkup);

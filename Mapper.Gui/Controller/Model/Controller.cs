@@ -73,6 +73,7 @@ namespace Mapper.Gui.Controller
             };
             _ = new ShortcutInput(Shortcuts, ShortcutsPanel!, MainWindow);
             ToolbarWidget!.ShortcutsTool.Show = ShortcutsPanel!.Open;
+            InformationWidget.Live = ToolbarWidget.LiveTool;
 
             WorldDrop = new WorldDrop(WorldOpener, ToolbarWidget.MarkupTool, MainWindow, DropOverlay!);
             _ = new DropInput(WorldDrop, MainWindow);

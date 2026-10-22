@@ -11,49 +11,70 @@ namespace Mapee.Tests.Fixtures
         public string Directory { get; } = Path.Combine(Path.GetTempPath(), "mapee-tests", Guid.NewGuid().ToString("N"));
         public string LevelDat => Path.Combine(Directory, "level.dat");
 
-        // Region coordinates -> chunks in that region, each with the compression type its sector header names
-        private readonly Dictionary<(int X, int Z), List<(int X, int Z, byte Compression, byte[] Nbt)>> _regions = [];
+        // Dimension folder and region coordinates -> chunks in that region, each with the compression type its sector
+        // header names
+        private readonly Dictionary<(string Dimension, int X, int Z), List<(int X, int Z, byte Compression, byte[] Nbt)>> _regions = [];
+        private Dictionary<string, object>? _player;
 
-        // compression: 1 gzip, 2 zlib (what the game writes), 3 none
-        public JavaTestWorld Chunk(int x, int z, Dictionary<string, object> chunk, byte compression = 2)
+        // compression: 1 gzip, 2 zlib (what the game writes), 3 none. dimension: the game's folder under
+        // dimensions/minecraft (overworld, the_nether, the_end)
+        public JavaTestWorld Chunk(int x, int z, Dictionary<string, object> chunk, byte compression = 2, string dimension = "overworld")
         {
-            var key = (x >> 5, z >> 5);
+            var key = (dimension, x >> 5, z >> 5);
             if (!_regions.TryGetValue(key, out var chunks)) _regions[key] = chunks = [];
             chunks.Add((x, z, compression, Nbt.Compound(chunk, littleEndian: false)));
             return this;
         }
 
+        // The single player, written as 26.x does: players/data/<uuid>.dat, named in level.dat as singleplayer_uuid
+        public JavaTestWorld Player(Dictionary<string, object> player)
+        {
+            _player = player;
+            return this;
+        }
+
+        public static readonly int[] PlayerUuid = [0x12345678, unchecked((int)0x9abcdef0), 0x11223344, 0x55667788];
+        public const string PlayerFile = "12345678-9abc-def0-1122-334455667788.dat";
+
         public JavaTestWorld Save(string worldName = "Java test world")
         {
-            // Where regions go depends on the version; 26.x moved the Overworld's under dimensions/
-            string regionFolder = Path.Combine(Directory, WorldEditor.Dimension.Overworld.GetRegionFolder((WorldEditor.Version)DataVersion)!);
-            System.IO.Directory.CreateDirectory(regionFolder);
+            Dictionary<string, object> data = new()
+            {
+                ["DataVersion"] = DataVersion,
+                ["Version"] = new Dictionary<string, object> { ["Name"] = "26.2", ["Id"] = DataVersion },
+                ["LevelName"] = worldName,
+                ["GameType"] = 1,
+                ["SpawnX"] = 0,
+                ["SpawnY"] = 64,
+                ["SpawnZ"] = 0,
+                ["LastPlayed"] = 1700000000000L
+            };
+            if (_player is not null) data["singleplayer_uuid"] = PlayerUuid;
+            System.IO.Directory.CreateDirectory(Directory);
+            WriteGzipped(LevelDat, Nbt.Compound(new() { ["Data"] = data }, littleEndian: false));
 
-            byte[] level = Nbt.Compound(new()
+            if (_player is not null)
             {
-                ["Data"] = new Dictionary<string, object>
-                {
-                    ["DataVersion"] = DataVersion,
-                    ["Version"] = new Dictionary<string, object> { ["Name"] = "26.2", ["Id"] = DataVersion },
-                    ["LevelName"] = worldName,
-                    ["GameType"] = 1,
-                    ["SpawnX"] = 0,
-                    ["SpawnY"] = 64,
-                    ["SpawnZ"] = 0,
-                    ["LastPlayed"] = 1700000000000L
-                }
-            }, littleEndian: false);
-            using (FileStream file = File.Create(LevelDat))
-            using (GZipStream gzip = new(file, CompressionLevel.Optimal))
-            {
-                gzip.Write(level);
+                string players = Path.Combine(Directory, "players", "data");
+                System.IO.Directory.CreateDirectory(players);
+                WriteGzipped(Path.Combine(players, PlayerFile), Nbt.Compound(_player, littleEndian: false));
             }
 
+            // The game's own layout since 26.1, spelled out rather than asked of Mapee, so a wrong folder there shows
             foreach (var (region, chunks) in _regions)
             {
+                string regionFolder = Path.Combine(Directory, "dimensions", "minecraft", region.Dimension, "region");
+                System.IO.Directory.CreateDirectory(regionFolder);
                 File.WriteAllBytes(Path.Combine(regionFolder, $"r.{region.X}.{region.Z}.mca"), RegionFile(chunks));
             }
             return this;
+        }
+
+        private static void WriteGzipped(string path, byte[] bytes)
+        {
+            using FileStream file = File.Create(path);
+            using GZipStream gzip = new(file, CompressionLevel.Optimal);
+            gzip.Write(bytes);
         }
 
         // An 8 KiB header of sector locations and timestamps, then each chunk in whole 4 KiB sectors:

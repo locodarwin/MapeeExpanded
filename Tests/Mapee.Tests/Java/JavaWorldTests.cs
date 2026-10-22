@@ -72,5 +72,46 @@ namespace Mapee.Tests.Java
             Assert.Equal("minecraft:oak_log", NameAt(blocks, 7, 68, 7));
             Assert.Equal("minecraft:air", NameAt(blocks, 7, 69, 7));
         }
+    
+        // 26.1 moved every dimension under dimensions/minecraft/; the Nether's folder is the_nether
+        [Fact]
+        public void LoadsEachDimensionFromItsOwnFolder()
+        {
+            using JavaTestWorld world = new JavaTestWorld()
+                .Chunk(0, 0, Chunk(0, 0))
+                .Chunk(1, 0, Chunk(1, 0), dimension: "the_nether")
+                .Chunk(2, 0, Chunk(2, 0), dimension: "the_end")
+                .Save();
+
+            Level level = WorldLoader.ReadLevel(world.LevelDat);
+            Assert.Equal([new Coords(0, 0)], WorldLoader.LoadChunks(level, Dimension.Overworld).Keys);
+            Assert.Equal([new Coords(1, 0)], WorldLoader.LoadChunks(level, Dimension.Nether).Keys);
+            Assert.Equal([new Coords(2, 0)], WorldLoader.LoadChunks(level, Dimension.TheEnd).Keys);
+        }
+
+        // 26.x keeps the single player in players/data/<uuid>.dat rather than in level.dat
+        [Theory]
+        [InlineData("minecraft:overworld", "Overworld")]
+        [InlineData("minecraft:the_nether", "Nether")]
+        [InlineData("minecraft:the_end", "The End")]
+        public void ReadsThePlayerFromItsOwnFile(string dimension, string expected)
+        {
+            using JavaTestWorld world = new JavaTestWorld()
+                .Chunk(0, 0, Chunk(0, 0))
+                .Player(new()
+                {
+                    ["Dimension"] = dimension,
+                    ["Pos"] = new List<object> { 120.5, 70.0, -33.25 },
+                    ["playerGameType"] = 0,
+                    ["respawn"] = new Dictionary<string, object> { ["pos"] = new[] { 10, 64, -20 }, ["dimension"] = "minecraft:overworld" }
+                })
+                .Save();
+
+            Level level = WorldLoader.ReadLevel(world.LevelDat);
+            Assert.Equal(expected, level.Player.Dimension.Name);
+            Assert.Equal(new System.Numerics.Vector3(120.5f, 70f, -33.25f), level.Player.Position);
+            Assert.Equal(new System.Numerics.Vector3(10, 64, -20), level.Player.Spawn);
+            Assert.Equal(GameType.Survival, level.Player.GameType);
+        }
     }
 }

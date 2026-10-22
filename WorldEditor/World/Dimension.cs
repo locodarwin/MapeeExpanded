@@ -54,6 +54,8 @@ namespace WorldEditor
                 return "region";
             }
 
+            // Mapee's id for the Nether is minecraft:nether, but the game's folder is named for minecraft:the_nether
+            if (this == Nether) name = "the_nether";
             return Path.Combine("dimensions", @namespace, name, "region");
         }
 

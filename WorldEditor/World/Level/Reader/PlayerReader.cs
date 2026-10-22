@@ -1,4 +1,5 @@
 ﻿using NbtEditor;
+using System.IO.Compression;
 using System.Numerics;
 
 namespace WorldEditor
@@ -8,7 +9,9 @@ namespace WorldEditor
         public Player Read(LevelArgs input)
         {
             Player player = new Player();
-            if (input.Data.TryGetChild("Player", out Tag playerTag) && playerTag is CompoundTag playerCompound) 
+            CompoundTag? playerCompound = input.Data.TryGetChild("Player", out Tag playerTag) ? playerTag as CompoundTag : null;
+            playerCompound ??= ReadPlayerFile(input);
+            if (playerCompound is not null) 
             {
                 ReadPlayerPositions(playerCompound, out Vector3 pos, out Vector3 spawn);
                 
@@ -41,6 +44,33 @@ namespace WorldEditor
             return player;
         }
 
+        // A 26.x level.dat no longer holds the player: it is players/data/<uuid>.dat, the uuid level.dat names as
+        // singleplayer_uuid (four ints, read as hex)
+        private static CompoundTag? ReadPlayerFile(LevelArgs input)
+        {
+            if (input.Level.Directory is null) return null;
+            if (!input.Data.TryGetChild("singleplayer_uuid", out Tag uuidTag) || uuidTag is not ArrayTag uuidArray) return null;
+            if (uuidArray.InternalArary is not int[] { Length: 4 } parts) return null;
+
+            string hex = string.Concat(parts.Select(part => ((uint)part).ToString("x8")));
+            string uuid = $"{hex[..8]}-{hex[8..12]}-{hex[12..16]}-{hex[16..20]}-{hex[20..]}";
+            string file = Path.Combine(input.Level.Directory, "players", "data", uuid + ".dat");
+            if (!File.Exists(file)) return null;
+
+            try
+            {
+                using FileStream stream = File.OpenRead(file);
+                using GZipStream gzip = new(stream, CompressionMode.Decompress);
+                using MemoryStream bytes = new();
+                gzip.CopyTo(bytes);
+                return Tag.FromBytes(bytes.ToArray(), 0) as CompoundTag;
+            }
+            catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException)
+            {
+                return null;
+            }
+        }
+
         private static void ReadPlayerPositions(CompoundTag player, out Vector3 pos, out Vector3 spawn)
         {
             if (player.TryGetChild("Pos", out Tag posTag) && posTag is ListTag posArray)
@@ -64,6 +94,13 @@ namespace WorldEditor
             if (player.TryGetChild("SpawnZ", out Tag zTag) && zTag is ValueTag<int> zValueTag)
             {
                 z = zValueTag;
+            }
+
+            // 26.x keeps a bed or anchor spawn as respawn: { pos: [x, y, z], dimension }
+            if (!player.TryGetChild("SpawnX", out _) && player.TryGetChild(out Tag respawnPos, "respawn", "pos")
+                && respawnPos is ArrayTag { InternalArary: int[] { Length: 3 } respawn })
+            {
+                (x, y, z) = (respawn[0], respawn[1], respawn[2]);
             }
 
             spawn = new Vector3(x, y, z);
@@ -90,8 +127,8 @@ namespace WorldEditor
                 return dimension switch
                 {
                     "minecraft:overworld" => Dimension.Overworld,
-                    "minecraft:nether" => Dimension.Nether,
-                    "minecraft:end" => Dimension.TheEnd,
+                    "minecraft:the_nether" or "minecraft:nether" => Dimension.Nether,
+                    "minecraft:the_end" or "minecraft:end" => Dimension.TheEnd,
                     _ => Dimension.Overworld
                 };
             }

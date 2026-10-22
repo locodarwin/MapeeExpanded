@@ -9,6 +9,7 @@ Upstream website: [mapee.net](https://www.mapee.net/home)
 # What's New?
 **Since 1.5.0** (not in a release yet)
 - Change any shortcut key: click it in the key list and press the new one (see "Keyboard shortcuts" below)
+- Java worlds from 26.1 on show their Nether (Mapee looked in the wrong folder), and the player is placed where they really are, in the right dimension, rather than at the world spawn
 
 **Version 1.5.0**
 - Linux: an AppImage of Mapee, a second GUI written in Avalonia that looks and works like the Windows one (see "Linux" below)

@@ -12,6 +12,7 @@
 //   shot:<name>                       save <name>-<n>.png for each open window, main window first
 //   size:<w>x<h>                      resize the main window
 //   scale:<factor>                    render the main window as on a scaled display
+//   centre:<x>,<z>                    move the map so that block is in the middle
 //   dim:<overworld|nether|end>        switch dimension
 //   style:<id>                        pick a style
 //   tool:<tooltip or name>            press a toolbar button, or turn an overlay on or off by its label in the Overlays menu
@@ -147,6 +148,11 @@ foreach (string step in args.Skip(1))
             break;
         case "scale":
             main.SetRenderScaling(double.Parse(value, System.Globalization.CultureInfo.InvariantCulture));
+            Pump(500);
+            break;
+        case "centre":
+            double[] mapCentre = value.Split(',').Select(v => double.Parse(v, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+            controller.ImplementedScene.Map.SetCenterPoint(new XzPoint(mapCentre[0], mapCentre[1]));
             Pump(500);
             break;
         case "dim":

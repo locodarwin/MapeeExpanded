@@ -6,6 +6,8 @@ Upstream website: [mapee.net](https://www.mapee.net/home)
 
 [Download the latest release](https://github.com/locodarwin/MapeeExpanded/releases/latest): for Windows x64, unzip and run `Mapee.exe`; for Linux x86-64, the AppImage (see "Linux" below). Neither needs installing.
 
+![Mapee Expanded with a Bedrock world open: an island base with pins and a zone](docs/images/app-main.webp)
+
 # What's New?
 **Version 1.6.0**
 - A tidier toolbar: buttons in groups (a world, getting around, marking, what's drawn, how it's drawn, export, help), each with a label under a new icon that stays sharp on scaled screens and turns gold while on. **Open** browses for a world or picks a recent one; **Overlays** holds the grid, slime chunks, axes and chunk highlight, with a count of how many are on. In narrow windows the labels give way to icons only, and a right-click on the toolbar turns them off everywhere (see "The toolbar" below)
@@ -167,72 +169,48 @@ mapee-cli styles          # the style ids
 - Markup: `render --markup` draws the pins and zones marked on the world in Mapee; `webmap` includes them unless `--no-markers` (which also leaves out the spawn and player). `--markup <file.json>` uses a file from the bar's Export instead.
 - Exit codes: 0 done, 1 failed or nothing to draw, 2 wrong usage, 130 cancelled.
 
-# Sample gui images
+# Screenshots
 
-Default style
-![0](https://user-images.githubusercontent.com/122542335/235355217-e7998e17-ae22-453c-830f-93ff0c32e0d7.png)
+All of these are from one Bedrock world, drawn by the Linux build (the Windows one looks the same inside its own window frame).
 
-Y = 70, with gridlines enabled
-![1](https://user-images.githubusercontent.com/122542335/235355320-830ce786-43a7-4c62-af82-6575050244a2.png)
+**Find blocks**: spawners and chests, nearest first, marked on the map
 
-The nether
-![2](https://user-images.githubusercontent.com/122542335/235355329-bdb24aad-c416-413f-a2b5-c7eae53675db.png)
+![Find blocks](docs/images/app-find.webp)
 
-Cave view
-![3](https://user-images.githubusercontent.com/122542335/235355338-1af6224f-cca3-4db5-aec4-8ee48bb1bb97.png)
+**Markup**: pins and zones, with the editor open on a new pin
 
-Stone only block filter
-![4](https://user-images.githubusercontent.com/122542335/235355355-f9479e9d-9958-4bdf-81c3-591920818f92.png)
+![Markup](docs/images/app-markup.webp)
 
-Greenfield city in night mode
-![5](https://user-images.githubusercontent.com/122542335/235355363-10000eb5-7c1c-4f00-a2d4-d75c314482d8.png)
+**Overlays**: grid lines and slime chunks, ticked in the Overlays menu
 
-Another example of a block filter
-![6](https://user-images.githubusercontent.com/122542335/235355388-3364a0d1-13cf-41ff-b96d-514727abf642.png)
+![Overlays](docs/images/app-overlays.webp)
 
-Heightmap
-![7](https://user-images.githubusercontent.com/122542335/235355406-060dba26-b588-424c-9393-04395b3156eb.png)
+**Height panel, Caves**: the cave floors below Y 20
 
-Alpha
-![8](https://user-images.githubusercontent.com/122542335/235355416-c25f0369-f831-48b1-b2ec-8cbfec8f124b.png)
+![Caves](docs/images/app-caves.webp)
 
-# Sample render images
+**Night mode**
 
-Y = 70
-![y=70](https://user-images.githubusercontent.com/122542335/235524227-ce732b4b-7ae9-40d4-ac24-d1f175415a89.png)
+![Night mode](docs/images/app-night.webp)
 
-'Default' style
-![default](https://user-images.githubusercontent.com/122542335/235524257-3fd7ddad-aa21-4575-833d-0342a1391696.png)
+**The Nether** and **the End**, with an End city
 
-Stone filter
-![stone only](https://user-images.githubusercontent.com/122542335/235524297-b57f98d0-97ef-4590-86eb-44fb0ffaf7b0.png)
+![The Nether](docs/images/app-nether.webp)
 
-'Alpha' style
-![alpha](https://user-images.githubusercontent.com/122542335/235532782-57796b66-7626-4171-a612-c39188fb4c46.png)
+![The End](docs/images/app-end.webp)
 
-Heightmap
-![heightmap](https://user-images.githubusercontent.com/122542335/235532968-69cf6ef3-b69b-437c-a057-2ae0db352526.png)
+**Web map**: the same world exported, in a browser, with its pins and zone
 
-Cave view
-![caves](https://user-images.githubusercontent.com/122542335/235532812-e44ed561-104c-4883-aac1-cca812fd92e8.png)
+![Web map](docs/images/webmap.webp)
 
-Granite, andesite and diorite filter
-![igneous](https://user-images.githubusercontent.com/122542335/235532993-73f1946f-8d9d-4d55-9fb0-2d8d0e103da5.png)
+# Sample renders
 
-Gravel filter
-![gravel only](https://user-images.githubusercontent.com/122542335/235533082-e5dd8a95-78c4-4b10-8d8d-423105dff3be.png)
+From `mapee-cli render`, one pixel per block, the same 640 by 400 block area in each style.
 
-Nether
-![nether](https://user-images.githubusercontent.com/122542335/235532849-36d3d858-ca3e-4c07-bf57-ea53ed02f2fd.png)
-
-The End
-![the_end](https://user-images.githubusercontent.com/122542335/235532871-16526e83-f1b7-4909-b0b7-6c4497785fbd.png)
-
-Night mode
-![night_0](https://user-images.githubusercontent.com/122542335/235532890-fd4e5b41-af51-499d-978c-2f519298d54d.png)
-
-Greenfield city with night mode
-![night_1](https://user-images.githubusercontent.com/122542335/235532913-9228f155-2c09-4901-b61c-ae5910f41390.png)
-
-'Urban' style
-![urban](https://user-images.githubusercontent.com/122542335/235532943-e665cc44-2d57-439f-a338-b877aa052d5a.png)
+| | |
+|---|---|
+| ![Default](docs/images/render-default.webp)<br>Default | ![Urban](docs/images/render-urban.webp)<br>Urban |
+| ![Heightmap](docs/images/render-heightmap.webp)<br>Heightmap | ![Y = 70](docs/images/render-y70.webp)<br>Y = 70 |
+| ![Stone only](docs/images/render-stone.webp)<br>Stone only | ![Igneous](docs/images/render-igneous.webp)<br>Igneous (granite, andesite, diorite) |
+| ![Caves below Y 20](docs/images/render-caves20.webp)<br>`--caves 20` | ![Slice at Y 40](docs/images/render-slice40.webp)<br>`--slice 40` |
+| ![Nether](docs/images/render-nether.webp)<br>Nether | ![End](docs/images/render-end.webp)<br>The End, an End city |

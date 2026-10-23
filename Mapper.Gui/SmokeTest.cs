@@ -161,6 +161,9 @@ namespace Mapper.Gui
                 mouse_event(MouseMove, 0, 0, 0, IntPtr.Zero);
                 await Wait(200);
             }
+            int hooked = 0;
+            void Count(object? sender, Point point) => hooked++;
+            MouseHook.MouseMove += Count;
             await MoveTo(from);
             mouse_event(LeftDown, 0, 0, 0, IntPtr.Zero);
             await Wait(200);
@@ -168,10 +171,14 @@ namespace Mapper.Gui
             await MoveTo(to);
             mouse_event(LeftUp, 0, 0, 0, IntPtr.Zero);
             await Wait(300);
+            MouseHook.MouseMove -= Count;
 
             if (tool.Measured is not var (first, second))
             {
-                Line("SKIP", "measure a drag across the map", "no mouse input reached the app on this machine");
+                GetCursorPos(out CursorPoint cursor);
+                Point want = canvas.PointToScreen(to);
+                Line("SKIP", "measure a drag across the map", $"no measurement: the hook saw {hooked} moves, the cursor is at {cursor.X}, {cursor.Y} " +
+                    $"(asked for {want.X:0}, {want.Y:0}), the map {(canvas.IsMouseOver ? "is" : "isn't")} under it");
                 return;
             }
             XzPoint wantFirst = _controller.ImplementedScene.Map.TransformPointOnScreenToXz(from), wantSecond = _controller.ImplementedScene.Map.TransformPointOnScreenToXz(to);
@@ -185,6 +192,14 @@ namespace Mapper.Gui
 
         [System.Runtime.InteropServices.DllImport("user32.dll")]
         private static extern bool SetCursorPos(int x, int y);
+
+        private struct CursorPoint
+        {
+            public int X, Y;
+        }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool GetCursorPos(out CursorPoint point);
 
         [System.Runtime.InteropServices.DllImport("user32.dll")]
         private static extern void mouse_event(uint flags, int dx, int dy, uint data, IntPtr extra);

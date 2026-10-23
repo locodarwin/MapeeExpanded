@@ -106,6 +106,12 @@ namespace Mapper.Gui
 
             CursorOverBlockLabel.Text = point.ToString("N0");
             CursorOverChunkLabel.Text = BlockToChunk(point).ToString("N0");
+
+            // Where a portal here would lead: the place in the other dimension
+            string? across = CursorAcross.Prefix(Information.Dimension);
+            CursorAcrossLabel.Text = across ?? string.Empty;
+            CursorAcrossPlaceLabel.Text = across is null ? string.Empty : CursorAcross.Place(Information.Dimension!.Value, point).ToString("N0");
+            CursorAcrossEndLabel.Text = across is null ? string.Empty : ")";
         }
 
         // "; Grass Block at Y 64, Plains", or for water, "; Water 5 deep over Sand at Y 62, Ocean"
@@ -141,6 +147,9 @@ namespace Mapper.Gui
 
             CursorOverBlockLabel.Text = string.Empty;
             CursorOverChunkLabel.Text = string.Empty;
+            CursorAcrossLabel.Text = string.Empty;
+            CursorAcrossPlaceLabel.Text = string.Empty;
+            CursorAcrossEndLabel.Text = string.Empty;
 
             if (!visible) SetColumnLabels(null, null, null);
 

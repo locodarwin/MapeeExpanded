@@ -9,7 +9,7 @@ namespace Mapper.Gui.Model
     }
 
     // Most are Lucide's (lucide.dev, ISC licence; see THIRD-PARTY-NOTICES.txt), written out as absolute path data
-    // so both GUIs' parsers read them alike; Find, Slime and Chunk are drawn to match
+    // so both GUIs' parsers read them alike; Find, Slime, Chunk and Portal are drawn to match
     public static class ToolIcons
     {
         public static readonly ToolIcon Open = new("M 6 14 L 7.5 11.1 A 2 2 0 0 1 9.24 10 L 20 10 A 2 2 0 0 1 21.94 12.5 L 20.4 18.5 A 2 2 0 0 1 18.45 20 L 4 20 A 2 2 0 0 1 2 18 L 2 5 A 2 2 0 0 1 4 3 L 7.9 3 A 2 2 0 0 1 9.59 3.9 L 10.4 5.1 A 2 2 0 0 0 12.07 6 L 18 6 A 2 2 0 0 1 20 8 L 20 10");
@@ -22,6 +22,8 @@ namespace Mapper.Gui.Model
         public static readonly ToolIcon Slime = new("M 7 4.5 L 17 4.5 A 3.5 3.5 0 0 1 20.5 8 L 20.5 17 A 3.5 3.5 0 0 1 17 20.5 L 7 20.5 A 3.5 3.5 0 0 1 3.5 17 L 3.5 8 A 3.5 3.5 0 0 1 7 4.5 Z M 10.5 16 L 13.5 16", "M 7 9 L 10 9 L 10 12 L 7 12 Z M 14 9 L 17 9 L 17 12 L 14 12 Z");
         public static readonly ToolIcon Axes = new("M 12 3 L 12 21 M 3 12 L 21 12 M 9 6 L 12 3 L 15 6 M 18 9 L 21 12 L 18 15");
         public static readonly ToolIcon Chunk = new("M 5 3 A 2 2 0 0 0 3 5 M 19 3 A 2 2 0 0 1 21 5 M 5 21 A 2 2 0 0 1 3 19 M 9 3 L 10 3 M 9 21 L 10 21 M 14 3 L 15 3 M 3 9 L 3 10 M 21 9 L 21 10 M 3 14 L 3 15", "M 12.5 12.5 L 16.1 21.5 L 17.5 17.9 L 21.1 16.5 Z");
+        public static readonly ToolIcon Spawn = new("M 12.5 17 L 12 16 L 11.5 17 Z M 15 22 A 1 1 0 0 0 16 21 L 16 20 A 2 2 0 0 0 17.56 16.75 A 8 8 0 1 0 6.44 16.75 A 2 2 0 0 0 8 20 L 8 21 A 1 1 0 0 0 9 22 Z", "M 13.6 12 A 1.4 1.4 0 1 0 16.4 12 A 1.4 1.4 0 1 0 13.6 12 Z M 7.6 12 A 1.4 1.4 0 1 0 10.4 12 A 1.4 1.4 0 1 0 7.6 12 Z");
+        public static readonly ToolIcon Portal = new("M 7 2.5 L 17 2.5 A 1.5 1.5 0 0 1 18.5 4 L 18.5 20 A 1.5 1.5 0 0 1 17 21.5 L 7 21.5 A 1.5 1.5 0 0 1 5.5 20 L 5.5 4 A 1.5 1.5 0 0 1 7 2.5 Z M 12 7 C 15 7 15 12 12 12 C 9 12 9 17 12 17");
         public static readonly ToolIcon Night = new("M 12 3 A 6 6 0 0 0 21 12 A 9 9 0 1 1 12 3 Z");
         public static readonly ToolIcon Live = new("M 4.9 19.1 C 1 15.2 1 8.8 4.9 4.9 M 7.8 16.2 C 5.5 13.9 5.5 10.1 7.8 7.7 M 16.2 7.8 C 18.5 10.1 18.5 13.9 16.2 16.3 M 19.1 4.9 C 23 8.8 23 15.1 19.1 19", "M 9.8 12 A 2.2 2.2 0 1 0 14.2 12 A 2.2 2.2 0 1 0 9.8 12 Z");
         public static readonly ToolIcon Filter = new("M 22 3 L 2 3 L 10 12.46 L 10 19 L 14 21 L 14 12.46 Z");

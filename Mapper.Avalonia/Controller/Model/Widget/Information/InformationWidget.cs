@@ -11,6 +11,7 @@ namespace Mapper.Gui.Controller
     public class InformationWidget : IInformationWidget
     {
         public CanvasControl MainControl => Renderer.GraphicsCanvas;
+        public WorldEditor.Dimension? Dimension => Scene.Domain.CurrentWorld?.CurrentDimension.Dimension;
 
         public event EventHandler<SceneInformation>? InformationUpdate;
         public event EventHandler<XzPoint>? CursorUpdate;

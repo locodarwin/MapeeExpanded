@@ -34,6 +34,9 @@ namespace Mapee.Cli
                   --area <x1>,<z1>,<x2>,<z2>  only between these corners
                   --y <min>,<max>          only between these heights
                   --csv                    as comma-separated values with a header line
+              mapee-cli portals <world> [--csv]
+                  Lists the Nether portals in the Overworld and the Nether, where each leads, and
+                  which lead to a portal that leads somewhere else on the way back.
               mapee-cli worlds             lists the worlds in the game's world folders
               mapee-cli styles             lists the styles
 
@@ -81,6 +84,7 @@ namespace Mapee.Cli
                     "render" => Render(line, cancel.Token),
                     "webmap" => WebMap(line, cancel.Token),
                     "find" => Find(line, cancel.Token),
+                    "portals" => Portals(line, cancel.Token),
                     "worlds" => Worlds(),
                     _ => Styles()
                 };
@@ -276,6 +280,55 @@ namespace Mapee.Cli
             return 0;
         }
 
+        // One line per portal: where it is, where it leads and whether it leads back
+        private static int Portals(CommandLine line, CancellationToken cancellation)
+        {
+            Directory.SetCurrentDirectory(AppContext.BaseDirectory);
+            (Level level, _) = OpenWorld(line.World!);
+
+            SceneInfo? Scene(Dimension dimension)
+            {
+                SceneInfo scene = new(level, dimension);
+                if (scene.RegionStore is IBackgroundRegionStore background) background.Ready.Wait(cancellation);
+                return scene.Regions.Any() ? scene : null;
+            }
+            bool interactive = !Console.IsErrorRedirected;
+            if (interactive) Console.Error.Write("Looking for portals in the Overworld");
+            SceneInfo? overworld = Scene(Dimension.Overworld);
+            List<BlockMatch> overworldBlocks = PortalMap.Search(overworld, cancellation);
+            if (interactive) Console.Error.Write(" and the Nether");
+            SceneInfo? nether = Scene(Dimension.Nether);
+            List<BlockMatch> netherBlocks = PortalMap.Search(nether, cancellation);
+            if (interactive) Console.Error.WriteLine();
+
+            PortalMap map = new(overworldBlocks, netherBlocks);
+            if (line.Csv) Console.WriteLine("dimension,x,y,z,blocks,leads_to_dimension,target_x,target_y,target_z,leads_to_x,leads_to_y,leads_to_z,leads_back");
+            foreach (Portal portal in map.Overworld.Concat(map.Nether))
+            {
+                PortalLink link = map.Link(portal);
+                Dimension other = portal.Dimension == Dimension.Nether ? Dimension.Overworld : Dimension.Nether;
+                if (line.Csv)
+                {
+                    string to = link.To is Portal p ? $"{p.X},{p.MinY},{p.Z}" : ",,";
+                    string back = link.To is null ? "" : link.Mismatched ? "no" : "yes";
+                    Console.WriteLine($"{portal.Dimension.Name},{portal.X},{portal.MinY},{portal.Z},{portal.Blocks},{other.Name},{link.TargetX},{link.TargetY},{link.TargetZ},{to},{back}");
+                    continue;
+                }
+
+                string where = link.To is Portal found
+                    ? $"leads to the portal at {found} in {The(other)}"
+                    : $"would build a new portal near {link.TargetX}, {link.TargetY}, {link.TargetZ} in {The(other)}";
+                string warning = link.Mismatched ? $"; that one leads back to {link.Back} instead" : "";
+                Console.WriteLine($"{portal.Dimension.Name} {portal}: {where}{warning}");
+            }
+
+            int mismatched = map.Overworld.Concat(map.Nether).Count(p => map.Link(p).Mismatched);
+            Console.Error.WriteLine(map.Overworld.Count + map.Nether.Count == 0
+                ? $"{level.WorldName} has no Nether portals"
+                : $"{level.WorldName}: {map.Overworld.Count} in the Overworld, {map.Nether.Count} in the Nether{(mismatched switch { 0 => "", 1 => "; 1 leads to a portal that doesn't lead back", _ => $"; {mismatched} lead to portals that don't lead back" })}");
+            return 0;
+        }
+
         private static int Worlds()
         {
             List<(string Path, Level? Level)> worlds = [.. FindWorlds()];
@@ -457,7 +510,7 @@ namespace Mapee.Cli
         public int? MaxY { get; private set; }
         public bool Csv { get; private set; }
 
-        private static readonly string[] Commands = ["render", "webmap", "find", "worlds", "styles"];
+        private static readonly string[] Commands = ["render", "webmap", "find", "portals", "worlds", "styles"];
 
         // Paths are made full here, before the program moves to its own folder to read its resources
         public static CommandLine Parse(string[] args)
@@ -466,7 +519,7 @@ namespace Mapee.Cli
             if (!Commands.Contains(command)) throw new UsageException($"{args[0]} isn't a command; the commands are {string.Join(", ", Commands)}");
 
             CommandLine line = new() { Command = command };
-            bool drawing = command is "render" or "webmap" or "find";
+            bool drawing = command is "render" or "webmap" or "find" or "portals";
 
             for (int i = 1; i < args.Length; i++)
             {
@@ -548,7 +601,7 @@ namespace Mapee.Cli
                         }
                         (line.MinY, line.MaxY) = (Math.Min(minY, maxY), Math.Max(minY, maxY));
                         break;
-                    case "--csv" when command == "find":
+                    case "--csv" when command is "find" or "portals":
                         line.Csv = true;
                         break;
                     default:
@@ -562,6 +615,14 @@ namespace Mapee.Cli
             if (drawing)
             {
                 if (line.World is null) throw new UsageException($"{command} needs a world");
+                if (command == "portals")
+                {
+                    if (line.Out is not null || line.Dimensions is not null || line.Style is not null || line.Cut is not null || line.Area is not null || line.Markup)
+                    {
+                        throw new UsageException("portals takes only --csv; it looks in the Overworld and the Nether, and writes to the screen");
+                    }
+                    return line;
+                }
                 if (command == "find")
                 {
                     if (line.Blocks is null) throw new UsageException("find needs --block, the blocks to look for");

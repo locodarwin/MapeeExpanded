@@ -10,6 +10,8 @@ namespace WorldEditor
 
         // False when chunks are read only for their blocks: a store that works out light itself then skips it
         public bool Light { get; init; } = true;
+        // False when sky light isn't wanted either: a store that works out light itself then works out block light alone
+        public bool SkyLight { get; init; } = true;
 
         private IChunkEnumeratorFromRegion[] _enumerators;
 
@@ -53,7 +55,7 @@ namespace WorldEditor
                     ChunkEnumerateFromRegionArgs? args = null;
                     if (RegionStoreProvider.Invoke() is IChunkSourceRegionStore chunkSource)
                     {
-                        chunkSource.EnumerateChunks(regions[index], TasksPerRegion, (r, chunk) => body.EndReadingChunk(iterator, r, chunk), Light);
+                        chunkSource.EnumerateChunks(regions[index], TasksPerRegion, (r, chunk) => body.EndReadingChunk(iterator, r, chunk), Light, SkyLight);
                     }
                     else
                     {

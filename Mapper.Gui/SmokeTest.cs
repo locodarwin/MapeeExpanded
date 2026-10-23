@@ -1,4 +1,5 @@
 using Mapper.Gui.Controller;
+using Mapper.Gui.Logic;
 using Mapper.Gui.Model;
 using System;
 using System.Collections.Generic;
@@ -111,7 +112,16 @@ namespace Mapper.Gui
             {
                 foreach (Button row in Descendants<Button>(Find<OverlaysMenu>()!)) await Click(row);
                 int on = toolbar.OverlaysTool.Items.Count(i => i.Tool.IsTurnedOn);
-                Check("Overlays: tick all four", on == 4 && Badge("Overlays") == 4, $"{on} on, badge {Badge("Overlays")}");
+                int all = toolbar.OverlaysTool.Items.Count;
+                Check($"Overlays: tick all {all}", on == all && Badge("Overlays") == all, $"{on} on, badge {Badge("Overlays")}");
+
+                // The made-up world is open ground, dark at night; it has no portals and no Nether
+                SpawnTool spawn = (SpawnTool)toolbar.Overlays["spawn_spots"];
+                PortalTool portals = (PortalTool)toolbar.Overlays["portals"];
+                await Until(() => spawn.Spots.Regions.Any() && !portals.Portals.Reading, 60);
+                int spots = spawn.Spots.Regions.Sum(r => r.Count);
+                Check("Overlays: where mobs can spawn", spots > 0, $"{spots:N0} blocks in {spawn.Spots.Regions.Count()} regions");
+                Check("Overlays: Nether portals", !portals.Portals.Reading && !portals.Portals.Map.Overworld.Any(), $"{portals.Portals.Map.Overworld.Count} in the Overworld");
                 await Shoot("overlays-on");
                 foreach (OverlayItem item in toolbar.OverlaysTool.Items) item.Tool.IsTurnedOn = false;
             });

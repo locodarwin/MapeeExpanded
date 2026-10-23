@@ -25,7 +25,7 @@ namespace Mapper
         PreviousStyle, NextStyle,
         // Argument for HeightDown and HeightUp: how many blocks
         HeightMode, HeightDown, HeightUp,
-        Grid, SlimeChunks, Axes, ChunkHighlight, MeasureLength, NightMode, LiveReload,
+        Grid, SlimeChunks, Axes, ChunkHighlight, SpawnSpots, Portals, MeasureLength, NightMode, LiveReload,
         Markup, ShowMarkup, PinMode, ZoneMode, RectangleMode, SelectMode,
         GoTo, FindBlocks, Export, LoadWorld, RecentWorlds, BlockFilter,
         Help, FullScreen, LeaveFullScreen
@@ -170,6 +170,8 @@ namespace Mapper
             ShortcutAction.SlimeChunks => "Slime chunks",
             ShortcutAction.Axes => "Axes",
             ShortcutAction.ChunkHighlight => "Chunk highlighter",
+            ShortcutAction.SpawnSpots => "Where mobs can spawn",
+            ShortcutAction.Portals => "Nether portals",
             ShortcutAction.MeasureLength => "Measure length",
             ShortcutAction.NightMode => "Night mode",
             ShortcutAction.LiveReload => "Live reload",
@@ -228,6 +230,7 @@ namespace Mapper
                 ]),
                 new("Height panel", Lines(ShortcutAction.HeightMode, ShortcutAction.HeightDown, ShortcutAction.HeightUp)),
                 new("Overlays and tools", Lines(ShortcutAction.Grid, ShortcutAction.SlimeChunks, ShortcutAction.Axes, ShortcutAction.ChunkHighlight,
+                    ShortcutAction.SpawnSpots, ShortcutAction.Portals,
                     ShortcutAction.MeasureLength, ShortcutAction.NightMode, ShortcutAction.LiveReload)),
                 new("Markup",
                 [
@@ -272,6 +275,8 @@ namespace Mapper
             yield return new(ShortcutKey.S, none, ShortcutAction.SlimeChunks);
             yield return new(ShortcutKey.A, none, ShortcutAction.Axes);
             yield return new(ShortcutKey.C, none, ShortcutAction.ChunkHighlight);
+            yield return new(ShortcutKey.D, none, ShortcutAction.SpawnSpots);
+            yield return new(ShortcutKey.O, none, ShortcutAction.Portals);
             yield return new(ShortcutKey.L, none, ShortcutAction.MeasureLength);
             yield return new(ShortcutKey.N, none, ShortcutAction.NightMode);
             yield return new(ShortcutKey.W, none, ShortcutAction.LiveReload);

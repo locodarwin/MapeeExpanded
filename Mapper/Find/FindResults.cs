@@ -121,7 +121,10 @@ namespace Mapper
             return Math.Sqrt(dx * dx + dz * dz);
         }
 
-        public static List<FoundCluster> Cluster(IEnumerable<BlockMatch> matches)
+        public static List<FoundCluster> Cluster(IEnumerable<BlockMatch> matches) => [.. Groups(matches).Select(g => g.Cluster)];
+
+        // Blocks of a target touching, even at a corner, as one cluster, each with the blocks it's made of
+        public static List<(FoundCluster Cluster, BlockMatch[] Members)> Groups(IEnumerable<BlockMatch> matches)
         {
             BlockMatch[] all = [.. matches];
             Dictionary<(int, int, int, int), int> at = new(all.Length);
@@ -152,13 +155,13 @@ namespace Mapper
                 }
             }
 
-            List<FoundCluster> output = [];
+            List<(FoundCluster, BlockMatch[])> output = [];
             foreach (IGrouping<int, int> group in Enumerable.Range(0, all.Length).GroupBy(Root))
             {
                 BlockMatch[] members = [.. group.Select(i => all[i])];
                 double mx = members.Average(m => m.X), my = members.Average(m => m.Y), mz = members.Average(m => m.Z);
                 BlockMatch middle = members.MinBy(m => (m.X - mx) * (m.X - mx) + (m.Y - my) * (m.Y - my) + (m.Z - mz) * (m.Z - mz));
-                output.Add(new FoundCluster(middle.Target, members.Length, middle.X, middle.Y, middle.Z, members.Min(m => m.Y), members.Max(m => m.Y)));
+                output.Add((new FoundCluster(middle.Target, members.Length, middle.X, middle.Y, middle.Z, members.Min(m => m.Y), members.Max(m => m.Y)), members));
             }
             return output;
         }

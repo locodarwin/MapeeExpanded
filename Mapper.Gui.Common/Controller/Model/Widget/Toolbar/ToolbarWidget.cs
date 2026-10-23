@@ -55,8 +55,10 @@ namespace Mapper.Gui.Controller
             ToolScene = new ToolScene(Renderer.Scene);
             RenderInvoker = new RenderInvoker(Renderer);
 
-            // Made in the order the painters draw and the tools need each other: the overlays under the measure
-            // line, Find's marks over both, and the markup (painted by the GUI) over everything
+            // Live first, since the overlays read again what it redraws. Then the buttons, made in the order the
+            // painters draw and the tools need each other: the overlays under the measure line, Find's marks over
+            // both, and the markup (painted by the GUI) over everything
+            LiveTool = new LiveReloadTool(Renderer.Scene, WorldOpener, WorldOpener.Settings);
             ToolButton overlays = CreateOverlaysButton();
             ToolButton measure = CreateMeasureLengthButton();
             ToolButton markup = CreateMarkupButton();
@@ -94,7 +96,7 @@ namespace Mapper.Gui.Controller
             _keyed.Add((button, text, action));
         }
 
-        // Grid, slime chunks, axes and the chunk highlight, behind one button
+        // Grid, slime chunks, axes, the chunk highlight, where mobs can spawn and the Nether portals, behind one button
         private ToolButton CreateOverlaysButton()
         {
             OverlayItem Overlay(string id, string label, ToolIcon icon, IToggleableTool tool, ShortcutAction action)
@@ -109,12 +111,14 @@ namespace Mapper.Gui.Controller
                 Overlay("grid", "Grid lines", ToolIcons.Grid, new GridTool(ToolScene), ShortcutAction.Grid),
                 Overlay("slime_chunks", "Slime chunks", ToolIcons.Slime, new SlimeChunkTool(ToolScene, new SlimeChunkChecker(Renderer.Scene.Domain)), ShortcutAction.SlimeChunks),
                 Overlay("axes", "Axes (x and z)", ToolIcons.Axes, new AxisTool(ToolScene), ShortcutAction.Axes),
-                Overlay("chunk_highlight", "Chunk under the cursor", ToolIcons.Chunk, new HighlightChunkTool(ToolScene, RenderInvoker, Renderer.GraphicsCanvas), ShortcutAction.ChunkHighlight)
+                Overlay("chunk_highlight", "Chunk under the cursor", ToolIcons.Chunk, new HighlightChunkTool(ToolScene, RenderInvoker, Renderer.GraphicsCanvas), ShortcutAction.ChunkHighlight),
+                Overlay("spawn_spots", "Where mobs can spawn", ToolIcons.Spawn, new SpawnTool(ToolScene, new SpawnSpots(Renderer.Scene, LiveTool), RenderInvoker), ShortcutAction.SpawnSpots),
+                Overlay("portals", "Nether portals", ToolIcons.Portal, new PortalTool(Renderer.Scene, new NetherPortals(Renderer.Scene, LiveTool), Renderer.GraphicsCanvas, RenderInvoker), ShortcutAction.Portals)
             ], Keys);
             OverlaysTool = tool;
 
             ToolButton output = new(tool) { Icon = ToolIcons.Overlays, Name = "Overlays", Menu = true };
-            output.ToolTip = "Draw over the map: grid lines, slime chunks, axes, the chunk under the cursor";
+            output.ToolTip = "Draw over the map: grid lines, slime chunks, axes, the chunk under the cursor, where mobs can spawn, Nether portals";
             tool.Owner = output;
 
             return output;
@@ -152,9 +156,7 @@ namespace Mapper.Gui.Controller
         }
         private ToolButton CreateLiveButton()
         {
-            LiveReloadTool tool = new(Renderer.Scene, WorldOpener, WorldOpener.Settings);
-            LiveTool = tool;
-            return CreateButton(tool, ToolIcons.Live, "Live", "Live: redraw what the game saves while the world is open (not for .mcworld files, which are copies)", ShortcutAction.LiveReload);
+            return CreateButton(LiveTool, ToolIcons.Live, "Live", "Live: redraw what the game saves while the world is open (not for .mcworld files, which are copies)", ShortcutAction.LiveReload);
         }
         private ToolButton CreateGoToButton()
         {

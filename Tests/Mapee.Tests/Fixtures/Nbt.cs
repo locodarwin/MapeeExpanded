@@ -38,6 +38,7 @@ namespace Mapee.Tests.Fixtures
             Dictionary<string, object> => 10,
             int[] => 11,
             long[] => 12,
+            byte[] => 7,
             _ => throw new ArgumentException($"Unsupported NBT value {value.GetType()}")
         };
 
@@ -64,6 +65,10 @@ namespace Mapee.Tests.Fixtures
                         break;
                     case string text:
                         String(text);
+                        break;
+                    case byte[] bytes:
+                        Int(bytes.Length);
+                        stream.Write(bytes);
                         break;
                     case int[] ints:
                         Int(ints.Length);

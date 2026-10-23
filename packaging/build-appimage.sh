@@ -3,7 +3,7 @@
 #   APPIMAGETOOL=/path/to/appimagetool packaging/build-appimage.sh [version]
 # appimagetool: https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
 # DOTNET defaults to dotnet on PATH, then ~/.dotnet/dotnet. Output: artifacts/MapeeExpanded-<version>-x86_64.AppImage
-# The command line tool (Mapee.Cli) goes in beside the GUI: `Mapee.AppImage render|webmap|find|worlds|styles ...` runs it
+# The command line tool (Mapee.Cli) goes in beside the GUI: `Mapee.AppImage render|webmap|find|portals|worlds|styles ...` runs it
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -44,7 +44,7 @@ cat > "$APP_DIR/AppRun" <<'APPRUN'
 #!/usr/bin/env bash
 HERE="$(dirname "$(readlink -f "$0")")"
 case "${1:-}" in
-  render|webmap|find|worlds|styles|help|--help|--version) exec "$HERE/usr/bin/mapee-cli" "$@" ;;
+  render|webmap|find|portals|worlds|styles|help|--help|--version) exec "$HERE/usr/bin/mapee-cli" "$@" ;;
 esac
 exec "$HERE/usr/bin/Mapee" "$@"
 APPRUN

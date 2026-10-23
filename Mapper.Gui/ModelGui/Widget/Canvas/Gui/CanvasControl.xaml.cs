@@ -26,8 +26,10 @@ namespace Mapper.Gui
                 DrawingGroups.Add(new DrawingGroup());
             }
         }
+        // A painter added beyond the count asked for gets a drawing of its own too, drawn over the rest
         public DrawingGroup ProvideNextDrawingGroup()
         {
+            if (_index == DrawingGroups.Count) DrawingGroups.Add(new DrawingGroup());
             return DrawingGroups[_index++];
         }
 

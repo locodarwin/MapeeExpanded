@@ -56,6 +56,8 @@ namespace Mapper.Gui
             _watchdog = new Timer(_ =>
             {
                 Line("FAIL", "finish within " + Limit.TotalMinutes + " minutes", "still running");
+                // What went wrong on the way, such as the app failing to start, which a hang never gets to report
+                foreach (string error in _errors.ToList()) Line("ERROR", error, null);
                 Finish(2);
             }, null, Limit, Timeout.InfiniteTimeSpan);
 

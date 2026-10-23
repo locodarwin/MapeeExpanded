@@ -52,9 +52,9 @@ namespace Mapper.Gui.Controller
                 Settings.Keys = Keys.Stored();
                 Settings.Save();
             };
-            // One drawing per painter: background, scene, the toolbar's five overlays, the block finder's marks, markup,
-            // and the map's messages
-            GraphicsCanvas = new CanvasControl(10);
+            // One drawing per painter: background, scene, the six overlays and the measure line, the block finder's
+            // marks, markup, and the map's messages
+            GraphicsCanvas = new CanvasControl(12);
 
             Domain = new ProgramDomain();
             StartupLog.Mark("Styles and assets read");

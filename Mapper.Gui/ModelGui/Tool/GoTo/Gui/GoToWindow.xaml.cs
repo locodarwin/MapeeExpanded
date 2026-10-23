@@ -136,6 +136,14 @@ namespace Mapper.Gui
             Close();
         }
 
+        // However it closes (its own buttons, Esc, the frame's close button, or the app), losing focus on the way
+        // out mustn't close it a second time, which WPF refuses with an exception
+        protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+        {
+            _closing = true;
+            base.OnClosing(e);
+        }
+
         protected override void OnDeactivated(EventArgs e)
         {
             base.OnDeactivated(e);

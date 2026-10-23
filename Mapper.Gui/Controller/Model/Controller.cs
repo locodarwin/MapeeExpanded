@@ -70,6 +70,7 @@ namespace Mapper.Gui.Controller
 
             StartupLog.Mark("Scene and renderer made");
             MainWindow = new MapViewer();
+            MouseHook.Window = MainWindow;
             StartupLog.Mark("Main window made");
             MainWindow.Initialize(CreateMainWindowArgs());
             MainWindow.ApplySettings(Settings.Window);

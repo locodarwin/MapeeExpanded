@@ -80,7 +80,7 @@ namespace Mapper.Gui.Logic
             if (!OffsetEnabled || !_outputControl.IsMouseOver) return;
 
             _mouseDown = true;
-            _prevMousePoint = point;
+            _prevMousePoint = OnCanvas(point);
             _prevOffset = Offset;
         }
         private void MouseMove(object? sender, Point point)
@@ -88,13 +88,21 @@ namespace Mapper.Gui.Logic
             if (!OffsetEnabled) return;
             if (!_mouseDown) return;
 
-            Point moved = new(point.X - _prevMousePoint.X, point.Y - _prevMousePoint.Y);
+            Point now = OnCanvas(point);
+            Point moved = new(now.X - _prevMousePoint.X, now.Y - _prevMousePoint.Y);
 
             Offset = new(_prevOffset.X + moved.X, _prevOffset.Y + moved.Y);
         }
         private void MouseUp(object? sender, Point point)
         {
             _mouseDown = false;
+        }
+
+        // The hook's screen point on the canvas, so a drag follows the mouse at the scale of the monitor the window is on
+        private Point OnCanvas(Point point)
+        {
+            if (PresentationSource.FromVisual(_outputControl) is null) return point;
+            return _outputControl.PointFromScreen(point);
         }
 
         private void OnCanvasMouseWheel(object? sender, MouseWheelEventArgs e)

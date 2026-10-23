@@ -25,6 +25,9 @@ namespace Mapper.Gui.Logic
         private XzPoint _firstPoint, _secondPoint = new(double.MinValue, double.MinValue);
         private XzPoint _currentMousePoint = new(double.MinValue, double.MinValue);
 
+        // The two blocks last measured between, while a measurement is on show (the smoke test reads it)
+        public (XzPoint From, XzPoint To)? Measured => _secondPoint.X == double.MinValue ? null : (_firstPoint, _secondPoint);
+
         public MeasureLengthTool(IScene scene, IRenderInvoker renderInvoker, Control outputControl)
         {
             Scene = scene;
@@ -185,15 +188,11 @@ namespace Mapper.Gui.Logic
             RenderInvoker.Render();
         }
 
+        // WPF's own conversion, right on every monitor whatever its scale
         private Point AbsolutePointToRelative(Point point)
         {
-            if(!OutputControl.IsVisible) return point;
-            Point output = OutputControl.PointToScreen(new Point(0, 0)).CalibrateToDpiScale();
-
-            point.X -= output.X;
-            point.Y -= output.Y;
-
-            return point;
+            if (!OutputControl.IsVisible || PresentationSource.FromVisual(OutputControl) is null) return point;
+            return OutputControl.PointFromScreen(point);
         }
     }
 }

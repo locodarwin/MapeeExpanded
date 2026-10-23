@@ -7,11 +7,18 @@ using System.Windows;
 namespace Mapper.Gui
 {
     // From: https://stackoverflow.com/questions/11607133/global-mouse-event-handler
+    // Points are on the screen, as Windows gives them to this app: what a control's PointFromScreen takes. The hook's
+    // own point is in physical pixels whatever the app's DPI awareness, which differ from those on a monitor whose
+    // scale isn't the main one's (measurements landed far to the right there), so it's turned into the main window's
+    // own. (GetCursorPos would do that too, but in the hook it still holds the point before the move.)
     public static partial class MouseHook
     {
         public static event EventHandler<Point> MouseDown = delegate { };
         public static event EventHandler<Point> MouseUp = delegate { };
         public static event EventHandler<Point> MouseMove = delegate { };
+
+        // The window whose coordinates the points are given in (the main window)
+        public static Window? Window { get; set; }
 
         public static void Start() => _hookID = SetHook(_proc);
         public static void Stop() => UnhookWindowsHookEx(_hookID);
@@ -36,7 +43,10 @@ namespace Mapper.Gui
                 MSLLHOOKSTRUCT? hookStruct = (MSLLHOOKSTRUCT?)Marshal.PtrToStructure(lParam, typeof(MSLLHOOKSTRUCT));
                 if (hookStruct is null) return IntPtr.Zero;
 
-                Point point = new Point(hookStruct.Value.pt.x, hookStruct.Value.pt.y).CalibrateToDpiScale();
+                POINT screen = hookStruct.Value.pt;
+                IntPtr window = Window is null ? IntPtr.Zero : new System.Windows.Interop.WindowInteropHelper(Window).Handle;
+                if (window != IntPtr.Zero) PhysicalToLogicalPointForPerMonitorDPI(window, ref screen);
+                Point point = new(screen.x, screen.y);
 
                 switch ((MouseMessages)wParam)
                 {
@@ -93,6 +103,10 @@ namespace Mapper.Gui
         [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode,
           IntPtr wParam, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool PhysicalToLogicalPointForPerMonitorDPI(IntPtr window, ref POINT point);
 
         [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern IntPtr GetModuleHandle(string lpModuleName);

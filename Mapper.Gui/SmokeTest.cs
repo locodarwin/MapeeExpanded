@@ -106,7 +106,7 @@ namespace Mapper.Gui
                 await Shoot("find-results");
             });
             await Press("Mark", () => toolbar.MarkupTool.IsTurnedOn && _controller.MarkupBar.IsVisible, turnOff: true);
-            await Press("Measure", () => toolbar.MeasureLengthTool.IsTurnedOn, turnOff: true);
+            await Press("Measure", () => toolbar.MeasureLengthTool.IsTurnedOn, Measure, turnOff: true);
             await Press("Overlays", () => Find<OverlaysMenu>() is not null, async () =>
             {
                 foreach (Button row in Descendants<Button>(Find<OverlaysMenu>()!)) await Click(row);
@@ -145,6 +145,49 @@ namespace Mapper.Gui
 
             Check("no errors on the way", _errors.Count == 0, string.Join("\n", _errors));
         }
+
+        // Drags the real mouse across the map with Measure on and checks it measured between the blocks under the
+        // cursor, which it didn't on a monitor scaled unlike the main one. Skipped if this machine takes no mouse input
+        private async Task Measure()
+        {
+            Logic.MeasureLengthTool tool = _controller.ToolbarWidget.MeasureLengthTool;
+            FrameworkElement canvas = _controller.GraphicsCanvas;
+            Point from = new(canvas.ActualWidth * 0.3, canvas.ActualHeight * 0.4), to = new(canvas.ActualWidth * 0.6, canvas.ActualHeight * 0.7);
+
+            async Task MoveTo(Point point)
+            {
+                Point screen = canvas.PointToScreen(point);
+                SetCursorPos((int)Math.Round(screen.X), (int)Math.Round(screen.Y));
+                mouse_event(MouseMove, 0, 0, 0, IntPtr.Zero);
+                await Wait(200);
+            }
+            await MoveTo(from);
+            mouse_event(LeftDown, 0, 0, 0, IntPtr.Zero);
+            await Wait(200);
+            await MoveTo(new Point((from.X + to.X) / 2, (from.Y + to.Y) / 2));
+            await MoveTo(to);
+            mouse_event(LeftUp, 0, 0, 0, IntPtr.Zero);
+            await Wait(300);
+
+            if (tool.Measured is not var (first, second))
+            {
+                Line("SKIP", "measure a drag across the map", "no mouse input reached the app on this machine");
+                return;
+            }
+            XzPoint wantFirst = _controller.ImplementedScene.Map.TransformPointOnScreenToXz(from), wantSecond = _controller.ImplementedScene.Map.TransformPointOnScreenToXz(to);
+            bool Near(XzPoint a, XzPoint b) => Math.Abs(a.X - b.X) <= 1 && Math.Abs(a.Z - b.Z) <= 1;
+            Check("measure a drag across the map", Near(first, wantFirst) && Near(second, wantSecond),
+                $"measured {first.X}, {first.Z} to {second.X}, {second.Z}; the cursor was over {wantFirst.X:0}, {wantFirst.Z:0} to {wantSecond.X:0}, {wantSecond.Z:0}");
+            await Shoot("measure-drag");
+        }
+
+        private const uint MouseMove = 0x0001, LeftDown = 0x0002, LeftUp = 0x0004;
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool SetCursorPos(int x, int y);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern void mouse_event(uint flags, int dx, int dy, uint data, IntPtr extra);
 
         // Presses a toolbar button by its label, checks it did what it should, runs anything more on what it opened,
         // pictures it, and puts things back: windows and menus it opened closed, a tool it turned on turned off

@@ -21,6 +21,9 @@ namespace WorldEditor
         // A newer view made from this one, and what changed between them, so each dimension's store can move on to it
         private (BedrockWorld World, IReadOnlyCollection<(int Dimension, int X, int Z)> Changed)? _next;
 
+        // Each chunk's newest write to a record it's drawn from, per dimension; made on first use
+        private readonly Lazy<Dictionary<int, Dictionary<Coords, ulong>>> _stamps;
+
         private static readonly Dictionary<string, WeakReference<BedrockWorld>> _open = [];
 
         private BedrockWorld(string directory, string stamp)
@@ -28,6 +31,7 @@ namespace WorldEditor
             Directory = directory;
             Stamp = stamp;
             Database = new LevelDbReader(Path.Combine(directory, "db"));
+            _stamps = new(ReadStamps);
             Indexed = Task.Run(Index);
         }
 
@@ -37,6 +41,7 @@ namespace WorldEditor
             Directory = older.Directory;
             Stamp = stamp;
             Database = database;
+            _stamps = new(ReadStamps);
 
             foreach (var (dimension, regions) in older._regions)
             {
@@ -127,6 +132,44 @@ namespace WorldEditor
         {
             Indexed.Wait();
             return _chunks.Contains((dimension, x, z));
+        }
+
+        // For each chunk of the dimension, the highest sequence number among the records it's drawn from. Every write
+        // takes the next number and compaction keeps them, so the number changes exactly when the game saves the
+        // chunk's blocks, biomes or heights; entities, ticks and the like don't count. Reads keys only
+        public IReadOnlyDictionary<Coords, ulong> ChunkStamps(int dimension)
+        {
+            return _stamps.Value.TryGetValue(dimension, out var stamps) ? stamps : new Dictionary<Coords, ulong>();
+        }
+
+        private Dictionary<int, Dictionary<Coords, ulong>> ReadStamps()
+        {
+            System.Collections.Concurrent.ConcurrentDictionary<(int Dimension, int X, int Z), ulong> newest = new();
+            Database.ForEachRecord(IsDrawnKey, (key, sequence) =>
+            {
+                if (!BedrockKey.TryParse(key, out BedrockKey parsed)) return;
+                newest.AddOrUpdate((parsed.Dimension, parsed.X, parsed.Z), sequence, (_, old) => Math.Max(old, sequence));
+            });
+
+            Dictionary<int, Dictionary<Coords, ulong>> output = [];
+            foreach (var (chunk, sequence) in newest)
+            {
+                if (!output.TryGetValue(chunk.Dimension, out var stamps)) output[chunk.Dimension] = stamps = [];
+                stamps[new Coords(chunk.X, chunk.Z)] = sequence;
+            }
+            return output;
+        }
+
+        private static bool IsDrawnKey(ReadOnlySpan<byte> key)
+        {
+            if (key.Length is < 9 or > 14) return false;
+
+            // A sub-chunk key ends in its Y, every other chunk key in its tag
+            if (key.Length is 10 or 14 && (BedrockChunkTag)key[^2] == BedrockChunkTag.SubChunkPrefix) return true;
+            if (key.Length is not (9 or 13)) return false;
+
+            return (BedrockChunkTag)key[^1] is BedrockChunkTag.Version or BedrockChunkTag.LegacyVersion or BedrockChunkTag.Data3D
+                or BedrockChunkTag.Data2D or BedrockChunkTag.Data2DLegacy or BedrockChunkTag.LegacyTerrain;
         }
 
         private void Index()

@@ -129,7 +129,7 @@ namespace Mapper.Gui
         }
         private void SetWebMapDescription()
         {
-            string description = "Renders the Overworld, Nether and End, whichever the world has and all of each, into a folder with a page that pans, zooms and switches between them in any browser. Large worlds take a while.";
+            string description = "Renders the Overworld, Nether and End, whichever the world has and all of each, into a folder with a page that pans, zooms and switches between them in any browser. Exporting again redraws only changes.";
 
             if (DescriptionLabel is null) return;
             DescriptionLabel.Text = $"Description: {description}";
@@ -213,7 +213,8 @@ namespace Mapper.Gui
             Action<IProgress<WebMapProgress>?, CancellationToken> export;
             try
             {
-                export = _imageSaver.PrepareWebMap(folder, new WebMapOptions() { IncludeMarkers = IncludeMarkersCheckBox.IsChecked == true, IncludeMarkup = IncludeMarkupCheckBox.IsChecked == true });
+                export = _imageSaver.PrepareWebMap(folder, new WebMapOptions() { IncludeMarkers = IncludeMarkersCheckBox.IsChecked == true, IncludeMarkup = IncludeMarkupCheckBox.IsChecked == true,
+                    RedrawAll = RedrawAllCheckBox.IsChecked == true });
             }
             catch (Exception exception)
             {
@@ -276,6 +277,8 @@ namespace Mapper.Gui
             string dimension = progress.Dimension is null ? string.Empty : $"{progress.Dimension}: ";
             SavingLabel.Text = progress.Stage switch
             {
+                WebMapStage.Rendering when progress.Update && progress.Total == 0 => $"{dimension}no regions changed",
+                WebMapStage.Rendering when progress.Update => $"{dimension}rendering {progress.Total} changed region{(progress.Total == 1 ? "" : "s")} {progress.Done} / {progress.Total}",
                 WebMapStage.Rendering => $"{dimension}rendering regions {progress.Done} / {progress.Total}",
                 WebMapStage.Zooming => $"{dimension}making zoom levels {progress.Done} / {progress.Total}",
                 _ => "Finishing"
@@ -316,6 +319,7 @@ namespace Mapper.Gui
             FullResolutionButton.IsEnabled = enabled;
             WebMapButton.IsEnabled = enabled;
             IncludeMarkersCheckBox.IsEnabled = enabled;
+            RedrawAllCheckBox.IsEnabled = enabled;
             IncludeMarkupCheckBox.IsEnabled = enabled;
             OpenWhenDoneCheckBox.IsEnabled = enabled;
             ClipAreaCheckBox.IsEnabled = enabled;

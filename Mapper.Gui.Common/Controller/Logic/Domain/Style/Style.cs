@@ -17,6 +17,10 @@ namespace Mapper.Gui.Logic
         public ScanType ScanType { get; set; }
         public StyleMetadata Metadata { get; set; }
 
+        // Empty while the assets are the style's own; a new value each time the block filter replaces them, so an
+        // export can tell whether it's drawn as an earlier one was
+        public string AssetRevision { get; set; } = string.Empty;
+
         public Style(AssetPack assetPack, StyleMetadata metadata)
         {
             AssetPack = assetPack;
@@ -52,7 +56,8 @@ namespace Mapper.Gui.Logic
                 DefaultHeightmapStyle = DefaultHeightmapStyle,
                 DimensionRenderSettingStyles = DimensionRenderSettingStyles,
                 DefaultRenderSettingStyle = DefaultRenderSettingStyle,
-                ScanType = ScanType
+                ScanType = ScanType,
+                AssetRevision = AssetRevision
             };
         }
     }

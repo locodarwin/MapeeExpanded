@@ -188,6 +188,7 @@ namespace Mapper.Gui.Logic
             StartupLog.Mark("Profile changed (block filter or render settings)");
             if (Domain.CurrentWorld is null) return;
 
+            if (!ReferenceEquals(Domain.CurrentWorld.Style.AssetPack, profile.AssetPack)) Domain.CurrentWorld.Style.AssetRevision = Guid.NewGuid().ToString("N");
             Domain.CurrentWorld.Style.AssetPack = profile.AssetPack;
             SetDimensionProfile(Domain.CurrentWorld.CurrentDimension, profile);
 

@@ -2,7 +2,7 @@ namespace WorldEditor
 {
     // Bedrock has no region files. Chunks are found by indexing the world database in the background,
     // then grouped into the same 32x32 regions Java uses so the rest of Mapee can treat them alike
-    public class BedrockRegionStore : IChunkSourceRegionStore, IBackgroundRegionStore, IBedrockNeighborSource, IRefreshableRegionStore
+    public class BedrockRegionStore : IChunkSourceRegionStore, IBackgroundRegionStore, IBedrockNeighborSource, IRefreshableRegionStore, IChunkStampRegionStore
     {
         public int Dimension { get; }
         public int Count => Regions.Count;
@@ -43,6 +43,8 @@ namespace WorldEditor
         }
 
         public string Stamp() => _world?.CurrentStamp() ?? string.Empty;
+
+        public IReadOnlyDictionary<Coords, ulong> ChunkStamps() => _world?.ChunkStamps(Dimension) ?? new Dictionary<Coords, ulong>();
 
         public RegionChanges? Refresh()
         {

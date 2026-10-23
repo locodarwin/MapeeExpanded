@@ -33,6 +33,8 @@
                 <TextBlock Text="Map" FontSize="14" FontWeight="Bold" Margin="0,0,0,2" Foreground="#FFEEEEEE" />
                 <TextBlock x:Name="WebMapDescriptionLabel" Foreground="#FFBBBBBB" Margin="0,0,0,4" />
                 <CheckBox x:Name="IncludeMarkersCheckBox" IsChecked="True" Content="Mark the spawn and the player" />
+                <CheckBox x:Name="RedrawAllCheckBox" IsChecked="False" Content="Redraw everything"
+                          ToolTip.Tip="Over an earlier export of this world, only the regions the game has saved since are drawn again. Tick to draw them all" />
                 <CheckBox x:Name="OpenWhenDoneCheckBox" IsChecked="True" Content="Open in the browser when done" />
             </StackPanel>
           </Grid>

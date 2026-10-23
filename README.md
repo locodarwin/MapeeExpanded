@@ -10,6 +10,8 @@ Upstream website: [mapee.net](https://www.mapee.net/home)
 **Since 1.5.0** (not in a release yet)
 - Change any shortcut key: click it in the key list and press the new one (see "Keyboard shortcuts" below)
 - Java worlds from 26.1 on show their Nether (Mapee looked in the wrong folder), and the player is placed where they really are, in the right dimension, rather than at the world spawn
+- Web maps update: exporting a web map again into the same folder draws only the regions where the game has saved something since, and keeps the rest, so refreshing a big map takes seconds. Changing the style, block filter, height cut or render settings, or a new version of Mapee, draws everything again, as does the export window's **Redraw everything** (`--full` for `mapee-cli`). A web map made in the app can be updated from the command line and the other way round
+- `mapee-cli render` images now match the web map's tiles pixel for pixel (both draw regions in the same groups of four, so neighbours are shaded the same way)
 
 **Version 1.5.0**
 - Linux: an AppImage of Mapee, a second GUI written in Avalonia that looks and works like the Windows one (see "Linux" below)
@@ -118,14 +120,14 @@ An entry Mapee can't read is skipped, and that action keeps its usual key.
 
 ```
 mapee-cli render <world> --out map.png [--dimension overworld|nether|end] [--area x1,z1,x2,z2] [--markup]
-mapee-cli webmap <world> --out <folder> [--dimension overworld,nether] [--no-markers] [--force]
+mapee-cli webmap <world> --out <folder> [--dimension overworld,nether] [--no-markers] [--force] [--full]
 mapee-cli worlds          # the worlds in the game's world folders
 mapee-cli styles          # the style ids
 ```
 
 - `<world>` is a world folder, its `level.dat`, a `.mcworld`, or the name of a world that `mapee-cli worlds` lists.
 - `render` writes one dimension at a pixel per block, transparent where nothing has been generated; `--area` keeps the blocks between two corners. It prints where the image lies in block coordinates.
-- `webmap` writes the same web map as the export window, every dimension the world has. An earlier web map in the folder is replaced without asking, so a map can be kept up to date from a script; other files that would be replaced need `--force`.
+- `webmap` writes the same web map as the export window, every dimension the world has. An earlier web map in the folder is replaced without asking, so a map can be kept up to date from a script; other files that would be replaced need `--force`. Over an earlier web map of the same world drawn the same way, only the regions the game has saved since are drawn, and the result line says how many (`Updated: Overworld: 3 of 26 regions changed`); `--full` draws everything.
 - Both take `--style <id>` (default `default`), and `--slice <y>` or `--caves <y>` to draw as the height panel's Slice or Caves would.
 - Markup: `render --markup` draws the pins and zones marked on the world in Mapee; `webmap` includes them unless `--no-markers` (which also leaves out the spawn and player). `--markup <file.json>` uses a file from the bar's Export instead.
 - Exit codes: 0 done, 1 failed or nothing to draw, 2 wrong usage, 130 cancelled.

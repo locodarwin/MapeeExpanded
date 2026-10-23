@@ -10,8 +10,10 @@ namespace Mapper
         private static readonly byte[] Signature = [137, 80, 78, 71, 13, 10, 26, 10];
         private static readonly uint[] CrcTable = CreateCrcTable();
 
+        // An existing file is deleted first rather than overwritten: some network shares keep a file's old length
         public static void Write(string path, byte[] rgba, int width, int height)
         {
+            File.Delete(path);
             using FileStream file = File.Create(path);
             Write(file, rgba, width, height);
         }

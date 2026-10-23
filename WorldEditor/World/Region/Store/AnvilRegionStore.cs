@@ -1,6 +1,6 @@
 ﻿namespace WorldEditor
 {
-    public class AnvilRegionStore : IRefreshableRegionStore
+    public class AnvilRegionStore : IRefreshableRegionStore, IChunkStampRegionStore
     {
         public int Count => _store.Count;
 
@@ -91,6 +91,34 @@
                 if (saved != 0 && saved >= unixSeconds) count++;
             }
             return count;
+        }
+
+        // The first 8 KiB of each region file: where each chunk is (4 bytes) and when it was saved (4 bytes). A save
+        // changes the time, and almost always the place too, so the two together stand for the chunk's contents
+        public IReadOnlyDictionary<Coords, ulong> ChunkStamps()
+        {
+            Dictionary<Coords, ulong> stamps = [];
+            byte[] header = new byte[8192];
+
+            foreach (var (region, file) in _store)
+            {
+                try
+                {
+                    using FileStream stream = new(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                    if (stream.ReadAtLeast(header, header.Length, throwOnEndOfStream: false) < header.Length) continue;
+                }
+                catch (FileNotFoundException) { continue; }
+
+                for (int i = 0; i < 1024; i++)
+                {
+                    uint location = System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(header.AsSpan(i * 4));
+                    if (location == 0) continue;
+
+                    uint saved = System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(header.AsSpan(4096 + i * 4));
+                    stamps[new Coords(region.X * 32 + i % 32, region.Z * 32 + i / 32)] = (ulong)location << 32 | saved;
+                }
+            }
+            return stamps;
         }
 
         public bool Exists(Coords coords)

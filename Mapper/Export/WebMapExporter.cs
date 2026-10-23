@@ -4,23 +4,65 @@ using WorldEditor;
 namespace Mapper
 {
     // Renders every region of a dimension, as the map view would, into a web map, with the height of each block
-    // drawn. It takes its own mapper pack and scene so the view can keep drawing while it runs. Regions go in rows
-    // of four so neighbours in a row are shaded against each other, as they are on screen
+    // drawn. It takes its own mapper pack and scene so the view can keep drawing while it runs. Regions are drawn
+    // in WebMapGroups, so neighbours in a group are shaded against each other, as they are on screen. Given an
+    // identity, it updates an earlier export of the same world drawn the same way: only groups where the game
+    // saved a chunk since are drawn again
     public static class WebMapExporter
     {
-        private const int RegionsInParallel = 4;
+        private const int RegionsInParallel = WebMapGroups.Width;
         private const int ChunksInParallel = 8;
 
-        // Writes under <folder>/<id>. Nothing is written for a dimension with no regions; it returns null instead
+        // Writes under <folder>/<id>. Nothing is written for a dimension with no regions; it returns null instead.
+        // Without an identity, or with redrawAll, everything is drawn
         public static WebMapDimension? Export(MapperPack mapperPack, SceneInfo scene, string folder, string id, string name,
-            string subtitle, IList<WebMapMarker> markers, IProgress<WebMapProgress>? progress = null, CancellationToken cancellation = default)
+            string subtitle, IList<WebMapMarker> markers, IProgress<WebMapProgress>? progress = null, CancellationToken cancellation = default,
+            WebMapIdentity? identity = null, bool redrawAll = false)
         {
             if (scene.RegionStore is IBackgroundRegionStore background) background.Ready.Wait(cancellation);
 
-            Coords[] regions = [.. scene.Regions.OrderBy(c => c.Z).ThenBy(c => c.X)];
-            if (regions.Length == 0) return null;
+            Coords[] regions = [.. scene.Regions];
+            if (regions.Length == 0)
+            {
+                WebMapFolder.ClearDimension(folder, id);
+                return null;
+            }
+            List<Coords[]> groups = WebMapGroups.Group(regions);
+            static string NameOf(Coords[] group) => WebMapGroups.Name(WebMapGroups.Of(group[0]));
+
+            // Fingerprints only when the store can say what was saved; a store that can't is drawn whole each time
+            IReadOnlyDictionary<Coords, ulong>? stamps = identity is not null && scene.RegionStore is IChunkStampRegionStore stampStore ? stampStore.ChunkStamps() : null;
+            Dictionary<string, string> fingerprints = stamps is null ? []
+                : groups.AsParallel().ToDictionary(NameOf, g => WebMapGroups.Fingerprint(g, stamps));
+
+            WebMapManifest? previous = !redrawAll && identity is not null && stamps is not null
+                && WebMapManifest.Read(folder, id) is WebMapManifest earlier && earlier.Matches(identity) ? earlier : null;
+            if (previous is null) WebMapFolder.ClearDimension(folder, id);
+            else WebMapManifest.Delete(folder, id);
 
             WebMapWriter writer = new(folder, id);
+            List<Coords[]> draw = [.. groups.Where(g => previous is null || previous.Groups.GetValueOrDefault(NameOf(g)) != fingerprints[NameOf(g)])];
+            HashSet<Coords> drawn = [.. draw.SelectMany(g => g)];
+
+            // What the earlier export drew in groups drawn again or gone from the world goes; the rest is kept
+            HashSet<Coords>? changed = null;
+            if (previous is not null)
+            {
+                HashSet<Coords> redrawnGroups = [.. draw.Select(g => WebMapGroups.Of(g[0]))];
+                HashSet<Coords> present = [.. groups.Select(g => WebMapGroups.Of(g[0]))];
+                changed = [.. drawn];
+
+                foreach (Coords region in previous.DrawnRegions())
+                {
+                    Coords group = WebMapGroups.Of(region);
+                    if (present.Contains(group) && !redrawnGroups.Contains(group)) writer.Keep([region]);
+                    else
+                    {
+                        writer.Forget(region);
+                        changed.Add(region);
+                    }
+                }
+            }
 
             ChunkEnumerator enumerator = new(RegionsInParallel, ChunksInParallel, () => scene.RegionStore,
                 new ChunkEnumeratorFromRegionFactory(index => mapperPack.ChunkReader));
@@ -39,16 +81,32 @@ namespace Mapper
                 }
             };
 
-            progress?.Report(new WebMapProgress(WebMapStage.Rendering, 0, regions.Length, name));
-            for (int i = 0; i < regions.Length; i += RegionsInParallel)
+            int total = drawn.Count, done = 0;
+            progress?.Report(new WebMapProgress(WebMapStage.Rendering, 0, total, name, previous is not null));
+            foreach (Coords[] group in draw)
             {
                 cancellation.ThrowIfCancellationRequested();
 
-                enumerator.Enumerate(regions[i..Math.Min(i + RegionsInParallel, regions.Length)], body);
-                progress?.Report(new WebMapProgress(WebMapStage.Rendering, Math.Min(i + RegionsInParallel, regions.Length), regions.Length, name));
+                enumerator.Enumerate(group, body);
+                done += group.Length;
+                progress?.Report(new WebMapProgress(WebMapStage.Rendering, done, total, name, previous is not null));
             }
 
-            return writer.Finish(name, subtitle, markers, progress, cancellation);
+            WebMapDimension finished = writer.Finish(name, subtitle, markers, progress, cancellation, changed);
+            WebMapDimension dimension = finished with { Redrawn = finished.Regions.Count(drawn.Contains), Total = finished.Regions.Count, Updated = previous is not null };
+
+            if (identity is not null && stamps is not null)
+            {
+                new WebMapManifest
+                {
+                    Format = WebMapManifest.CurrentFormat,
+                    World = identity.World,
+                    Drawing = identity.Drawing,
+                    Groups = fingerprints,
+                    Regions = [.. dimension.Regions.OrderBy(c => c.Z).ThenBy(c => c.X).SelectMany(c => new[] { c.X, c.Z })]
+                }.Write(folder, id);
+            }
+            return dimension;
         }
 
         // The top block the scan kept in each column, which is the one drawn there

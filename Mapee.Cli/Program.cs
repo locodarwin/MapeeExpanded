@@ -23,6 +23,9 @@ namespace Mapee.Cli
                   --dimension <d>[,<d>]    only these dimensions
                   --no-markers             leave out the spawn and player markers, and the pins and zones
                   --force                  replace files in a folder that isn't an earlier web map
+                  --full                   draw every region again; otherwise, over an earlier web map
+                                           of the same world drawn the same way, only regions the game
+                                           has saved since are drawn
               mapee-cli worlds             lists the worlds in the game's world folders
               mapee-cli styles             lists the styles
 
@@ -159,7 +162,8 @@ namespace Mapee.Cli
             IList<Dimension> dimensions = line.Dimensions ?? [.. WebMapFolder.Dimensions.Select(d => d.Dimension)];
             string folder = line.Out!;
 
-            // An earlier web map is replaced without asking, so a map can be refreshed from a script
+            // An earlier web map is replaced without asking, so a map can be refreshed from a script, and only what
+            // changed in the world since is drawn again
             IList<string> replaced = WebMapFolder.WillReplace(folder, dimensions.Select(WebMapFolder.IdOf));
             if (replaced.Count > 0 && !WebMapFolder.IsEarlierExport(folder) && !line.Force)
             {
@@ -174,14 +178,15 @@ namespace Mapee.Cli
             List<WebMapTarget> targets = [.. dimensions.Select(dimension =>
             {
                 (Profile profile, ScanType scanType, string description) = Drawing(domain, style, dimension, line.Cut);
-                return new WebMapTarget(dimension, profile, scanType, description, line.Markers ? WebMapSaver.Markers(level, dimension) : []);
+                return new WebMapTarget(dimension, profile, scanType, description, line.Markers ? WebMapSaver.Markers(level, dimension) : [],
+                    WebMapSaver.DrawingKey(style, profile, scanType, level));
             })];
 
             // The page opens on the player's dimension
             string current = WebMapFolder.IdOf(dimensions.Contains(level.Player.Dimension) ? level.Player.Dimension : dimensions[0]);
 
             ConsoleProgress progress = new();
-            IList<WebMapDimension> written = WebMapSaver.Export(domain.DefaultAssetPack, level, targets, folder, level.WorldName ?? "Map", current, progress, cancellation, markup);
+            IList<WebMapDimension> written = WebMapSaver.Export(domain.DefaultAssetPack, level, targets, folder, level.WorldName ?? "Map", current, progress, cancellation, markup, line.Full);
             progress.Finish();
 
             if (written.Count == 0)
@@ -193,6 +198,7 @@ namespace Mapee.Cli
             Console.WriteLine($"Wrote {Path.Combine(folder, "index.html")}: {level.WorldName}, " +
                 string.Join(", ", written.Select(d => $"{d.Name} {d.Regions.Count} region{(d.Regions.Count == 1 ? "" : "s")}")) + $" ({targets[0].Subtitle})" +
                 (markup is { IsEmpty: false } ? $", {Count(markup.Pins.Count, "pin")} and {Count(markup.Zones.Count, "zone")}" : ""));
+            if (WebMapSaver.DescribeUpdate(written) is { Length: > 0 } update) Console.WriteLine($"Updated: {update}");
             return 0;
         }
 
@@ -317,7 +323,12 @@ namespace Mapee.Cli
         {
             if (value.Stage == WebMapStage.Done) return;
 
-            string stage = $"{value.Dimension}: {(value.Stage == WebMapStage.Rendering ? "drawing regions" : "making zoom levels")}";
+            string stage = $"{value.Dimension}: {value.Stage switch
+            {
+                WebMapStage.Rendering when value.Update => "drawing changed regions",
+                WebMapStage.Rendering => "drawing regions",
+                _ => "making zoom levels"
+            }}";
             lock (_lock)
             {
                 if (_interactive)
@@ -366,6 +377,7 @@ namespace Mapee.Cli
         public bool Markup { get; private set; }
         public string? MarkupFile { get; private set; }
         public bool Force { get; private set; }
+        public bool Full { get; private set; }
 
         private static readonly string[] Commands = ["render", "webmap", "worlds", "styles"];
 
@@ -442,6 +454,9 @@ namespace Mapee.Cli
                         break;
                     case "--force" when command == "webmap":
                         line.Force = true;
+                        break;
+                    case "--full" when command == "webmap":
+                        line.Full = true;
                         break;
                     default:
                         throw new UsageException($"{command} has no option {option}");

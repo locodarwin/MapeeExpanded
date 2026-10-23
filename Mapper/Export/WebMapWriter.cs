@@ -12,10 +12,20 @@ namespace Mapper
     // One dimension's map as the page lists it: its folder, what the switcher and the panel call it, and what
     // its writer drew
     public record WebMapDimension(string Id, string Name, string Subtitle, IList<WebMapMarker> Markers,
-        IReadOnlyCollection<Coords> Regions, int MinLevel);
+        IReadOnlyCollection<Coords> Regions, int MinLevel)
+    {
+        // How many of the regions with a tile this export drew, of how many there are; fewer when an earlier export's
+        // unchanged regions were kept
+        public int Redrawn { get; init; }
+        public int Total { get; init; }
+
+        // Whether an earlier export was updated, rather than everything drawn afresh
+        public bool Updated { get; init; }
+    }
 
     public enum WebMapStage { Rendering, Zooming, Done }
-    public readonly record struct WebMapProgress(WebMapStage Stage, int Done, int Total, string? Dimension = null);
+    // Update: only the regions that changed since an earlier export are being drawn, Total of them
+    public readonly record struct WebMapProgress(WebMapStage Stage, int Done, int Total, string? Dimension = null, bool Update = false);
 
     // Lays one dimension's rendered map out under <folder>/<id>: tiles/<level>/<x>_<z>.png and
     // heights/<x>_<z>.js. Level 0 is one tile per region at one pixel per block; each level below halves that,
@@ -37,7 +47,8 @@ namespace Mapper
         private readonly string _heights;
         private readonly ConcurrentDictionary<Coords, byte> _regions = new();
 
-        // Call WebMapFolder.Clear on the folder first, so no tiles are left from an earlier export
+        // Call WebMapFolder.Clear on the folder first, so no tiles are left from an earlier export, unless updating one:
+        // then Keep its unchanged regions and Forget the rest before drawing them again
         public WebMapWriter(string outputDirectory, string id)
         {
             OutputDirectory = outputDirectory;
@@ -47,6 +58,20 @@ namespace Mapper
 
             Directory.CreateDirectory(Path.Combine(_tiles, "0"));
             Directory.CreateDirectory(_heights);
+        }
+
+        // Regions an earlier export into this folder drew, whose tiles and heights stay as they are
+        public void Keep(IEnumerable<Coords> regions)
+        {
+            foreach (Coords region in regions) _regions[region] = 0;
+        }
+
+        // Removes what an earlier export drew of a region, before it's drawn again or when it's gone from the world
+        public void Forget(Coords region)
+        {
+            _regions.TryRemove(region, out _);
+            File.Delete(TilePath(0, region.X, region.Z));
+            File.Delete(HeightsPath(region));
         }
 
         // Takes a region as the map renderer draws it: Bgra32 rows covering blocks from (left, top), possibly
@@ -99,42 +124,68 @@ namespace Mapper
             using (DeflateStream deflate = new(compressed, CompressionLevel.Optimal, true)) deflate.Write(deltas);
 
             string script = $"mapeeHeights(\"{Id}\",{region.X},{region.Z},\"{Convert.ToBase64String(compressed.ToArray())}\");\n";
-            File.WriteAllText(Path.Combine(_heights, $"{region.X}_{region.Z}.js"), script);
+            string path = HeightsPath(region);
+            File.Delete(path);
+            File.WriteAllText(path, script);
         }
 
-        // Makes the zoomed-out levels. Call once every region is added; the page takes what it returns
+        // Makes the zoomed-out levels. Call once every region is added; the page takes what it returns. When updating
+        // an earlier export, changed names the regions drawn again or forgotten, and only the tiles over them are
+        // made again; tiles over regions no longer there are removed
         public WebMapDimension Finish(string name, string subtitle, IList<WebMapMarker> markers,
-            IProgress<WebMapProgress>? progress = null, CancellationToken cancellation = default)
+            IProgress<WebMapProgress>? progress = null, CancellationToken cancellation = default, IReadOnlySet<Coords>? changed = null)
         {
-            List<HashSet<Coords>> levels = [[.. _regions.Keys]];
-            int total = CountLevels(levels[0]).Sum(), done = 0;
+            HashSet<Coords> regions = [.. _regions.Keys];
+            List<(int Level, HashSet<Coords> Children, HashSet<Coords> Parents, List<Coords> Write)> plan = [];
 
-            while (levels[^1].Count > 4 && -levels.Count >= LowestLevel)
+            // Null once a level is made whole, as every level below it then is too
+            HashSet<Coords>? dirty = changed is null ? null : [.. changed];
+            HashSet<Coords> children = regions;
+            while (children.Count > 4 && -(plan.Count + 1) >= LowestLevel)
             {
-                int level = -levels.Count;
-                HashSet<Coords> children = levels[^1];
-                HashSet<Coords> parents = [.. children.Select(c => new Coords(MathUtilities.FindSectionY(c.X, 2), MathUtilities.FindSectionY(c.Z, 2)))];
-                Directory.CreateDirectory(Path.Combine(_tiles, level.ToString()));
+                int level = -(plan.Count + 1);
+                HashSet<Coords> parents = [.. children.Select(Parent)];
 
-                Parallel.ForEach(parents, new ParallelOptions() { CancellationToken = cancellation }, parent =>
-                {
-                    WriteParent(level, parent, children);
-                    progress?.Report(new WebMapProgress(WebMapStage.Zooming, Interlocked.Increment(ref done), total, name));
-                });
-                levels.Add(parents);
+                if (dirty is not null && !Directory.Exists(Path.Combine(_tiles, level.ToString()))) dirty = null;
+                if (dirty is not null) dirty = [.. dirty.Select(Parent)];
+
+                plan.Add((level, children, parents, [.. dirty is null ? parents : parents.Where(dirty.Contains)]));
+                children = parents;
             }
 
-            return new WebMapDimension(Id, name, subtitle, markers, levels[0], -(levels.Count - 1));
+            int total = plan.Sum(step => step.Write.Count), done = 0;
+            foreach (var (level, below, parents, write) in plan)
+            {
+                string folder = Path.Combine(_tiles, level.ToString());
+                Directory.CreateDirectory(folder);
+                RemoveTilesExcept(folder, parents);
+
+                Parallel.ForEach(write, new ParallelOptions() { CancellationToken = cancellation }, parent =>
+                {
+                    WriteParent(level, parent, below);
+                    progress?.Report(new WebMapProgress(WebMapStage.Zooming, Interlocked.Increment(ref done), total, name));
+                });
+            }
+
+            // Levels an earlier export went deeper to
+            for (int level = -(plan.Count + 1); level >= LowestLevel; level--)
+            {
+                string folder = Path.Combine(_tiles, level.ToString());
+                if (Directory.Exists(folder)) Directory.Delete(folder, true);
+            }
+
+            return new WebMapDimension(Id, name, subtitle, markers, regions, -plan.Count);
         }
 
-        // How many tiles each level below 0 will have, for progress
-        private static IEnumerable<int> CountLevels(HashSet<Coords> regions)
+        private static Coords Parent(Coords child) => new(MathUtilities.FindSectionY(child.X, 2), MathUtilities.FindSectionY(child.Z, 2));
+
+        private static void RemoveTilesExcept(string folder, HashSet<Coords> keep)
         {
-            HashSet<Coords> level = regions;
-            for (int depth = 1; level.Count > 4 && -depth >= LowestLevel; depth++)
+            foreach (string file in Directory.EnumerateFiles(folder, "*.png"))
             {
-                level = [.. level.Select(c => new Coords(MathUtilities.FindSectionY(c.X, 2), MathUtilities.FindSectionY(c.Z, 2)))];
-                yield return level.Count;
+                string[] parts = Path.GetFileNameWithoutExtension(file).Split('_');
+                if (parts.Length == 2 && int.TryParse(parts[0], out int x) && int.TryParse(parts[1], out int z) && keep.Contains(new Coords(x, z))) continue;
+                File.Delete(file);
             }
         }
 
@@ -185,6 +236,11 @@ namespace Mapper
         {
             return Path.Combine(_tiles, level.ToString(), $"{x}_{z}.png");
         }
+
+        private string HeightsPath(Coords region)
+        {
+            return Path.Combine(_heights, $"{region.X}_{region.Z}.js");
+        }
     }
 
     // The export folder: what an export there replaces, and clearing it beforehand
@@ -229,11 +285,15 @@ namespace Mapper
             Directory.CreateDirectory(directory);
             if (IsEarlierExport(directory)) Delete(Path.Combine(directory, "tiles"));
 
-            foreach (string id in ids)
-            {
-                Delete(Path.Combine(directory, id, "tiles"));
-                Delete(Path.Combine(directory, id, "heights"));
-            }
+            foreach (string id in ids) ClearDimension(directory, id);
+        }
+
+        // One dimension's tiles and heights, and the record of what drew them
+        public static void ClearDimension(string directory, string id)
+        {
+            Delete(Path.Combine(directory, id, "tiles"));
+            Delete(Path.Combine(directory, id, "heights"));
+            WebMapManifest.Delete(directory, id);
         }
 
         private static void Delete(string directory)
@@ -291,7 +351,9 @@ namespace Mapper
                 .Replace("/*{{DATA}}*/null", json);
 
             Directory.CreateDirectory(directory);
-            File.WriteAllText(Path.Combine(directory, "index.html"), page);
+            string index = Path.Combine(directory, "index.html");
+            File.Delete(index);
+            File.WriteAllText(index, page);
         }
     }
 }

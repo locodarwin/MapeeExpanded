@@ -106,6 +106,24 @@ namespace WorldEditor
             }
         }
 
+        // Visits every record whose key filter accepts, older ones a newer write hides and deletions included, with
+        // its sequence number. Nothing is merged, so a key may come more than once; the highest number is its newest
+        // write. Tables are scanned in parallel, so body must be safe to call from several threads
+        public void ForEachRecord(LevelDbKeyFilter filter, LevelDbRecordHandler body)
+        {
+            Parallel.For(0, _tables.Length, i =>
+            {
+                _tables[i].Value.ScanKeys((key, sequence, isDeletion) =>
+                {
+                    if (filter(key)) body(key, sequence);
+                });
+            });
+            foreach (var entry in _memory)
+            {
+                if (filter(entry.Key)) body(entry.Key, entry.Value.Sequence);
+            }
+        }
+
         // Visits once each key accepted by filter that was written, or deleted, after older was opened. Only tables
         // older didn't have can hold such writes (tables are never changed once written), plus the logs
         public void ForEachChangeSince(LevelDbReader older, LevelDbKeyFilter filter, Action<byte[]> body)
@@ -201,6 +219,7 @@ namespace WorldEditor
     }
 
     public delegate bool LevelDbKeyFilter(ReadOnlySpan<byte> userKey);
+    public delegate void LevelDbRecordHandler(ReadOnlySpan<byte> userKey, ulong sequence);
 
     public sealed class ByteArrayComparer : IComparer<byte[]>, IEqualityComparer<byte[]>
     {

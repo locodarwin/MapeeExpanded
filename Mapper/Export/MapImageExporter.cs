@@ -4,11 +4,11 @@ namespace Mapper
 {
     // Renders a whole dimension, or the part inside an area, into one PNG at a pixel per block, drawn as the map
     // view draws it. It goes a row of regions at a time and writes the image as it goes, so only one row of
-    // regions is held in memory. Regions in a row are drawn four at a time so neighbours are shaded against each
-    // other, as in the web map export
+    // regions is held in memory. Regions in a row are drawn in the web map's groups of four, so neighbours are
+    // shaded against each other and the pixels match the web map's
     public static class MapImageExporter
     {
-        private const int RegionsInParallel = 4;
+        private const int RegionsInParallel = WebMapGroups.Width;
         private const int ChunksInParallel = 8;
         private const int RegionSize = 512;
 
@@ -69,12 +69,10 @@ namespace Mapper
                             }
                         };
 
-                        Coords[] inRow = [.. row];
-                        for (int i = 0; i < inRow.Length; i += RegionsInParallel)
+                        foreach (Coords[] batch in WebMapGroups.Group(row))
                         {
                             cancellation.ThrowIfCancellationRequested();
 
-                            Coords[] batch = inRow[i..Math.Min(i + RegionsInParallel, inRow.Length)];
                             enumerator.Enumerate(batch, body);
                             done += batch.Length;
                             progress?.Report(new WebMapProgress(WebMapStage.Rendering, done, regions.Length, scene.Dimension.Name));

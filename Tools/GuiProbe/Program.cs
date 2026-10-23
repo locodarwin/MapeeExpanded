@@ -35,6 +35,14 @@
 //   dragover:<path>[|<path>]          drag files over the middle of the main window and hold them there
 //   dragleave                         drag them back out
 //   drop:<path>[|<path>]              drag files onto the middle of the main window and drop them
+//   find:<what>[,<what>][|<from y>|<to y>]  open Find blocks (as key F does), choose groups (diamonds, spawners, ...) or
+//                                     blocks (diamond_ore), search, wait for it to finish and print what it found
+//   find-start:<what>...              the same, without waiting for the search to finish
+//   find-type:<text>                  type into the find window's block search and print the first blocks listed
+//   find-pick:<row>                   pick a row of the find window's results (from 0): the map goes there
+//   find-pin                          press Add a pin for the picked row
+//   find-stop                         press Stop
+//   find-state                        print the find window's status, counts and first rows, and the marks on screen
 //   keys                              print the key list's state, the changed keys kept, and tooltips that name keys
 //   keys:<action>                     click that action's key in the key list (Grid, HeightUp, ...); keys:reset:<action>,
 //                                     keys:reset-all, keys:card, keys:outside (the dimmed map around it)
@@ -361,6 +369,60 @@ foreach (string step in args.Skip(1))
             Pump(300);
             Console.WriteLine($"  overlay: {controller.DropOverlay.Text ?? "(hidden)"}");
             break;
+        case "find":
+        case "find-start":
+            {
+                string[] fields = value.Split('|');
+                FindWindow window = OpenFind();
+                foreach (FindChip chip in window.Panel.Chips.ToList()) window.Panel.Remove(chip);
+                foreach (string name in fields[0].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    FindTarget target = FindGroups.Find(name) ?? FindTarget.Of(name);
+                    string? refused = window.Panel.Add(target);
+                    if (refused is not null) Console.WriteLine($"  refused {name}: {refused}");
+                }
+                window.FindControl<TextBox>("FromBox")!.Text = fields.Length > 1 ? fields[1] : "";
+                window.FindControl<TextBox>("ToBox")!.Text = fields.Length > 2 ? fields[2] : "";
+                var findWatch = System.Diagnostics.Stopwatch.StartNew();
+                window.FindControl<Button>("FindButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                Pump(100);
+                if (parts[0] == "find-start") break;
+                DateTime giveUp = DateTime.Now.AddSeconds(180);
+                while (controller.ToolbarWidget.FindTool.Searching && DateTime.Now < giveUp) Pump(50);
+                Pump(300);
+                Console.WriteLine($"  searched in {findWatch.ElapsedMilliseconds} ms");
+                PrintFind(window);
+                break;
+            }
+        case "find-type":
+            {
+                FindWindow window = OpenFind();
+                window.FindControl<TextBox>("SearchBox")!.Text = value;
+                Pump(200);
+                Console.WriteLine($"  {window.Panel.Blocks.Count} blocks: {string.Join(" | ", window.Panel.Blocks.Take(6).Select(b => $"{b.Title} ({b.Id})"))}");
+                break;
+            }
+        case "find-pick":
+            {
+                FindWindow window = OpenFind();
+                window.FindControl<ListBox>("ResultList")!.SelectedIndex = int.Parse(value);
+                Pump(400);
+                var picked = controller.ToolbarWidget.FindTool.Picked;
+                Console.WriteLine($"  picked {(picked is null ? "nothing" : controller.ToolbarWidget.FindTool.Label(picked) + $" at {picked.X}, {picked.Y}, {picked.Z}")}; map centre {controller.Domain.CurrentWorld?.CurrentDimension.Scaling.CenterPoint}");
+                break;
+            }
+        case "find-pin":
+        case "find-stop":
+            {
+                FindWindow window = OpenFind();
+                window.FindControl<Button>(parts[0] == "find-pin" ? "PinButton" : "StopButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                Pump(800);
+                PrintFind(window);
+                break;
+            }
+        case "find-state":
+            PrintFind(OpenFind());
+            break;
         case "marks":
             MarkupTool marks = controller.ToolbarWidget.MarkupTool;
             foreach (MapPin pin in marks.Editor.Document.Pins) Console.WriteLine($"  pin {pin.Label} at {pin.X}, {pin.Z} in {pin.Dimension}, {pin.Color} {pin.Icon ?? "dot"}{(pin.Note is null ? "" : $", note {pin.Note}")}");
@@ -428,6 +490,29 @@ void Shot(string name)
         string file = Path.Combine(output, $"{name}-{i}.png");
         order[i].CaptureRenderedFrame()?.Save(file);
         Console.WriteLine($"  {file} ({order[i].Title})");
+    }
+}
+
+// The open find window, opening it as key F does if it isn't
+FindWindow OpenFind()
+{
+    if (windows.OfType<FindWindow>().FirstOrDefault() is FindWindow open) return open;
+    controller.ToolbarWidget.FindTool.IsTurnedOn = true;
+    Pump(800);
+    return windows.OfType<FindWindow>().FirstOrDefault() ?? throw new InvalidOperationException("Find blocks didn't open its window");
+}
+
+void PrintFind(FindWindow window)
+{
+    FindTool tool = controller.ToolbarWidget.FindTool;
+    Console.WriteLine($"  status: {window.FindControl<TextBlock>("StatusText")!.Text}");
+    if (window.FindControl<TextBlock>("CountsText")!.Text is { Length: > 0 } counts) Console.WriteLine($"  counts: {counts}");
+    Console.WriteLine($"  chosen: {string.Join(", ", window.Panel.Chips.Select(c => $"{c.Label} {c.Color}"))}; {window.FindControl<TextBlock>("SortedText")!.Text}");
+    foreach (FindResultRow row in window.Panel.Rows().Take(5)) Console.WriteLine($"  row: {row.Title} at {row.Place}, {row.Distance}");
+    if (tool.Results is FindResults results)
+    {
+        FindFrame frame = FindFrame.Build(results, tool.View, controller.GraphicsCanvas.ActualWidth, controller.GraphicsCanvas.ActualHeight, tool.Picked);
+        Console.WriteLine($"  on screen: {frame.Marks.Count} {(frame.Dots ? "dots" : "chunk squares")}{(frame.Ring is null ? "" : ", a ring")}; buttons: go {window.FindControl<Button>("GoButton")!.IsEnabled}, pin {window.FindControl<Button>("PinButton")!.IsEnabled}");
     }
 }
 

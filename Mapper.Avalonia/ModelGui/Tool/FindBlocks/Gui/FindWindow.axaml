@@ -1,0 +1,127 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:gui="using:Mapper.Gui"
+        xmlns:m="using:Mapper"
+        x:Class="Mapper.Gui.FindWindow"
+        UseLayoutRounding="True"
+        Icon="avares://Mapee/Resources/Icon/ToolButton/Find_64px.ico"
+        Title="Find blocks" Height="700" Width="460" MinWidth="380" MinHeight="520" Background="#FF232323" WindowStartupLocation="CenterOwner">
+
+    <Window.Styles>
+        <Style Selector="ListBox.list">
+            <Setter Property="Background" Value="#FF191919" />
+        </Style>
+        <Style Selector="ListBox.list ListBoxItem">
+            <Setter Property="Padding" Value="8,3" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Foreground" Value="#FFEEEEEE" />
+        </Style>
+        <Style Selector="Button.group">
+            <Setter Property="Margin" Value="0,0,4,4" />
+            <Setter Property="Padding" Value="8,2" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="TextBlock.dim">
+            <Setter Property="Foreground" Value="#FFBBBBBB" />
+        </Style>
+    </Window.Styles>
+
+    <Grid Margin="15,8,15,15" RowDefinitions="Auto,Auto,110,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*,Auto">
+        <TextBlock Grid.Row="0" Text="Look for" Classes="heading" Margin="0,4,0,4" />
+        <TextBox Grid.Row="1" x:Name="SearchBox" PlaceholderText="Search blocks (Enter or double-click adds one)" FontSize="13" Height="25" Padding="4,1,0,0" />
+        <ListBox Grid.Row="2" x:Name="BlockList" Classes="list" Margin="0,3,0,0">
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="gui:FindBlockRow">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="{Binding Title}" />
+                        <TextBlock Text="{Binding Id}" Classes="dim" FontSize="11" VerticalAlignment="Center" />
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <ItemsControl Grid.Row="3" x:Name="GroupButtons" Margin="0,6,0,0">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="m:FindTarget">
+                    <Button Classes="dialog group" Content="{Binding Label}" Click="GroupButton_Click" />
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <ItemsControl Grid.Row="4" x:Name="ChipList" Margin="0,4,0,0">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="gui:FindChip">
+                    <Border Background="#FF303030" BorderBrush="#FF505050" BorderThickness="1" CornerRadius="3" Margin="0,0,5,5" Padding="6,2,2,2" ToolTip.Tip="{Binding ToolTip}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Border Width="11" Height="11" CornerRadius="2" Background="{Binding Color}" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding Label}" Foreground="#FFEEEEEE" VerticalAlignment="Center" />
+                            <Button Classes="flat" Content="×" Padding="5,0" FontSize="14" ToolTip.Tip="Take it off" Click="RemoveChip_Click" />
+                        </StackPanel>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <StackPanel Grid.Row="5" Orientation="Horizontal" Spacing="6" Margin="0,4,0,0">
+            <TextBlock Text="From Y" VerticalAlignment="Center" />
+            <TextBox x:Name="FromBox" Width="64" Height="25" Padding="4,1,0,0" PlaceholderText="any" />
+            <TextBlock Text="to Y" VerticalAlignment="Center" Margin="4,0,0,0" />
+            <TextBox x:Name="ToBox" Width="64" Height="25" Padding="4,1,0,0" PlaceholderText="any" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="6" Orientation="Horizontal" Spacing="8" Margin="0,10,0,0">
+            <Button x:Name="FindButton" Content="Find" Classes="dialog" Width="90" Height="26" HorizontalContentAlignment="Center" BorderBrush="#FF528753" Click="FindButton_Click" />
+            <Button x:Name="StopButton" Content="Stop" Classes="dialog" Width="70" Height="26" HorizontalContentAlignment="Center" Click="StopButton_Click" />
+        </StackPanel>
+        <TextBlock Grid.Row="7" x:Name="StatusText" Classes="dim" TextWrapping="Wrap" Margin="0,6,0,0" />
+        <ProgressBar Grid.Row="8" x:Name="Progress" Height="4" MinHeight="4" Margin="0,4,0,0" Minimum="0" Maximum="1" />
+
+        <Grid Grid.Row="9" ColumnDefinitions="*,Auto" Margin="0,6,0,3">
+            <TextBlock x:Name="CountsText" Classes="dim" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" />
+        </Grid>
+
+        <Border Grid.Row="10" BorderBrush="#FF404040" BorderThickness="1">
+            <DockPanel>
+                <Border DockPanel.Dock="Top" Background="#FF262626" Height="25">
+                    <Grid ColumnDefinitions="*,Auto" Margin="8,0,4,0">
+                        <TextBlock x:Name="SortedText" Classes="dim" FontSize="12" VerticalAlignment="Center" />
+                        <Button Grid.Column="1" x:Name="SortButton" Classes="flat" Content="Sort from the map's middle" FontSize="12" Padding="6,1" Click="SortButton_Click"
+                                ToolTip.Tip="List the nearest to the middle of the map first, from where it is now" />
+                    </Grid>
+                </Border>
+                <ListBox x:Name="ResultList" Classes="list">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="gui:FindResultRow">
+                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                <Border Width="11" Height="11" CornerRadius="2" Background="{Binding Color}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="{Binding Title}" />
+                                    <TextBlock Text="{Binding Place}" Classes="dim" FontSize="11" />
+                                </StackPanel>
+                                <TextBlock Grid.Column="2" Text="{Binding Distance}" Classes="dim" FontSize="11" VerticalAlignment="Center" Margin="8,0,0,0" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <StackPanel Grid.Row="11" Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+            <Button x:Name="GoButton" Content="Go there" Classes="dialog" Width="90" Height="26" HorizontalContentAlignment="Center" Click="GoButton_Click" />
+            <Button x:Name="PinButton" Content="Add a pin" Classes="dialog" Width="90" Height="26" HorizontalContentAlignment="Center" Click="PinButton_Click"
+                    ToolTip.Tip="Put a pin on it, labelled with what it is and how deep" />
+            <TextBlock x:Name="PinnedText" Classes="dim" VerticalAlignment="Center" />
+        </StackPanel>
+    </Grid>
+</Window>

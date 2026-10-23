@@ -20,8 +20,9 @@ namespace WorldEditor
         public bool ComputeSkyLight { get; set; } = true;
         public bool ComputeBlockLight { get; set; } = true;
 
-        // blocks, if given, are this chunk's already-decoded blocks; records then only supply Data3D
-        public ApiChunk? Read(int x, int z, int dimension, IDictionary<byte[], byte[]> records, IBedrockNeighborSource? neighbors = null, BlockStateChunk? blocks = null)
+        // blocks, if given, are this chunk's already-decoded blocks; records then only supply Data3D. Without light,
+        // neither kind is worked out, whatever ComputeSkyLight and ComputeBlockLight say
+        public ApiChunk? Read(int x, int z, int dimension, IDictionary<byte[], byte[]> records, IBedrockNeighborSource? neighbors = null, BlockStateChunk? blocks = null, bool light = true)
         {
             byte[]? data3D;
             BlockStateChunk? blockState;
@@ -52,10 +53,10 @@ namespace WorldEditor
                 Z = z,
                 Version = Version.Newest,
                 BlockState = blockState,
-                SkyLight = ComputeSkyLight ? BedrockLight.SkyLight(x, z, dimension, blockState, neighbors) : null
+                SkyLight = light && ComputeSkyLight ? BedrockLight.SkyLight(x, z, dimension, blockState, neighbors) : null
             };
 
-            if (ComputeBlockLight)
+            if (light && ComputeBlockLight)
             {
                 ulong mask = BedrockLight.EmitterMask(blockState, dimension);
                 neighbors?.SetEmitterMask(x, z, mask);

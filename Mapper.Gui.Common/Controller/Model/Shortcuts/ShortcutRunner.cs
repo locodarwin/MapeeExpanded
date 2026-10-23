@@ -122,6 +122,7 @@ namespace Mapper.Gui.Controller
                 case ShortcutAction.LoadWorld: return Open(Toolbar.BrowseTool);
                 case ShortcutAction.RecentWorlds: return Open(Toolbar.RecentTool);
                 case ShortcutAction.BlockFilter: return Open(Toolbar.FilterTool);
+                case ShortcutAction.FindBlocks: return Open(Toolbar.FindTool);
 
                 case ShortcutAction.Help:
                     ShowHelp?.Invoke();

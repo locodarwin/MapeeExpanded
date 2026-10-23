@@ -122,7 +122,7 @@ namespace WorldEditor
             return ChunkReader.Read(coords.X, coords.Z, Dimension, records, this, _blocks.GetValueOrDefault(coords));
         }
 
-        public void EnumerateChunks(Coords region, int tasks, Action<int, IChunk> body)
+        public void EnumerateChunks(Coords region, int tasks, Action<int, IChunk> body, bool light = true)
         {
             if (_world is null || !Regions.TryGetValue(region, out List<Coords>? unordered)) return;
             LevelDbReader db = _world.Database;
@@ -136,7 +136,7 @@ namespace WorldEditor
                 try
                 {
                     IDictionary<byte[], byte[]> records = db.GetByPrefix(BedrockKey.ChunkPrefix(coords.X, coords.Z, Dimension));
-                    ApiChunk? chunk = ChunkReader.Read(coords.X, coords.Z, Dimension, records, this, _blocks.GetValueOrDefault(coords));
+                    ApiChunk? chunk = ChunkReader.Read(coords.X, coords.Z, Dimension, records, this, _blocks.GetValueOrDefault(coords), light);
                     if (chunk is not null) body(r, chunk);
                 }
                 catch (Exception e)

@@ -26,6 +26,14 @@ namespace Mapee.Cli
                   --full                   draw every region again; otherwise, over an earlier web map
                                            of the same world drawn the same way, only regions the game
                                            has saved since are drawn
+              mapee-cli find <world> --block <name>[,<name>] [options]
+                  Lists where blocks are, one line per block found (x y z, then what it is).
+                  Names are as Java has them (diamond_ore, ancient_debris), for Bedrock worlds too,
+                  or one of the groups: diamonds, ancient_debris, spawners, chests, emeralds, buried.
+                  --dimension <d>          overworld (default), nether, end
+                  --area <x1>,<z1>,<x2>,<z2>  only between these corners
+                  --y <min>,<max>          only between these heights
+                  --csv                    as comma-separated values with a header line
               mapee-cli worlds             lists the worlds in the game's world folders
               mapee-cli styles             lists the styles
 
@@ -72,6 +80,7 @@ namespace Mapee.Cli
                 {
                     "render" => Render(line, cancel.Token),
                     "webmap" => WebMap(line, cancel.Token),
+                    "find" => Find(line, cancel.Token),
                     "worlds" => Worlds(),
                     _ => Styles()
                 };
@@ -199,6 +208,71 @@ namespace Mapee.Cli
                 string.Join(", ", written.Select(d => $"{d.Name} {d.Regions.Count} region{(d.Regions.Count == 1 ? "" : "s")}")) + $" ({targets[0].Subtitle})" +
                 (markup is { IsEmpty: false } ? $", {Count(markup.Pins.Count, "pin")} and {Count(markup.Zones.Count, "zone")}" : ""));
             if (WebMapSaver.DescribeUpdate(written) is { Length: > 0 } update) Console.WriteLine($"Updated: {update}");
+            return 0;
+        }
+
+        // A search stops at BlockFinder.MaxMatches, so the output can't run away with a common block
+        private static int Find(CommandLine line, CancellationToken cancellation)
+        {
+            Dimension dimension = line.Dimensions?.Count switch
+            {
+                null => Dimension.Overworld,
+                1 => line.Dimensions[0],
+                _ => throw new UsageException("find searches one dimension; give one to --dimension")
+            };
+
+            Directory.SetCurrentDirectory(AppContext.BaseDirectory);
+            List<FindTarget> targets = [];
+            foreach (string name in line.Blocks!)
+            {
+                if (FindGroups.Find(name) is FindTarget group) targets.Add(group);
+                else if (KnownBlocks.Contains(name)) targets.Add(FindTarget.Of(name));
+                else throw new UsageException($"Mapee doesn't know a block called {name}; give its Java name, such as diamond_ore, or a group: {string.Join(", ", FindGroups.Named.Select(n => n.Id))}");
+            }
+
+            (Level level, _) = OpenWorld(line.World!);
+            SceneInfo scene = new(level, dimension);
+            if (scene.RegionStore is IBackgroundRegionStore background) background.Ready.Wait(cancellation);
+
+            List<Coords> regions = [.. scene.Regions];
+            if (line.Area is BlockArea area)
+            {
+                regions = [.. regions.Where(r => r.X * 512 <= area.MaxX && r.X * 512 + 511 >= area.MinX && r.Z * 512 <= area.MaxZ && r.Z * 512 + 511 >= area.MinZ)];
+            }
+            if (regions.Count == 0)
+            {
+                Console.Error.WriteLine(line.Area is null ? $"{level.WorldName} has nothing in {The(dimension)}" : $"{level.WorldName} has nothing in that area of {The(dimension)}");
+                return 1;
+            }
+
+            BlockQuery query = new(targets, line.MinY, line.MaxY);
+            FindResults results = new(query);
+            bool interactive = !Console.IsErrorRedirected;
+            int searched = 0;
+            bool complete = new BlockFinder(query).Search(scene.RegionStore, regions, (region, matches) =>
+            {
+                results.Set(region, matches);
+                int done = Interlocked.Increment(ref searched);
+                if (interactive) Console.Error.Write($"\rSearching {The(dimension)}: {done}/{regions.Count} regions");
+            }, cancellation);
+            if (interactive) Console.Error.WriteLine();
+
+            List<BlockMatch> found = line.Area is BlockArea within ? results.MatchesIn(within.MinX, within.MinZ, within.MaxX, within.MaxZ) : results.All();
+            found.Sort((a, b) => a.Target != b.Target ? a.Target.CompareTo(b.Target) : a.X != b.X ? a.X.CompareTo(b.X) : a.Z != b.Z ? a.Z.CompareTo(b.Z) : a.Y.CompareTo(b.Y));
+
+            if (line.Csv) Console.WriteLine("x,y,z,block");
+            foreach (BlockMatch match in found)
+            {
+                string what = targets[match.Target].Label;
+                Console.WriteLine(line.Csv ? $"{match.X},{match.Y},{match.Z},\"{what.Replace("\"", "\"\"")}\"" : $"{match.X} {match.Y} {match.Z}  {what}");
+            }
+
+            int[] counts = new int[targets.Count];
+            foreach (BlockMatch match in found) counts[match.Target]++;
+            Console.Error.WriteLine(found.Count == 0
+                ? $"Found none in {level.WorldName}'s {dimension.Name}"
+                : $"Found {found.Count:N0} in {level.WorldName}'s {dimension.Name}: {string.Join(", ", targets.Select((t, i) => $"{t.Label} {counts[i]:N0}"))}");
+            if (!complete) Console.Error.WriteLine($"Stopped at {BlockFinder.MaxMatches:N0}; search for something rarer, or narrow the heights or area");
             return 0;
         }
 
@@ -378,8 +452,12 @@ namespace Mapee.Cli
         public string? MarkupFile { get; private set; }
         public bool Force { get; private set; }
         public bool Full { get; private set; }
+        public IList<string>? Blocks { get; private set; }
+        public int? MinY { get; private set; }
+        public int? MaxY { get; private set; }
+        public bool Csv { get; private set; }
 
-        private static readonly string[] Commands = ["render", "webmap", "worlds", "styles"];
+        private static readonly string[] Commands = ["render", "webmap", "find", "worlds", "styles"];
 
         // Paths are made full here, before the program moves to its own folder to read its resources
         public static CommandLine Parse(string[] args)
@@ -388,7 +466,7 @@ namespace Mapee.Cli
             if (!Commands.Contains(command)) throw new UsageException($"{args[0]} isn't a command; the commands are {string.Join(", ", Commands)}");
 
             CommandLine line = new() { Command = command };
-            bool drawing = command is "render" or "webmap";
+            bool drawing = command is "render" or "webmap" or "find";
 
             for (int i = 1; i < args.Length; i++)
             {
@@ -407,7 +485,7 @@ namespace Mapee.Cli
                     option = arg[..equals];
                     value = arg[(equals + 1)..];
                 }
-                else if (option is "--out" or "--dimension" or "--style" or "--slice" or "--caves" or "--area")
+                else if (option is "--out" or "--dimension" or "--style" or "--slice" or "--caves" or "--area" or "--block" or "--y")
                 {
                     if (i + 1 >= args.Length) throw new UsageException($"{option} needs a value");
                     value = args[++i];
@@ -428,23 +506,23 @@ namespace Mapee.Cli
                         line.Dimensions = [.. value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(ParseDimension).Distinct()];
                         if (line.Dimensions.Count == 0) throw new UsageException("--dimension needs a dimension");
                         break;
-                    case "--style":
+                    case "--style" when command != "find":
                         line.Style = value;
                         break;
-                    case "--slice":
-                    case "--caves":
+                    case "--slice" when command != "find":
+                    case "--caves" when command != "find":
                         if (line.Cut is not null) throw new UsageException("Give --slice or --caves, not both");
                         if (!short.TryParse(value, out short y)) throw new UsageException($"{option} needs a height, such as 64, not {value}");
                         line.Cut = new HeightCut(y, option == "--caves");
                         break;
-                    case "--area" when command == "render":
+                    case "--area" when command is "render" or "find":
                         if (!BlockArea.TryParse(value, out BlockArea area)) throw new UsageException($"--area needs two corners as x1,z1,x2,z2, such as -500,-500,500,500, not {value}");
                         line.Area = area;
                         break;
                     case "--no-markers" when command == "webmap":
                         line.Markers = false;
                         break;
-                    case "--markup":
+                    case "--markup" when command != "find":
                         line.Markup = true;
                         if (value.Length > 0)
                         {
@@ -458,6 +536,21 @@ namespace Mapee.Cli
                     case "--full" when command == "webmap":
                         line.Full = true;
                         break;
+                    case "--block" when command == "find":
+                        line.Blocks = [.. value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
+                        if (line.Blocks.Count == 0) throw new UsageException("--block needs a block, such as diamond_ore");
+                        break;
+                    case "--y" when command == "find":
+                        string[] heights = value.Split(',', StringSplitOptions.TrimEntries);
+                        if (heights.Length != 2 || !int.TryParse(heights[0], out int minY) || !int.TryParse(heights[1], out int maxY))
+                        {
+                            throw new UsageException($"--y needs two heights as min,max, such as -64,16, not {value}");
+                        }
+                        (line.MinY, line.MaxY) = (Math.Min(minY, maxY), Math.Max(minY, maxY));
+                        break;
+                    case "--csv" when command == "find":
+                        line.Csv = true;
+                        break;
                     default:
                         throw new UsageException($"{command} has no option {option}");
                 }
@@ -469,6 +562,12 @@ namespace Mapee.Cli
             if (drawing)
             {
                 if (line.World is null) throw new UsageException($"{command} needs a world");
+                if (command == "find")
+                {
+                    if (line.Blocks is null) throw new UsageException("find needs --block, the blocks to look for");
+                    if (line.Out is not null) throw new UsageException("find has no option --out; it writes to the screen (send it to a file with >)");
+                    return line;
+                }
                 if (line.Out is null) throw new UsageException($"{command} needs --out, {(command == "render" ? "the PNG to write" : "the folder to write the web map into")}");
                 if (command == "render" && Directory.Exists(line.Out)) throw new UsageException($"{line.Out} is a folder; --out names the PNG to write");
                 if (command == "webmap" && File.Exists(line.Out)) throw new UsageException($"{line.Out} is a file; --out names the folder to write the web map into");

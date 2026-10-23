@@ -8,6 +8,9 @@ namespace WorldEditor
         public int TasksPerRegion { get; }
         public Func<IRegionStore> RegionStoreProvider { get; }
 
+        // False when chunks are read only for their blocks: a store that works out light itself then skips it
+        public bool Light { get; init; } = true;
+
         private IChunkEnumeratorFromRegion[] _enumerators;
 
         public ChunkEnumerator(int regionsPerTask, int tasksPerRegion, Func<IRegionStore> regionStoreProvider, IFactory<int, IChunkEnumeratorFromRegion> factory)
@@ -50,7 +53,7 @@ namespace WorldEditor
                     ChunkEnumerateFromRegionArgs? args = null;
                     if (RegionStoreProvider.Invoke() is IChunkSourceRegionStore chunkSource)
                     {
-                        chunkSource.EnumerateChunks(regions[index], TasksPerRegion, (r, chunk) => body.EndReadingChunk(iterator, r, chunk));
+                        chunkSource.EnumerateChunks(regions[index], TasksPerRegion, (r, chunk) => body.EndReadingChunk(iterator, r, chunk), Light);
                     }
                     else
                     {

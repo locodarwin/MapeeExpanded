@@ -11,6 +11,7 @@ Upstream website: [mapee.net](https://www.mapee.net/home)
 - Change any shortcut key: click it in the key list and press the new one (see "Keyboard shortcuts" below)
 - Java worlds from 26.1 on show their Nether (Mapee looked in the wrong folder), and the player is placed where they really are, in the right dimension, rather than at the world spawn
 - Web maps update: exporting a web map again into the same folder draws only the regions where the game has saved something since, and keeps the rest, so refreshing a big map takes seconds. Changing the style, block filter, height cut or render settings, or a new version of Mapee, draws everything again, as does the export window's **Redraw everything** (`--full` for `mapee-cli`). A web map made in the app can be updated from the command line and the other way round
+- Find blocks: the toolbar's magnifying glass (or F) searches the whole dimension for any block, or for ready-made groups (diamonds, ancient debris, spawners, chests and barrels, emeralds, buried things), and marks what it finds on the map, with a list of every vein or cluster, nearest first, to step through or put a pin on (see "Find blocks" below). `mapee-cli find` lists them for a script or a spreadsheet
 - `mapee-cli render` images now match the web map's tiles pixel for pixel (both draw regions in the same groups of four, so neighbours are shaded the same way)
 
 **Version 1.5.0**
@@ -48,7 +49,7 @@ The Linux build is a single AppImage, self-contained (no .NET needed). Make it e
     chmod +x MapeeExpanded-1.5.0-x86_64.AppImage
     ./MapeeExpanded-1.5.0-x86_64.AppImage [world]
 
-If it complains about FUSE, run it with `--appimage-extract-and-run`. It runs as a native Wayland app (following the monitor's scale, fractional ones too) and falls back to X11, where it takes the scale from `GDK_SCALE` or `AVALONIA_GLOBAL_SCALE_FACTOR`. The world browser looks in `~/.minecraft/saves` (Java) and `~/.local/share/mcpelauncher/games/com.mojang/minecraftWorlds` (Bedrock through mcpelauncher); anything else opens with Browse, or by dropping it on the window. Differences from Windows: the system's own window frame, and Go to, Add block and the custom-dimension list open as pop-ups under their buttons rather than as small windows. Given a command as its first argument (`render`, `webmap`, `worlds`, `styles`), the AppImage runs `mapee-cli` instead (see "Command line" below).
+If it complains about FUSE, run it with `--appimage-extract-and-run`. It runs as a native Wayland app (following the monitor's scale, fractional ones too) and falls back to X11, where it takes the scale from `GDK_SCALE` or `AVALONIA_GLOBAL_SCALE_FACTOR`. The world browser looks in `~/.minecraft/saves` (Java) and `~/.local/share/mcpelauncher/games/com.mojang/minecraftWorlds` (Bedrock through mcpelauncher); anything else opens with Browse, or by dropping it on the window. Differences from Windows: the system's own window frame, and Go to, Add block and the custom-dimension list open as pop-ups under their buttons rather than as small windows. Given a command as its first argument (`render`, `webmap`, `find`, `worlds`, `styles`), the AppImage runs `mapee-cli` instead (see "Command line" below).
 
 # Markup
 
@@ -62,6 +63,16 @@ The toolbar's **Markup** button (the flag) opens a bar under the toolbar with wh
 Dragging still moves the map in every mode, and a right-click on any pin or zone changes it even with the bar closed. Hovering over a zone shows its size in blocks and chunks. Ctrl+Z and Ctrl+Y undo and redo while the bar is open. **Places** lists the dimension's pins and zones (click one to go there), and the Go to window lists them too. **Export** and **Import** move markup between machines or onto a copy of a world; **Hide** hides it until the Markup button (or Shift+M) brings it back. P, Z, R and V pick the four modes from the keyboard, opening the bar if it's closed.
 
 Markup is saved as you go, one file per world in the settings folder (`%APPDATA%\Mapee\Markup` on Windows, `~/.config/Mapee/Markup` on Linux), never in the world itself. It follows the path the world was opened from, as the recent worlds do, so a copied world starts without it until you import it. The export window's **Include pins and zones** puts it in screenshots, full-resolution images and web maps; in a web map, click a pin or zone to see its note, and **PINS** and **ZONES** (M and Z) switch them off.
+
+# Find blocks
+
+The toolbar's **Find blocks** button (the magnifying glass, or F) opens a window for finding blocks anywhere in the dimension on show, underground ones too, not only what the map shows from above:
+
+- **Look for**: type in the search box and press Enter, or double-click a block in the list, to add it. The buttons under the list add a ready-made group: **Diamonds** and **Emeralds** (their ores in stone and deepslate), **Ancient debris**, **Spawners** (trial spawners too), **Chests and barrels** (copper chests too) and **Buried things** (suspicious sand and gravel). Up to eight at once, each marked in its own colour; × takes one off.
+- **From Y** and **to Y** keep the search between two heights; leave them blank for every height.
+- **Find** reads the whole dimension in the background (a few seconds for most worlds) and the map fills in as it goes. **Stop** ends it early and keeps what it found.
+
+Zoomed out, each chunk holding any gets a small square for each thing it holds, bigger and more solid the more there is, with the rarer ones on top so a spawner isn't lost among diamonds. Zoomed in to 200% or more, every block found is a dot. The list below merges blocks that touch (a vein of eight diamonds is one row) and gives each one's X, Y and Z, nearest the middle of the map first; **Sort from the map's middle** sorts it again from where the map is now. Clicking a row takes the map there and rings it; **Add a pin** marks it with a pin labelled with what it is and how deep ("Diamonds ×8, Y -58 to -55"). With Live on, regions the game saves are searched again. Switching dimension or world clears the results, and closing the window takes the marks away. Bedrock worlds are searched by the same names as Java ones. A search stops at a million blocks found; for something that common, narrow the heights.
 
 # Live reload
 
@@ -95,6 +106,7 @@ Press **F1** or **?** in the app, or the keyboard button at the left end of the 
 | P Z R V | Markup: Pin, Zone, Rectangle, Select |
 | Ctrl+Z Ctrl+Y | Undo, redo markup (while the bar is open) |
 | Ctrl+G | Go to a place, with the cursor in the coordinate box |
+| F | Find blocks |
 | Ctrl+E | Export as image or web map |
 | Ctrl+O | Load a world |
 | Ctrl+Shift+O | Recent worlds (Up, Down and Enter pick one) |
@@ -121,6 +133,7 @@ An entry Mapee can't read is skipped, and that action keeps its usual key.
 ```
 mapee-cli render <world> --out map.png [--dimension overworld|nether|end] [--area x1,z1,x2,z2] [--markup]
 mapee-cli webmap <world> --out <folder> [--dimension overworld,nether] [--no-markers] [--force] [--full]
+mapee-cli find <world> --block diamonds,spawner [--dimension nether] [--area x1,z1,x2,z2] [--y min,max] [--csv]
 mapee-cli worlds          # the worlds in the game's world folders
 mapee-cli styles          # the style ids
 ```
@@ -128,7 +141,8 @@ mapee-cli styles          # the style ids
 - `<world>` is a world folder, its `level.dat`, a `.mcworld`, or the name of a world that `mapee-cli worlds` lists.
 - `render` writes one dimension at a pixel per block, transparent where nothing has been generated; `--area` keeps the blocks between two corners. It prints where the image lies in block coordinates.
 - `webmap` writes the same web map as the export window, every dimension the world has. An earlier web map in the folder is replaced without asking, so a map can be kept up to date from a script; other files that would be replaced need `--force`. Over an earlier web map of the same world drawn the same way, only the regions the game has saved since are drawn, and the result line says how many (`Updated: Overworld: 3 of 26 regions changed`); `--full` draws everything.
-- Both take `--style <id>` (default `default`), and `--slice <y>` or `--caves <y>` to draw as the height panel's Slice or Caves would.
+- `find` prints one line per block found, `x y z` and what it is, and a summary on the error stream. `--block` takes Java block names (`diamond_ore`, `ancient_debris`, also for Bedrock worlds) or the groups `diamonds`, `ancient_debris`, `spawners`, `chests`, `emeralds` and `buried`; `--y` keeps between two heights, `--area` between two corners, and `--csv` writes `x,y,z,block` with a header line, for a spreadsheet.
+- `render` and `webmap` take `--style <id>` (default `default`), and `--slice <y>` or `--caves <y>` to draw as the height panel's Slice or Caves would.
 - Markup: `render --markup` draws the pins and zones marked on the world in Mapee; `webmap` includes them unless `--no-markers` (which also leaves out the spawn and player). `--markup <file.json>` uses a file from the bar's Export instead.
 - Exit codes: 0 done, 1 failed or nothing to draw, 2 wrong usage, 130 cancelled.
 

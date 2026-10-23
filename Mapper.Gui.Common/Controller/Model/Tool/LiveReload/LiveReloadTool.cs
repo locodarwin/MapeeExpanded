@@ -33,6 +33,10 @@ namespace Mapper.Gui.Controller
         public string? Note { get; private set; }
         public event EventHandler? NoteChanged;
 
+        // Regions of a dimension drawn again because the game saved them, raised on the checking thread; the block
+        // finder searches them again
+        public event Action<DimensionDomain, IReadOnlyCollection<Coords>>? Refreshed;
+
         private class Watch
         {
             public string Seen = string.Empty;
@@ -124,6 +128,7 @@ namespace Mapper.Gui.Controller
                 if (changes is not null && Scene.Domain.CurrentWorld == world && world.CurrentDimension == dimension)
                 {
                     Scene.RegionLoader.Refresh(changes.Regions);
+                    Refreshed?.Invoke(dimension, changes.Regions);
                     SetNote(changes.Chunks == 1 ? $"Live: 1 chunk updated at {DateTime.Now:HH:mm}" : $"Live: {changes.Chunks:N0} chunks updated at {DateTime.Now:HH:mm}");
                 }
                 else if (Note?.StartsWith("Live: can't") == true)

@@ -27,7 +27,7 @@ namespace Mapper
         HeightMode, HeightDown, HeightUp,
         Grid, SlimeChunks, Axes, ChunkHighlight, MeasureLength, NightMode, LiveReload,
         Markup, ShowMarkup, PinMode, ZoneMode, RectangleMode, SelectMode,
-        GoTo, Export, LoadWorld, RecentWorlds, BlockFilter,
+        GoTo, FindBlocks, Export, LoadWorld, RecentWorlds, BlockFilter,
         Help, FullScreen, LeaveFullScreen
     }
 
@@ -184,6 +184,7 @@ namespace Mapper
             ShortcutAction.LoadWorld => "Load a world",
             ShortcutAction.RecentWorlds => "Recent worlds",
             ShortcutAction.BlockFilter => "Filter blocks",
+            ShortcutAction.FindBlocks => "Find blocks",
             ShortcutAction.Help => "Key list",
             ShortcutAction.FullScreen => "Full screen",
             ShortcutAction.Dimension => "Pick a dimension",
@@ -211,7 +212,7 @@ namespace Mapper
             }
             IReadOnlyList<ShortcutHelp> Lines(params ShortcutAction[] actions) => [.. actions.Select(Line)];
 
-            List<ShortcutHelp> window = [.. Lines(ShortcutAction.GoTo, ShortcutAction.Export, ShortcutAction.LoadWorld, ShortcutAction.RecentWorlds, ShortcutAction.BlockFilter)];
+            List<ShortcutHelp> window = [.. Lines(ShortcutAction.GoTo, ShortcutAction.FindBlocks, ShortcutAction.Export, ShortcutAction.LoadWorld, ShortcutAction.RecentWorlds, ShortcutAction.BlockFilter)];
             if (fullScreen) window.Add(Line(ShortcutAction.FullScreen));
             window.Add(Line(ShortcutAction.Help));
 
@@ -283,6 +284,7 @@ namespace Mapper
             yield return new(ShortcutKey.V, none, ShortcutAction.SelectMode);
 
             yield return new(ShortcutKey.G, control, ShortcutAction.GoTo);
+            yield return new(ShortcutKey.F, none, ShortcutAction.FindBlocks);
             yield return new(ShortcutKey.E, control, ShortcutAction.Export);
             yield return new(ShortcutKey.O, control, ShortcutAction.LoadWorld);
             yield return new(ShortcutKey.O, control | shift, ShortcutAction.RecentWorlds);

@@ -23,6 +23,7 @@ namespace Mapper.Gui.Controller
         public GoToTool GoToTool { get; private set; } = null!;
         public ExportAsImageTool ExportTool { get; private set; } = null!;
         public FilterTool FilterTool { get; private set; } = null!;
+        public FindTool FindTool { get; private set; } = null!;
         public BrowseTool BrowseTool { get; private set; } = null!;
         public ShortcutsTool ShortcutsTool { get; private set; } = null!;
         public RecentWorldsTool RecentTool { get; private set; } = null!;
@@ -57,6 +58,7 @@ namespace Mapper.Gui.Controller
             shortSegment.Tools.Add(CreateDayNightCycleButton());
             shortSegment.Tools.Add(CreateLiveButton());
             shortSegment.Tools.Add(CreateGoToButton());
+            shortSegment.Tools.Add(CreateFindButton());
             shortSegment.Tools.Add(CreateExportAsImageButton());
 
             ToolButtonSegment longSegment = new()
@@ -163,6 +165,20 @@ namespace Mapper.Gui.Controller
             Keyed(output, "Go to position in world", ShortcutAction.GoTo);
 
             tool.Owner = output;
+
+            return output;
+        }
+        // Its marks are drawn over the other overlays, and under the markup, whose painter comes later
+        private ToolButton CreateFindButton()
+        {
+            FindTool tool = new(Renderer.Scene, Renderer.GraphicsCanvas, MarkupTool, LiveTool, RenderInvoker);
+            FindTool = tool;
+            Renderer.AddPainter(new FindPainter(tool, Renderer.GraphicsCanvas));
+            ToolButton output = new(tool)
+            {
+                Icon = AppImages.Load("/Resources/Image/ToolButton/Find_22px.png")
+            };
+            Keyed(output, "Find blocks: diamonds, spawners, chests or any block, anywhere in the dimension", ShortcutAction.FindBlocks);
 
             return output;
         }

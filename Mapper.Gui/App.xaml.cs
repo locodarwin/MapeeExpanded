@@ -16,6 +16,8 @@ namespace Mapper.Gui
             StartupLog.Begin();
         }
 
+        private const string SmokeTestSwitch = "--smoke-test=";
+
         [STAThread]
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -24,11 +26,19 @@ namespace Mapper.Gui
             // before moving to the app's folder, where Resources are
             string? world = e.Args.FirstOrDefault(arg => !arg.StartsWith('-'));
             if (world is not null) world = Path.GetFullPath(world);
+            string startFolder = Directory.GetCurrentDirectory();
             Directory.SetCurrentDirectory(AppContext.BaseDirectory);
             StartupLog.Mark("OnStartup");
 
             AppDomain.CurrentDomain.UnhandledException += UnhandledExceptions;
             InitializeBackgroundWork();
+
+            // CI's check of this GUI (see SmokeTest); the folder is made whole before the move above too
+            if (e.Args.FirstOrDefault(arg => arg.StartsWith(SmokeTestSwitch)) is string smoke)
+            {
+                new SmokeTest(Path.GetFullPath(smoke[SmokeTestSwitch.Length..], startFolder), world).Start(this);
+                return;
+            }
 
             Controller.Controller controller = new Controller.Controller(startupWorld: world);
             controller.MainWindow.ShowDialog();

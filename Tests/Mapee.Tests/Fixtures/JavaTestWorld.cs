@@ -9,6 +9,13 @@ namespace Mapee.Tests.Fixtures
         public const int DataVersion = 4903; // 26.2
 
         public string Directory { get; } = Path.Combine(Path.GetTempPath(), "mapee-tests", Guid.NewGuid().ToString("N"));
+        // Left on disk when disposed, for a world written somewhere to be used afterwards (the CI smoke world)
+        public bool Keep { get; init; }
+
+        public JavaTestWorld(string? directory = null)
+        {
+            if (directory is not null) Directory = directory;
+        }
         public string LevelDat => Path.Combine(Directory, "level.dat");
 
         // Dimension folder and region coordinates -> chunks in that region, each with the compression type its sector
@@ -142,6 +149,7 @@ namespace Mapee.Tests.Fixtures
 
         public void Dispose()
         {
+            if (Keep) return;
             try
             {
                 System.IO.Directory.Delete(Directory, true);

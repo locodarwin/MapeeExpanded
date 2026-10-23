@@ -7,13 +7,16 @@ Upstream website: [mapee.net](https://www.mapee.net/home)
 [Download the latest release](https://github.com/locodarwin/MapeeExpanded/releases/latest): for Windows x64, unzip and run `Mapee.exe`; for Linux x86-64, the AppImage (see "Linux" below). Neither needs installing.
 
 # What's New?
-**Since 1.5.0** (not in a release yet)
+**Version 1.6.0**
 - A tidier toolbar: buttons in groups (a world, getting around, marking, what's drawn, how it's drawn, export, help), each with a label under a new icon that stays sharp on scaled screens and turns gold while on. **Open** browses for a world or picks a recent one; **Overlays** holds the grid, slime chunks, axes and chunk highlight, with a count of how many are on. In narrow windows the labels give way to icons only, and a right-click on the toolbar turns them off everywhere (see "The toolbar" below)
 - Change any shortcut key: click it in the key list and press the new one (see "Keyboard shortcuts" below)
 - Java worlds from 26.1 on show their Nether (Mapee looked in the wrong folder), and the player is placed where they really are, in the right dimension, rather than at the world spawn
 - Web maps update: exporting a web map again into the same folder draws only the regions where the game has saved something since, and keeps the rest, so refreshing a big map takes seconds. Changing the style, block filter, height cut or render settings, or a new version of Mapee, draws everything again, as does the export window's **Redraw everything** (`--full` for `mapee-cli`). A web map made in the app can be updated from the command line and the other way round
 - Find blocks: the toolbar's **Find** button (or F) searches the whole dimension for any block, or for ready-made groups (diamonds, ancient debris, spawners, chests and barrels, emeralds, buried things), and marks what it finds on the map, with a list of every vein or cluster, nearest first, to step through or put a pin on (see "Find blocks" below). `mapee-cli find` lists them for a script or a spreadsheet
 - `mapee-cli render` images now match the web map's tiles pixel for pixel (both draw regions in the same groups of four, so neighbours are shaded the same way)
+- Windows: measuring, and dragging the map, follow the mouse on a second monitor whose scaling differs from the main one's (the measurement used to land well to the right of the cursor)
+- Windows: closing the Go to, Add block or custom-dimension window with its close button no longer throws an error
+- Windows: `LICENSE.txt` and `THIRD-PARTY-NOTICES.txt` (the toolbar icons' licence) come with the app
 
 **Version 1.5.0**
 - Linux: an AppImage of Mapee, a second GUI written in Avalonia that looks and works like the Windows one (see "Linux" below)
@@ -47,8 +50,8 @@ Upstream website: [mapee.net](https://www.mapee.net/home)
 
 The Linux build is a single AppImage, self-contained (no .NET needed). Make it executable and run it:
 
-    chmod +x MapeeExpanded-1.5.0-x86_64.AppImage
-    ./MapeeExpanded-1.5.0-x86_64.AppImage [world]
+    chmod +x MapeeExpanded-1.6.0-x86_64.AppImage
+    ./MapeeExpanded-1.6.0-x86_64.AppImage [world]
 
 If it complains about FUSE, run it with `--appimage-extract-and-run`. It runs as a native Wayland app (following the monitor's scale, fractional ones too) and falls back to X11, where it takes the scale from `GDK_SCALE` or `AVALONIA_GLOBAL_SCALE_FACTOR`. The world browser looks in `~/.minecraft/saves` (Java) and `~/.local/share/mcpelauncher/games/com.mojang/minecraftWorlds` (Bedrock through mcpelauncher); anything else opens with Browse, or by dropping it on the window. Differences from Windows: the system's own window frame, and Go to, Add block and the custom-dimension list open as pop-ups under their buttons rather than as small windows. Given a command as its first argument (`render`, `webmap`, `find`, `worlds`, `styles`), the AppImage runs `mapee-cli` instead (see "Command line" below).
 

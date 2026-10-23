@@ -105,10 +105,15 @@ jobs:
     permissions:
       contents: write
     steps:
+      # By name: the run also holds build.yml's artifacts (the Windows smoke test's pictures), which aren't downloads
       - uses: actions/download-artifact@v8
         with:
+          name: windows
           path: downloads
-          merge-multiple: true
+      - uses: actions/download-artifact@v8
+        with:
+          name: linux
+          path: downloads
       - name: Make the draft
         env:
           GH_TOKEN: ${{ github.token }}

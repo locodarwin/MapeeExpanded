@@ -8,7 +8,7 @@
              UseLayoutRounding="True"
              BorderBrush="#FF3F3F3F" BorderThickness="1"
              Background="#FF1C1C1C" 
-             Width="Auto" Height="35" Loaded="UserControl_Loaded">
+             HorizontalAlignment="Center">
 
     <UserControl.Effect>
         <DropShadowEffect Direction="-75" ShadowDepth="2" Opacity="5" BlurRadius="6" Color="Black"/>
@@ -25,5 +25,5 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <Grid x:Name="ButtonContainer" />
+    <StackPanel x:Name="ButtonContainer" Orientation="Horizontal" Margin="3, 2"/>
 </UserControl>

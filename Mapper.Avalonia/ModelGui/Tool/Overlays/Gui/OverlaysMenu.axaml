@@ -1,0 +1,19 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Mapper.Gui.OverlaysMenu"
+             Background="#FF232323"
+             Width="280">
+
+    <UserControl.Styles>
+        <Style Selector="Button.overlay">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Padding" Value="8,6" />
+        </Style>
+    </UserControl.Styles>
+
+    <StackPanel>
+        <TextBlock Text="Draw over the map" FontSize="11" Foreground="#FFAAAAAA" Margin="8,6,8,3" />
+        <StackPanel x:Name="Rows" Margin="0,0,0,4" />
+    </StackPanel>
+</UserControl>

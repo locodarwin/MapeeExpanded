@@ -51,6 +51,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>LICENSE.txt</Link>
     </None>
+    <None Include="..\THIRD-PARTY-NOTICES.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>THIRD-PARTY-NOTICES.txt</Link>
+    </None>
   </ItemGroup>
 
   <!-- Code shared with the other GUI -->

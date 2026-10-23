@@ -14,7 +14,7 @@
 //   scale:<factor>                    render the main window as on a scaled display
 //   dim:<overworld|nether|end>        switch dimension
 //   style:<id>                        pick a style
-//   tool:<tooltip or name>            press a toolbar button
+//   tool:<tooltip or name>            press a toolbar button, or turn an overlay on or off by its label in the Overlays menu
 //   zoom:<levels>                     zoom in (positive) or out (negative) around the centre
 //   mouse:<x>,<y>                     move the mouse over the main window
 //   info                              print what the info bar says about the block under the mouse
@@ -26,9 +26,10 @@
 //   close                             close every window but the main one
 //   click:<x>,<y>[:right|shift|double]  click on the main window (double: two clicks in quick succession)
 //   key:[ctrl+][shift+]<key>          press a key on the main window (Escape, Back, Delete, Enter, Z, ...)
-//   markup:<pin|zone|rectangle|select|view>  pick what a click on the map does (turning the Markup button on first)
+//   markup:<pin|zone|rectangle|select|view>  pick what a click on the map does (turning the Mark button on first)
 //   edit:<label>[|<colour hex>|<icon id>|<note>]  fill in the open pin or zone popup and save it; edit:!cancel, edit:!delete
 //   marks                             print the world's pins and zones, and the Places list
+//   labels:<on|off>                   show or hide the toolbar's labels, as its right-click menu does
 //   recent                            open the Recent menu and print its rows, and how many menus are open
 //   recent:<world name>               pick that row in the open Recent menu
 //   recent-x:<world name>             press that row's × (take it off the list); recent-x:!clear, Clear the list
@@ -162,6 +163,13 @@ foreach (string step in args.Skip(1))
             Pump(500);
             break;
         case "tool":
+            // The overlays have no buttons of their own: their rows in the Overlays menu, by label ("Grid lines")
+            if (controller.ToolbarWidget.OverlaysTool.Items.FirstOrDefault(item => string.Equals(item.Label, value, StringComparison.OrdinalIgnoreCase)) is OverlayItem overlay)
+            {
+                overlay.Tool.IsTurnedOn = !overlay.Tool.IsTurnedOn;
+                Pump(800);
+                break;
+            }
             IToolButton button = controller.ToolbarWidget.ToolButtonSegments.SelectMany(segment => segment.Tools)
                 .FirstOrDefault(tool => string.Equals(tool.ToolTip, value, StringComparison.OrdinalIgnoreCase) || string.Equals(tool.Name?.Trim(), value, StringComparison.OrdinalIgnoreCase) ||
                     // without the key a tooltip ends with, "Grid lines" for "Grid lines (G)"
@@ -301,7 +309,7 @@ foreach (string step in args.Skip(1))
                 Console.WriteLine($"  key list {(panel.IsOpen ? "open" : "closed")}; editing {panel.Editing?.ToString() ?? "-"}; message: {panel.Message ?? "-"}");
                 Console.WriteLine($"  kept: {(controller.Settings.Keys is { } kept ? string.Join(", ", kept.Select(k => $"{k.Key}={k.Value}")) : "(none)")}");
                 string ToolTipOf(string start) => controller.ToolbarWidget.ToolButtonSegments.SelectMany(segment => segment.Tools).First(t => t.ToolTip!.StartsWith(start)).ToolTip!;
-                Console.WriteLine($"  tooltips: {ToolTipOf("Grid")} | {ToolTipOf("Cardinal")} | {ToolTipOf("Keyboard")} | pin: {ToolTip.GetTip(controller.MarkupBar.FindControl<Button>("PinButton")!)} | hide: {ToolTip.GetTip(controller.MarkupBar.FindControl<Button>("HideButton")!)}");
+                Console.WriteLine($"  tooltips: {ToolTipOf("Night")} | {ToolTipOf("Measure")} | {ToolTipOf("Keyboard")} | pin: {ToolTip.GetTip(controller.MarkupBar.FindControl<Button>("PinButton")!)} | hide: {ToolTip.GetTip(controller.MarkupBar.FindControl<Button>("HideButton")!)}");
                 foreach (ShortcutHelp line in controller.Keys.Map.Help(false).SelectMany(g => g.Lines).Where(l => l.Action is not null && controller.Keys.IsChanged(l.Action.Value)))
                 {
                     Console.WriteLine($"  changed: {line.Keys} - {line.Description}");
@@ -319,6 +327,11 @@ foreach (string step in args.Skip(1))
                 main.MouseUp(onMain, MouseButton.Left, RawInputModifiers.None);
                 Pump(250);
             }
+            break;
+        case "labels":
+            controller.ToolbarWidget.ShowLabels = value != "off";
+            controller.Toolbar.Fit();
+            Pump(300);
             break;
         case "recent":
             if (value.Length == 0)

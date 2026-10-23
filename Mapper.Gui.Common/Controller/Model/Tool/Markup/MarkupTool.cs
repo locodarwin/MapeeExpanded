@@ -7,7 +7,7 @@ using WorldEditor;
 
 namespace Mapper.Gui.Controller
 {
-    // The Markup button: turned on, the markup bar shows and clicks on the map add and change pins and zones. Each
+    // The Mark button: turned on, the markup bar shows and clicks on the map add and change pins and zones. Each
     // world's markup is read when it opens and saved after every change. Whether markup is drawn at all is the bar's
     // Show switch, remembered in the settings
     public class MarkupTool : ToggleableTool

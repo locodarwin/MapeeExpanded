@@ -8,10 +8,11 @@ Upstream website: [mapee.net](https://www.mapee.net/home)
 
 # What's New?
 **Since 1.5.0** (not in a release yet)
+- A tidier toolbar: buttons in groups (a world, getting around, marking, what's drawn, how it's drawn, export, help), each with a label under a new icon that stays sharp on scaled screens and turns gold while on. **Open** browses for a world or picks a recent one; **Overlays** holds the grid, slime chunks, axes and chunk highlight, with a count of how many are on. In narrow windows the labels give way to icons only, and a right-click on the toolbar turns them off everywhere (see "The toolbar" below)
 - Change any shortcut key: click it in the key list and press the new one (see "Keyboard shortcuts" below)
 - Java worlds from 26.1 on show their Nether (Mapee looked in the wrong folder), and the player is placed where they really are, in the right dimension, rather than at the world spawn
 - Web maps update: exporting a web map again into the same folder draws only the regions where the game has saved something since, and keeps the rest, so refreshing a big map takes seconds. Changing the style, block filter, height cut or render settings, or a new version of Mapee, draws everything again, as does the export window's **Redraw everything** (`--full` for `mapee-cli`). A web map made in the app can be updated from the command line and the other way round
-- Find blocks: the toolbar's magnifying glass (or F) searches the whole dimension for any block, or for ready-made groups (diamonds, ancient debris, spawners, chests and barrels, emeralds, buried things), and marks what it finds on the map, with a list of every vein or cluster, nearest first, to step through or put a pin on (see "Find blocks" below). `mapee-cli find` lists them for a script or a spreadsheet
+- Find blocks: the toolbar's **Find** button (or F) searches the whole dimension for any block, or for ready-made groups (diamonds, ancient debris, spawners, chests and barrels, emeralds, buried things), and marks what it finds on the map, with a list of every vein or cluster, nearest first, to step through or put a pin on (see "Find blocks" below). `mapee-cli find` lists them for a script or a spreadsheet
 - `mapee-cli render` images now match the web map's tiles pixel for pixel (both draw regions in the same groups of four, so neighbours are shaded the same way)
 
 **Version 1.5.0**
@@ -51,22 +52,39 @@ The Linux build is a single AppImage, self-contained (no .NET needed). Make it e
 
 If it complains about FUSE, run it with `--appimage-extract-and-run`. It runs as a native Wayland app (following the monitor's scale, fractional ones too) and falls back to X11, where it takes the scale from `GDK_SCALE` or `AVALONIA_GLOBAL_SCALE_FACTOR`. The world browser looks in `~/.minecraft/saves` (Java) and `~/.local/share/mcpelauncher/games/com.mojang/minecraftWorlds` (Bedrock through mcpelauncher); anything else opens with Browse, or by dropping it on the window. Differences from Windows: the system's own window frame, and Go to, Add block and the custom-dimension list open as pop-ups under their buttons rather than as small windows. Given a command as its first argument (`render`, `webmap`, `find`, `worlds`, `styles`), the AppImage runs `mapee-cli` instead (see "Command line" below).
 
+# The toolbar
+
+From left to right, in groups:
+
+| Button | Does |
+|---|---|
+| **Open** | Browse for a world, or pick one opened lately (with none yet, it browses straight away) |
+| **Go to**, **Find** | Go to a place or a pin; find blocks anywhere in the dimension |
+| **Mark**, **Measure** | Pins and zones; measure a length (only one of the two takes clicks at a time) |
+| **Overlays** | Grid lines, slime chunks, axes and the chunk under the cursor, ticked on and off in its menu; the number on it says how many are on |
+| **Night**, **Live** | Night lighting; redraw what the game saves while the world is open |
+| **Filter**, **Render** | Which blocks are drawn; light, height offset and background |
+| **Export** | Save the map as an image or a web map |
+| **Keys** | The keyboard shortcuts, which can be changed there |
+
+A button is gold, with a bar under it, while it's on. Each one's tooltip names its key. Where the window is too narrow for the labels, the buttons show icons only; right-click the toolbar and untick **Show labels under the icons** to have icons only everywhere.
+
 # Markup
 
-The toolbar's **Markup** button (the flag) opens a bar under the toolbar with what a click on the map does:
+The toolbar's **Mark** button (the pin) opens a bar under the toolbar with what a click on the map does:
 
 - **Pin**: click to drop a pin on the block, and give it a label, colour, symbol and note. Click a pin to change it.
 - **Zone**: click each corner; double-click, press Enter or click the first corner to finish. Backspace takes the last corner back; hold Shift to snap corners to chunk corners.
 - **Rectangle**: drag out a rectangular zone; hold Shift to take in whole chunks.
 - **Select**: click a pin or zone to pick it, double-click to change it, Delete to remove it; drag a pin, or a picked zone's corners, to move them. On a picked zone, double-click an edge to add a corner there, or a corner to remove it.
 
-Dragging still moves the map in every mode, and a right-click on any pin or zone changes it even with the bar closed. Hovering over a zone shows its size in blocks and chunks. Ctrl+Z and Ctrl+Y undo and redo while the bar is open. **Places** lists the dimension's pins and zones (click one to go there), and the Go to window lists them too. **Export** and **Import** move markup between machines or onto a copy of a world; **Hide** hides it until the Markup button (or Shift+M) brings it back. P, Z, R and V pick the four modes from the keyboard, opening the bar if it's closed.
+Dragging still moves the map in every mode, and a right-click on any pin or zone changes it even with the bar closed. Hovering over a zone shows its size in blocks and chunks. Ctrl+Z and Ctrl+Y undo and redo while the bar is open. **Places** lists the dimension's pins and zones (click one to go there), and the Go to window lists them too. **Export** and **Import** move markup between machines or onto a copy of a world; **Hide** hides it until the Mark button (or Shift+M) brings it back. P, Z, R and V pick the four modes from the keyboard, opening the bar if it's closed.
 
 Markup is saved as you go, one file per world in the settings folder (`%APPDATA%\Mapee\Markup` on Windows, `~/.config/Mapee/Markup` on Linux), never in the world itself. It follows the path the world was opened from, as the recent worlds do, so a copied world starts without it until you import it. The export window's **Include pins and zones** puts it in screenshots, full-resolution images and web maps; in a web map, click a pin or zone to see its note, and **PINS** and **ZONES** (M and Z) switch them off.
 
 # Find blocks
 
-The toolbar's **Find blocks** button (the magnifying glass, or F) opens a window for finding blocks anywhere in the dimension on show, underground ones too, not only what the map shows from above:
+The toolbar's **Find** button (or F) opens a window for finding blocks anywhere in the dimension on show, underground ones too, not only what the map shows from above:
 
 - **Look for**: type in the search box and press Enter, or double-click a block in the list, to add it. The buttons under the list add a ready-made group: **Diamonds** and **Emeralds** (their ores in stone and deepslate), **Ancient debris**, **Spawners** (trial spawners too), **Chests and barrels** (copper chests too) and **Buried things** (suspicious sand and gravel). Up to eight at once, each marked in its own colour; × takes one off.
 - **From Y** and **to Y** keep the search between two heights; leave them blank for every height.
@@ -76,7 +94,7 @@ Zoomed out, each chunk holding any gets a small square for each thing it holds, 
 
 # Live reload
 
-With **Live** on (the circling arrows on the toolbar, on by default and remembered), Mapee looks at the open world's files every two seconds. That look is only a folder listing; nothing is read until the files have stopped changing for a whole look, so a save in progress is never read halfway (if the game keeps writing for ten seconds, Mapee reads anyway). Then:
+With **Live** on (the toolbar's **Live** button, on by default and remembered), Mapee looks at the open world's files every two seconds. That look is only a folder listing; nothing is read until the files have stopped changing for a whole look, so a save in progress is never read halfway (if the game keeps writing for ten seconds, Mapee reads anyway). Then:
 
 - **Java**: each region file that changed is drawn again; the save times inside it say how many chunks the game wrote. Newly explored regions appear.
 - **Bedrock**: Mapee opens the world's database again and reads only the records written since its last look (every record carries a sequence number), so it knows exactly which chunks changed without reading the rest of the world. Light reaches across chunk edges, so a chunk on a region's edge redraws the region beside it too.
@@ -85,7 +103,7 @@ Each region keeps its old picture until the new one is ready, so the map doesn't
 
 
 # Keyboard shortcuts
-Press **F1** or **?** in the app, or the keyboard button at the left end of the toolbar, for this list. None of them work while you're typing in a box, and the ones that need a world do nothing until one is open.
+Press **F1** or **?** in the app, or the toolbar's **Keys** button, for this list. None of them work while you're typing in a box, and the ones that need a world do nothing until one is open.
 
 | Keys | Does |
 |---|---|
@@ -97,7 +115,7 @@ Press **F1** or **?** in the app, or the keyboard button at the left end of the 
 | , . | Previous, next style |
 | H | Height panel: Surface, Slice, Caves in turn |
 | [ ] | Height down, up; with Shift, by 10 |
-| G S A C | Grid lines, slime chunks, axes, chunk highlighter |
+| G S A C | Overlays: grid lines, slime chunks, axes, chunk highlighter |
 | L | Measure length |
 | N | Night mode |
 | W | Live reload on or off |
@@ -108,8 +126,8 @@ Press **F1** or **?** in the app, or the keyboard button at the left end of the 
 | Ctrl+G | Go to a place, with the cursor in the coordinate box |
 | F | Find blocks |
 | Ctrl+E | Export as image or web map |
-| Ctrl+O | Load a world |
-| Ctrl+Shift+O | Recent worlds (Up, Down and Enter pick one) |
+| Ctrl+O | Browse for a world |
+| Ctrl+Shift+O | The Open menu: recent worlds (Up, Down and Enter pick one) |
 | Ctrl+F | Filter blocks |
 | F11 | Full screen, on Windows (Esc leaves it); on Linux the window manager's own key does this |
 

@@ -51,11 +51,19 @@
     </UserControl.Resources>
 
     <StackPanel>
+        <Button x:Name="BrowseButton" Style="{StaticResource RowButton}" Padding="8, 7" Click="BrowseButton_Click"
+                ToolTip="Pick a world folder, a level.dat or a .mcworld file">
+            <DockPanel Width="296">
+                <TextBlock x:Name="BrowseKey" DockPanel.Dock="Right" FontSize="12" Foreground="#FFAAAAAA"/>
+                <TextBlock Text="Browse for a world…" FontSize="13"/>
+            </DockPanel>
+        </Button>
+        <Border Height="1" Background="#FF707070"/>
         <TextBlock Text="Recent worlds" FontSize="11" Foreground="#FFAAAAAA" Margin="8, 6, 8, 3"/>
         <ScrollViewer MaxHeight="420" VerticalScrollBarVisibility="Auto">
             <StackPanel x:Name="Rows"/>
         </ScrollViewer>
-        <TextBlock x:Name="EmptyText" Text="No recent worlds. Load world opens one, or drop a world on the window."
+        <TextBlock x:Name="EmptyText" Text="No recent worlds yet. You can also drop a world on the window to open it."
                    FontSize="12" Foreground="#FFAAAAAA" TextWrapping="Wrap" Margin="8, 2, 8, 8" Visibility="Collapsed"/>
         <StackPanel x:Name="ClearSection">
             <Border Height="1" Background="#FF707070" Margin="0, 3, 0, 0"/>

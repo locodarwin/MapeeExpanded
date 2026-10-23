@@ -1,10 +1,9 @@
 ﻿using Mapper.Gui.Model;
+using System;
 #if AVALONIA
 using Avalonia.Controls;
-using ImageSource = Avalonia.Media.IImage;
 #else
 using System.Windows.Controls;
-using System.Windows.Media;
 #endif
 
 namespace Mapper.Gui.Controller
@@ -12,10 +11,25 @@ namespace Mapper.Gui.Controller
     public class ToolButton : IToolButton
     {
         public IToggleableTool Tool { get; set; }
-        public ImageSource? Icon { get; set; }
+        public ToolIcon? Icon { get; set; }
         public string? Name { get; set; }
         public string? ToolTip { get; set; }
+        public bool Menu { get; set; }
         public Button? Button { get; set; }
+
+        public int Badge
+        {
+            get => _badge;
+            set
+            {
+                if (_badge == value) return;
+                _badge = value;
+                BadgeChanged?.Invoke();
+            }
+        }
+        private int _badge;
+
+        public event Action? BadgeChanged;
 
         public ToolButton(IToggleableTool tool) 
         {

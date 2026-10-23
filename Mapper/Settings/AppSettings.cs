@@ -24,6 +24,8 @@ namespace Mapper
         public bool ShowMarkup { get; set; } = true;
         // Redraws what the game saves while a world is open, unless turned off
         public bool LiveReload { get; set; } = true;
+        // Labels under the toolbar's icons where the window is wide enough, unless turned off (a right-click on the toolbar)
+        public bool ToolbarLabels { get; set; } = true;
         public List<RecentWorld> RecentWorlds { get; set; } = [];
         // The shortcut keys changed from the built-in ones, by action name (ShortcutKeys)
         public Dictionary<string, string>? Keys { get; set; }

@@ -10,6 +10,11 @@
             <Setter Property="HorizontalContentAlignment" Value="Left" />
             <Setter Property="Padding" Value="8,4" />
         </Style>
+        <Style Selector="Button.browse">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Padding" Value="8,7" />
+        </Style>
         <Style Selector="Button.remove">
             <Setter Property="Width" Value="28" />
             <Setter Property="FontSize" Value="14" />
@@ -23,11 +28,19 @@
     </UserControl.Styles>
 
     <StackPanel>
+        <Button x:Name="BrowseButton" Classes="flat browse" Click="BrowseButton_Click"
+                ToolTip.Tip="Pick a world folder, a level.dat or a .mcworld file">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="Browse for a world…" FontSize="13" />
+                <TextBlock x:Name="BrowseKey" Grid.Column="1" FontSize="12" Foreground="#FFAAAAAA" VerticalAlignment="Center" />
+            </Grid>
+        </Button>
+        <Border Height="1" Background="#FF707070" />
         <TextBlock Text="Recent worlds" FontSize="11" Foreground="#FFAAAAAA" Margin="8,6,8,3" />
         <ScrollViewer MaxHeight="420">
             <StackPanel x:Name="Rows" />
         </ScrollViewer>
-        <TextBlock x:Name="EmptyText" Text="No recent worlds. Load world opens one, or drop a world on the window."
+        <TextBlock x:Name="EmptyText" Text="No recent worlds yet. You can also drop a world on the window to open it."
                    FontSize="12" Foreground="#FFAAAAAA" TextWrapping="Wrap" Margin="8,2,8,8" IsVisible="False" />
         <StackPanel x:Name="ClearSection">
             <Border Height="1" Background="#FF707070" Margin="0,3,0,0" />

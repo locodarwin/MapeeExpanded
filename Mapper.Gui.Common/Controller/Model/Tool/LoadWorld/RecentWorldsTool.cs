@@ -10,11 +10,13 @@ using System.Windows.Controls.Primitives;
 
 namespace Mapper.Gui.Controller
 {
-    // The Recent button: a menu of the worlds opened lately, each opening where the map was left. Taking a world off
-    // the list only changes the settings
+    // The Open button: a menu that browses for a world, then lists the worlds opened lately, each opening where the
+    // map was left. With none yet it browses straight away. Taking a world off the list only changes the settings
     public class RecentWorldsTool : ToggleableTool
     {
         public ToolButton? Owner { get; set; }
+        public BrowseTool? Browse { get; set; }
+        public ShortcutKeys? Keys { get; set; }
         public WorldOpener Opener { get; }
         public MapViewer MapViewer { get; }
 
@@ -35,6 +37,12 @@ namespace Mapper.Gui.Controller
             IsTurnedOn = false;
             if (_isActive) return;
 
+            if (Opener.Settings.RecentWorlds.Count == 0 && Browse is not null)
+            {
+                Browse.IsTurnedOn = true;
+                return;
+            }
+
             _isActive = true;
             OpenMenu();
         }
@@ -48,7 +56,7 @@ namespace Mapper.Gui.Controller
             }
 
             AppSettings settings = Opener.Settings;
-            RecentWorldsMenu menu = new(settings.RecentWorlds, Opener.CurrentSource, DateTime.UtcNow);
+            RecentWorldsMenu menu = new(settings.RecentWorlds, Opener.CurrentSource, DateTime.UtcNow, Keys?.Map.KeyText(ShortcutAction.LoadWorld));
 
 #if AVALONIA
             // A flyout under the button, as Go to's
@@ -64,6 +72,11 @@ namespace Mapper.Gui.Controller
 #endif
 
             menu.CloseRequested += (sender, e) => Close();
+            menu.BrowseRequested += (sender, e) =>
+            {
+                Close();
+                if (Browse is not null) Browse.IsTurnedOn = true;
+            };
             menu.Picked += (sender, world) =>
             {
                 Close();

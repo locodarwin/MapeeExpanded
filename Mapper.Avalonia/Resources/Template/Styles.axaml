@@ -36,13 +36,13 @@
     <!-- Tool buttons: ToolButtonHook sets the background for every state itself -->
     <Style Selector="Button.tool">
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="0" />
+        <Setter Property="CornerRadius" Value="4" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="ToolTip.ShowDelay" Value="200" />
     </Style>
     <Style Selector="Button.tool /template/ ContentPresenter#PART_ContentPresenter, Button.tool:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.tool:pressed /template/ ContentPresenter#PART_ContentPresenter, Button.tool:disabled /template/ ContentPresenter#PART_ContentPresenter">
         <Setter Property="Background" Value="{Binding $parent[Button].Background}" />
-        <Setter Property="CornerRadius" Value="0" />
+        <Setter Property="CornerRadius" Value="4" />
     </Style>
     <Style Selector="Button.tool:pressed">
         <Setter Property="RenderTransform" Value="none" />

@@ -1,217 +1,180 @@
-﻿using Mapper.Gui.Model;
+using Mapper.Gui.Model;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Media;
 
 namespace Mapper.Gui
 {
-    /// <summary>
-    /// Interaction logic for ToolbarControl.xaml
-    /// </summary>
+    // The buttons in their groups, each an icon with a label under it. Where the window is too narrow for the labels
+    // beside the zoom box and the dimension buttons, or they're turned off (right-click), the buttons are icons only
     public partial class ToolbarControl : UserControl
     {
         public IToolbarWidget Toolbar { get; }
+
+        // Room the bar leaves either side of itself, together, for the zoom box and the dimension buttons
+        private const double Beside = 270;
+        private const double LabelledHeight = 50, IconHeight = 34;
+
+        // The badge's holder is hidden with the labels: on an icon-only button it would cover the icon, and gold says
+        // as much
+        private readonly List<(Button Button, FrameworkElement Label, FrameworkElement Badge)> _buttons = [];
+        private readonly List<Border> _separators = [];
+        private double _labelledWidth;
+        private bool? _labels;
+        private FrameworkElement? _watched;
 
         public ToolbarControl(IToolbarWidget toolbar)
         {
             InitializeComponent();
 
             Toolbar = toolbar;
+            LoadSegments();
+            CreateContextMenu();
+
+            Loaded += (sender, e) =>
+            {
+                if (_watched is not null) _watched.SizeChanged -= Watched_SizeChanged;
+                _watched = Parent as FrameworkElement;
+                if (_watched is not null) _watched.SizeChanged += Watched_SizeChanged;
+                Fit();
+            };
         }
 
-        private void UserControl_Loaded(object sender, RoutedEventArgs e)
+        private void Watched_SizeChanged(object sender, SizeChangedEventArgs e) => Fit();
+
+        public void Fit()
         {
-            double width = LoadSegments();
-            Width = width;
+            if (_labelledWidth == 0)
+            {
+                ShowLabels(true);
+                Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                _labelledWidth = DesiredSize.Width;
+            }
+
+            double room = _watched?.ActualWidth ?? double.PositiveInfinity;
+            ShowLabels(Toolbar.ShowLabels && room >= _labelledWidth + Beside);
         }
 
-        private double LoadSegments()
+        private void ShowLabels(bool labels)
         {
-            double width = 0;
+            if (_labels == labels) return;
+            _labels = labels;
 
+            foreach (var (button, label, badge) in _buttons)
+            {
+                label.Visibility = labels ? Visibility.Visible : Visibility.Collapsed;
+                badge.Visibility = labels ? Visibility.Visible : Visibility.Collapsed;
+                button.Height = labels ? LabelledHeight : IconHeight;
+                button.MinWidth = labels ? 54 : IconHeight;
+            }
+            foreach (Border separator in _separators) separator.Height = labels ? 30 : 22;
+        }
+
+        private void CreateContextMenu()
+        {
+            MenuItem item = new() { Header = "Show labels under the icons", IsCheckable = true, IsChecked = Toolbar.ShowLabels };
+            item.Click += (sender, e) =>
+            {
+                Toolbar.ShowLabels = item.IsChecked;
+                Fit();
+            };
+            ContextMenu = new ContextMenu() { Items = { item } };
+        }
+
+        private void LoadSegments()
+        {
             for (int i = 0; i < Toolbar.ToolButtonSegments.Count; i++)
             {
-                IToolButtonSegment segment = Toolbar.ToolButtonSegments[i];
+                if (i > 0) AddSeparator();
+                foreach (IToolButton button in Toolbar.ToolButtonSegments[i].Tools) ButtonContainer.Children.Add(CreateButton(button));
+            }
+        }
 
-                width += AddGap(segment.LeftGap);
-                width += LoadSegment(segment);
-                width += AddGap(segment.RightGap);
+        private void AddSeparator()
+        {
+            Border separator = new()
+            {
+                Width = 1,
+                Background = new SolidColorBrush(Color.FromRgb(71, 71, 71)),
+                Margin = new Thickness(5, 0, 5, 0),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            _separators.Add(separator);
+            ButtonContainer.Children.Add(separator);
+        }
+
+        private Button CreateButton(IToolButton button)
+        {
+            // Recoloured by the hook as the button is turned on and off, with the label and the menu arrow
+            SolidColorBrush ink = new(ToolButtonHook.Ink);
+
+            TextBlock name = new() { Text = button.Name ?? string.Empty, FontSize = 11, Foreground = ink };
+            StackPanel label = new() { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 3, 0, 4) };
+            label.Children.Add(name);
+            if (button.Menu)
+            {
+                FrameworkElement arrow = ToolIconView.Create(ToolIcons.Chevron, ink, 9);
+                arrow.Margin = new Thickness(2, 1, 0, 0);
+                arrow.VerticalAlignment = VerticalAlignment.Center;
+                label.Children.Add(arrow);
             }
 
-            return width;
-        }
-        private double LoadSegment(IToolButtonSegment segment) 
-        {
-            double width = 0;
+            StackPanel middle = new() { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
+            if (button.Icon is ToolIcon icon) middle.Children.Add(ToolIconView.Create(icon, ink, 22));
+            middle.Children.Add(label);
 
-            ToolButtonHook? prevHook = null;
-            DockPanel? prevPanel = null;
-            Border? prevSeparator = null;
-
-            for (int i = 0; i < segment.Tools.Count; i++)
+            Border bar = new()
             {
-                IToolButton button = segment.Tools[i];
+                Height = 2,
+                CornerRadius = new CornerRadius(1),
+                Background = new SolidColorBrush(ToolButtonHook.OnInk),
+                VerticalAlignment = VerticalAlignment.Bottom,
+                Margin = new Thickness(10, 0, 10, 2),
+                Visibility = Visibility.Collapsed
+            };
 
-                Button control = CreateButton(button);
-
-                ButtonContainer.ColumnDefinitions.Add(new ColumnDefinition()
-                {
-                    Width = new GridLength(0, GridUnitType.Auto)
-                });
-
-                Grid.SetRow(control, 0);
-                Grid.SetColumn(control, ButtonContainer.ColumnDefinitions.Count - 1);
-                ButtonContainer.Children.Add(control);
-
-                Size size = new Size(double.PositiveInfinity, double.PositiveInfinity);
-                control.Measure(size);
-                control.Arrange(new Rect(control.DesiredSize));
-
-                ToolButtonHook hook = new ToolButtonHook(button);
-                if (prevHook is not null && prevPanel is not null && prevSeparator is not null)
-                {
-                    _ = new SeparatorHook(prevPanel, prevSeparator, prevHook, hook);
-                }
-
-                width += control.ActualWidth;
-                if (i < segment.Tools.Count - 1)
-                {
-                    width += AddSeparator(out DockPanel panel, out Border separator);
-
-                    prevPanel = panel;
-                    prevSeparator = separator;
-                }
-
-                prevHook = hook;
-            }
-
-            return width;
-        }
-        private double AddGap(double width)
-        {
-            if (width <= 0) return 0;
-
-            ButtonContainer.ColumnDefinitions.Add(new ColumnDefinition()
+            TextBlock count = new()
             {
-                Width = new GridLength(width, GridUnitType.Pixel)
-            });
-
-            return width;
-        }
-        private double AddSeparator(out DockPanel panel, out Border separator) 
-        {
-            panel = CreateSeparator(out separator);
-
-            ButtonContainer.ColumnDefinitions.Add(new ColumnDefinition()
+                FontSize = 10,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(Color.FromRgb(28, 28, 28)),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            Border badge = new()
             {
-                Width = new GridLength(panel.Width, GridUnitType.Pixel)
-            });
+                MinWidth = 14,
+                Height = 14,
+                CornerRadius = new CornerRadius(7),
+                Padding = new Thickness(3, 0, 3, 0),
+                Background = new SolidColorBrush(ToolButtonHook.OnInk),
+                HorizontalAlignment = HorizontalAlignment.Right,
+                VerticalAlignment = VerticalAlignment.Top,
+                Margin = new Thickness(0, 3, 6, 0),
+                Child = count,
+                Visibility = Visibility.Collapsed
+            };
+            Grid badgeHolder = new();
+            badgeHolder.Children.Add(badge);
 
-            Grid.SetRow(panel, 0);
-            Grid.SetColumn(panel, ButtonContainer.ColumnDefinitions.Count - 1);
-            ButtonContainer.Children.Add(panel);
+            Grid content = new();
+            content.Children.Add(middle);
+            content.Children.Add(bar);
+            content.Children.Add(badgeHolder);
 
-            return panel.Width;
-        }
-
-        private Button CreateButton(IToolButton button) 
-        {
-            Button output = new() 
+            Button output = new()
             {
-                Width = double.NaN,
-                Height = 33,
-                Content = CreatePanel(button),
+                Content = content,
+                Padding = new Thickness(6, 0, 6, 0),
+                Margin = new Thickness(1, 0, 1, 0),
                 ToolTip = button.ToolTip,
                 Style = Resources["ToolButton"] as Style
             };
 
             button.SetButton(output);
-
-            return output;
-        }
-        private StackPanel CreatePanel(IToolButton button) 
-        {
-            StackPanel output = new()
-            {
-                Width = double.NaN,
-                Height = 33,
-                Orientation = Orientation.Horizontal,
-                HorizontalAlignment = HorizontalAlignment.Left,
-                Margin = new Thickness(0, 0, 6, 0)
-            };
-
-            Image image = CreateImageControl(button);
-            TextBlock block = CreateTextBlockControl(button);
-
-            output.Children.Add(image);
-            output.Children.Add(block);
-
-            if (image.Visibility == Visibility.Visible && block.Visibility == Visibility.Visible) 
-            {
-                image.Margin = new Thickness(image.Margin.Left + 2, image.Margin.Top, image.Margin.Right, image.Margin.Bottom);
-            }
-
-            return output;
-        }
-        private Image CreateImageControl(IToolButton button) 
-        {
-            Image output = new() 
-            {
-                Stretch = Stretch.None,
-                Margin = new Thickness(5, 0, 0, 0)
-            };
-
-            if (button.Icon is not null)
-            {
-                output.Source = button.Icon;
-            }
-            else 
-            {
-                output.Visibility = Visibility.Collapsed;
-                return output;
-            }
-
-            return output;
-        }
-        private TextBlock CreateTextBlockControl(IToolButton button)
-        {
-            TextBlock textBlock = new() 
-            {
-                Foreground = new SolidColorBrush(Color.FromRgb(239, 239, 239)),
-                FontSize = 15,
-                Margin = new Thickness(7, 7, 3, 0)
-            };
-
-            if (button.Name is not null)
-            {
-                textBlock.Text = button.Name;
-            }
-            else
-            {
-                textBlock.Visibility = Visibility.Collapsed;
-                return textBlock;
-            }
-
-            return textBlock;
-        }
-
-        private DockPanel CreateSeparator(out Border border) 
-        {
-            DockPanel output = new DockPanel() 
-            {
-                Background = Brushes.Transparent,
-                Width = 1
-            };
-
-            border = new Border()
-            {
-                BorderBrush = new SolidColorBrush(Color.FromRgb(112, 112, 112)),
-                BorderThickness = new Thickness(0, 0, 1, 0),
-                Margin = new Thickness(0, 7, 0, 7)
-            };
-
-            output.Children.Add(border);
+            _ = new ToolButtonHook(button, ink, bar, badge, count);
+            _buttons.Add((output, label, badgeHolder));
 
             return output;
         }

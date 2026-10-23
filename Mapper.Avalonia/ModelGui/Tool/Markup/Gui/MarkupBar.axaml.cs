@@ -13,7 +13,7 @@ using Avalonia.Threading;
 
 namespace Mapper.Gui
 {
-    // Under the toolbar while the Markup button is on: what a click on the map does, the Places list, undo, and
+    // Under the toolbar while the Mark button is on: what a click on the map does, the Places list, undo, and
     // markup files. It also shows the details popup whenever the editor asks for one
     public partial class MarkupBar : UserControl
     {
@@ -90,7 +90,7 @@ namespace Mapper.Gui
             Tip(RectangleButton, "Drag out a rectangular zone", ShortcutAction.RectangleMode);
             Tip(SelectButton, "Pick, move and edit pins and zones", ShortcutAction.SelectMode);
             string show = keys.KeyText(ShortcutAction.ShowMarkup) is string key ? $" or {key}" : "";
-            ToolTip.SetTip(HideButton, $"Hide pins and zones until the Markup button{show} brings them back");
+            ToolTip.SetTip(HideButton, $"Hide pins and zones until the Mark button{show} brings them back");
         }
 
         private void ShowMode()

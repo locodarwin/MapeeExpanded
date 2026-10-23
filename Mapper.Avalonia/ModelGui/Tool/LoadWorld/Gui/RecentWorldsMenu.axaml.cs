@@ -12,22 +12,24 @@ using WorldEditor;
 
 namespace Mapper.Gui
 {
-    // What the Recent button shows: a row per remembered world, most recent first, with an × to take it off the list.
-    // Up and Down move between rows, Enter opens one, Esc closes; RecentWorldsTool acts on what's picked
+    // What the Open button shows: Browse, then a row per remembered world, most recent first, with an × to take it off
+    // the list. Up and Down move between rows, Enter opens one, Esc closes; RecentWorldsTool acts on what's picked
     public partial class RecentWorldsMenu : UserControl
     {
         public event EventHandler<RecentWorld>? Picked;
         public event EventHandler<RecentWorld>? Removed;
         public event EventHandler? Cleared;
         public event EventHandler? CloseRequested;
+        public event EventHandler? BrowseRequested;
 
         private static readonly IBrush Name = new SolidColorBrush(Color.FromRgb(224, 224, 224));
         private static readonly IBrush Detail = new SolidColorBrush(Color.FromRgb(160, 160, 160));
         private readonly List<Button> _rows = [];
 
-        public RecentWorldsMenu(IReadOnlyList<RecentWorld> worlds, string? current, DateTime nowUtc)
+        public RecentWorldsMenu(IReadOnlyList<RecentWorld> worlds, string? current, DateTime nowUtc, string? browseKey = null)
         {
             InitializeComponent();
+            BrowseKey.Text = browseKey ?? string.Empty;
             Show(worlds, current, nowUtc);
 
             AddHandler(KeyDownEvent, (sender, e) =>
@@ -76,17 +78,20 @@ namespace Mapper.Gui
             if (IsVisible && _rows.Count > 0 && !_rows.Any(r => r.IsFocused)) _rows[0].Focus();
         }
 
+        // The latest world, so Enter reopens it; Browse when there's none
         public void FocusFirst()
         {
-            if (_rows.Count > 0) _rows[0].Focus();
+            (_rows.Count > 0 ? _rows[0] : BrowseButton).Focus();
         }
 
         private void MoveFocus(int by)
         {
-            if (_rows.Count == 0) return;
-            int at = _rows.FindIndex(r => r.IsFocused);
-            _rows[Math.Clamp(at < 0 ? 0 : at + by, 0, _rows.Count - 1)].Focus();
+            List<Button> rows = [BrowseButton, .. _rows];
+            int at = rows.FindIndex(r => r.IsFocused);
+            rows[Math.Clamp(at < 0 ? 0 : at + by, 0, rows.Count - 1)].Focus();
         }
+
+        private void BrowseButton_Click(object? sender, RoutedEventArgs e) => BrowseRequested?.Invoke(this, EventArgs.Empty);
 
         private void ClearButton_Click(object? sender, RoutedEventArgs e) => Cleared?.Invoke(this, EventArgs.Empty);
     }

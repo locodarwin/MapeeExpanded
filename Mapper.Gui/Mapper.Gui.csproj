@@ -67,17 +67,6 @@
     <None Remove="Resources\Image\Misc\Render_32px.png" />
     <None Remove="Resources\Image\Scanner\Add_64px.png" />
     <None Remove="Resources\Image\Scanner\Trash_64px.png" />
-    <None Remove="Resources\Image\ToolButton\Axis_22px.png" />
-    <None Remove="Resources\Image\ToolButton\ChunkHighlight_22px.png" />
-    <None Remove="Resources\Image\ToolButton\DayNightCycle_22px.png" />
-    <None Remove="Resources\Image\ToolButton\ExportAsImage_22px.png" />
-    <None Remove="Resources\Image\ToolButton\Filter_22px.png" />
-    <None Remove="Resources\Image\ToolButton\GoTo_22px.png" />
-    <None Remove="Resources\Image\ToolButton\Grid_22px.png" />
-    <None Remove="Resources\Image\ToolButton\LoadWorld_22px.png" />
-    <None Remove="Resources\Image\ToolButton\MeasureLength_22px.png" />
-    <None Remove="Resources\Image\ToolButton\RenderSettings_22px.png" />
-    <None Remove="Resources\Image\ToolButton\Slime_22px.png" />
     <None Remove="Resources\Image\WindowFrame\Close_16px.png" />
     <None Remove="Resources\Image\WindowFrame\Maximize_16px.png" />
     <None Remove="Resources\Image\WindowFrame\Minimize_16px.png" />
@@ -119,22 +108,6 @@
     <Resource Include="Resources\Image\Misc\Render_32px.png" />
     <Resource Include="Resources\Image\Scanner\Add_64px.png" />
     <Resource Include="Resources\Image\Scanner\Trash_64px.png" />
-    <Resource Include="Resources\Image\ToolButton\Axis_22px.png" />
-    <Resource Include="Resources\Image\ToolButton\ChunkHighlight_22px.png" />
-    <Resource Include="Resources\Image\ToolButton\DayNightCycle_22px.png" />
-    <Resource Include="Resources\Image\ToolButton\ExportAsImage_22px.png" />
-    <Resource Include="Resources\Image\ToolButton\Filter_22px.png" />
-    <Resource Include="Resources\Image\ToolButton\GoTo_22px.png" />
-    <Resource Include="Resources\Image\ToolButton\Grid_22px.png" />
-    <Resource Include="Resources\Image\ToolButton\LoadWorld_22px.png" />
-    <Resource Include="Resources\Image\ToolButton\MeasureLength_22px.png" />
-    <Resource Include="Resources\Image\ToolButton\Markup_22px.png" />
-    <Resource Include="Resources\Image\ToolButton\Shortcuts_22px.png" />
-    <Resource Include="Resources\Image\ToolButton\Recent_22px.png" />
-    <Resource Include="Resources\Image\ToolButton\Live_22px.png" />
-    <Resource Include="Resources\Image\ToolButton\Find_22px.png" />
-    <Resource Include="Resources\Image\ToolButton\RenderSettings_22px.png" />
-    <Resource Include="Resources\Image\ToolButton\Slime_22px.png" />
     <Resource Include="Resources\Image\WindowFrame\Close_16px.png" />
     <Resource Include="Resources\Image\WindowFrame\Maximize_16px.png" />
     <Resource Include="Resources\Image\WindowFrame\Minimize_16px.png" />
@@ -172,6 +145,10 @@
   <ItemGroup>
     <None Update="LICENSE.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\THIRD-PARTY-NOTICES.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>THIRD-PARTY-NOTICES.txt</Link>
     </None>
   </ItemGroup>
 

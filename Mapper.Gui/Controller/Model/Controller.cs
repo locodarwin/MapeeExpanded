@@ -26,6 +26,7 @@ namespace Mapper.Gui.Controller
         public TextPainter TextPainter { get; }
         public MarkupPainter MarkupPainter { get; private set; }
         public MarkupBar MarkupBar { get; private set; }
+        public ToolbarControl Toolbar { get; private set; } = null!;
         public ShortcutKeys Keys { get; }
         public ShortcutRunner Shortcuts { get; private set; }
         public ShortcutsPanel ShortcutsPanel { get; private set; }
@@ -216,13 +217,14 @@ namespace Mapper.Gui.Controller
         {
             ToolbarWidget = new ToolbarWidget(MainWindow, ImplementedRenderer, WorldOpener, Keys);
 
-            return new ToolbarControl(ToolbarWidget)
+            return Toolbar = new ToolbarControl(ToolbarWidget)
             {
                 VerticalAlignment = VerticalAlignment.Top,
                 Margin = new Thickness(0, 5, 0, 0)
             };
         }
-        // Under the toolbar while the Markup button is on; the markup itself is drawn over the toolbar's overlays
+        // Under the toolbar while the Mark button is on, however tall the toolbar is (it loses its labels in narrow
+        // windows); the markup itself is drawn over the toolbar's overlays
         private Control CreateMarkupBar()
         {
             MarkupTool tool = ToolbarWidget.MarkupTool;
@@ -231,12 +233,15 @@ namespace Mapper.Gui.Controller
             ImplementedRenderer.MarkupPainter = MarkupPainter;
             _ = new MarkupInput(tool, GraphicsCanvas);
 
-            return MarkupBar = new MarkupBar(tool, GraphicsCanvas, Keys)
+            MarkupBar = new MarkupBar(tool, GraphicsCanvas, Keys)
             {
                 VerticalAlignment = VerticalAlignment.Top,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 Margin = new Thickness(0, 47, 0, 0)
             };
+            Toolbar.SizeChanged += (sender, e) => MarkupBar.Margin = new Thickness(0, Toolbar.Margin.Top + e.NewSize.Height + 7, 0, 0);
+
+            return MarkupBar;
         }
         private Control CreateDimensionControl() 
         {

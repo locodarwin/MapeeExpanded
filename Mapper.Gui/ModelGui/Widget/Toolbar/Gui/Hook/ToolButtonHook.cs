@@ -1,31 +1,34 @@
-﻿using Mapper.Gui.Model;
+using Mapper.Gui.Model;
+using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 
 namespace Mapper.Gui
 {
+    // Keeps a toolbar button looking as its tool is: gold with a bar under it while on (or, for Overlays, while any
+    // overlay is), lighter under the mouse, greyed while it can't be used
     public class ToolButtonHook
     {
+        public static readonly Color Ink = Color.FromRgb(216, 216, 216);
+        public static readonly Color OnInk = Color.FromRgb(255, 216, 77);
+        private static readonly Color OverInk = Color.FromRgb(255, 255, 255);
+        private static readonly Color DisabledInk = Color.FromRgb(90, 90, 90);
+        private static readonly Color DisabledOnInk = Color.FromRgb(140, 123, 58);
+
         public IToolButton ToolButton { get; set; }
 
         public MouseColorProperties TurnedOff { get; } = new MouseColorProperties()
         {
             Default = new SolidColorBrush(Color.FromRgb(28, 28, 28)),
-            MouseOver = new SolidColorBrush(Color.FromRgb(80, 80, 80)),
-            MouseDown = new SolidColorBrush(Color.FromRgb(100, 100, 100))
+            MouseOver = new SolidColorBrush(Color.FromRgb(46, 46, 46)),
+            MouseDown = new SolidColorBrush(Color.FromRgb(58, 58, 58))
         };
         public MouseColorProperties TurnedOn { get; } = new MouseColorProperties()
         {
-            Default = new SolidColorBrush(Color.FromRgb(100, 100, 100)),
-            MouseOver = new SolidColorBrush(Color.FromRgb(120, 120, 120)),
-            MouseDown = new SolidColorBrush(Color.FromRgb(140, 140, 140))
-        };
-
-        public MouseColorProperties DisabledTurnedOn { get; } = new MouseColorProperties()
-        {
-            Default = new SolidColorBrush(Color.FromRgb(50, 50, 50)),
-            MouseOver = new SolidColorBrush(Color.FromRgb(120, 120, 120)),
-            MouseDown = new SolidColorBrush(Color.FromRgb(140, 140, 140))
+            Default = new SolidColorBrush(Color.FromRgb(58, 52, 32)),
+            MouseOver = new SolidColorBrush(Color.FromRgb(69, 62, 39)),
+            MouseDown = new SolidColorBrush(Color.FromRgb(80, 72, 45))
         };
 
         private enum MouseState
@@ -35,66 +38,73 @@ namespace Mapper.Gui
             Down
         }
 
-        public ToolButtonHook(IToolButton tool)
+        private readonly SolidColorBrush _ink;
+        private readonly Border _bar;
+        private readonly Border _badge;
+        private readonly TextBlock _count;
+
+        public ToolButtonHook(IToolButton tool, SolidColorBrush ink, Border bar, Border badge, TextBlock count)
         {
             ToolButton = tool;
+            _ink = ink;
+            _bar = bar;
+            _badge = badge;
+            _count = count;
 
             StartHook();
-            OnToolTurnedOn(ToolButton.Tool.IsTurnedOn);
+            Refresh();
         }
+
+        private bool IsOn => ToolButton.Tool.IsTurnedOn || ToolButton.Badge > 0;
 
         private void StartHook()
         {
-            ToolButton.Tool.OnTurnedOn += OnToolTurnedOn;
+            ToolButton.Tool.OnTurnedOn += isOn => Refresh();
             ToolButton.Tool.OnEnabled += OnEnabled;
+            ToolButton.BadgeChanged += Refresh;
 
             if (ToolButton.Button is null) return;
 
             ToolButton.Button.IsEnabled = ToolButton.Tool.Enabled;
             ToolButton.Button.Click += (sender, e) => ToolButton.Tool.IsTurnedOn = !ToolButton.Tool.IsTurnedOn;
-            ToolButton.Button.PreviewMouseDown += (sender, e) => SetBackground(MouseState.Down, GetColorProperties());
-            ToolButton.Button.PreviewMouseUp += (sender, e) => SetBackground(MouseState.Over, GetColorProperties());
-            ToolButton.Button.MouseLeave += (sender, e) => SetBackground(MouseState.Default, GetColorProperties());
-            ToolButton.Button.MouseEnter += (sender, e) => SetBackground(MouseState.Over, GetColorProperties());
+            ToolButton.Button.PreviewMouseDown += (sender, e) => Refresh();
+            ToolButton.Button.PreviewMouseUp += (sender, e) => Refresh();
+            ToolButton.Button.MouseLeave += (sender, e) => Refresh();
+            ToolButton.Button.MouseEnter += (sender, e) => Refresh();
         }
 
-        private void OnToolTurnedOn(bool isOn)
-        {
-            SetBackground(GetCurrentMouseState(), GetColorProperties());
-        }
         private void OnEnabled(bool isEnabled)
         {
-            if (ToolButton.Button is null) return;
-
-            SetBackground(GetCurrentMouseState(), GetColorProperties());
-            ToolButton.Button.IsEnabled = isEnabled;
+            if (ToolButton.Button is not null) ToolButton.Button.IsEnabled = isEnabled;
+            Refresh();
         }
 
         private MouseState GetCurrentMouseState()
         {
-            if (ToolButton.Button is null || !ToolButton.Button.IsMouseOver) return MouseState.Default;
-
-            bool leftButtonPressed = Mouse.LeftButton == MouseButtonState.Pressed;
-            return leftButtonPressed ? MouseState.Down : MouseState.Over;
-        }
-        private MouseColorProperties GetColorProperties()
-        {
-            if (ToolButton.Tool.Enabled) return ToolButton.Tool.IsTurnedOn ? TurnedOn : TurnedOff;
-            return ToolButton.Tool.IsTurnedOn ? DisabledTurnedOn : TurnedOff;
+            if (ToolButton.Button is null || !ToolButton.Button.IsMouseOver || !ToolButton.Tool.Enabled) return MouseState.Default;
+            return Mouse.LeftButton == MouseButtonState.Pressed ? MouseState.Down : MouseState.Over;
         }
 
-        private void SetBackground(MouseState mouseState, MouseColorProperties properties)
+        private void Refresh()
         {
+            bool on = IsOn, enabled = ToolButton.Tool.Enabled;
+            MouseState mouse = GetCurrentMouseState();
+
+            _ink.Color = !enabled ? (on ? DisabledOnInk : DisabledInk) : on ? OnInk : mouse == MouseState.Default ? Ink : OverInk;
+            _bar.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+            _bar.Opacity = enabled ? 1 : 0.5;
+            _badge.Visibility = ToolButton.Badge > 0 ? Visibility.Visible : Visibility.Collapsed;
+            _count.Text = ToolButton.Badge.ToString();
+
             if (ToolButton.Button is null) return;
 
-            SolidColorBrush color = mouseState switch
+            MouseColorProperties properties = on && enabled ? TurnedOn : TurnedOff;
+            ToolButton.Button.Background = mouse switch
             {
                 MouseState.Default => properties.Default,
                 MouseState.Over => properties.MouseOver,
                 _ => properties.MouseDown,
             };
-
-            ToolButton.Button.Background = color;
         }
     }
 }

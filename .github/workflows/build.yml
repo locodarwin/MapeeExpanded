@@ -46,7 +46,7 @@ jobs:
       # A small made-up world (Tests/Mapee.Tests/Fixtures/SmokeWorld.cs): the sample worlds are private
       - name: Write the smoke test world
         env:
-          MAPEE_SMOKE_WORLD: out/world
+          MAPEE_SMOKE_WORLD: ${{ github.workspace }}/out/world
         run: dotnet test Tests/Mapee.Tests -c Release --filter "FullyQualifiedName~SmokeWorldTests"
       # Opens the world, presses every toolbar button and opens what each leads to (see Mapper.Gui/SmokeTest.cs);
       # the pictures and report.txt are kept as an artifact, pass or fail

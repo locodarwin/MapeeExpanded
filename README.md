@@ -9,7 +9,7 @@ Upstream website: [mapee.net](https://www.mapee.net/home)
 ![Mapee Expanded with a Bedrock world open: an island base with pins and a zone](docs/images/app-main.webp)
 
 # What's New?
-**Unreleased**
+**Version 1.8.0**
 - Structures: a new overlay marks the villages, strongholds, temples, monuments, fortresses and other structures the game has generated, with their names, and outlines the ground each covers. While it's on, Go to lists them nearest first, and typing a name there picks them out (see "Structures" below). `mapee-cli structures` lists them
 - `mapee-cli watch` keeps a web map up to date while the game is played, drawing the regions it saves every half minute or so (see "Command line" below)
 
@@ -61,8 +61,8 @@ Upstream website: [mapee.net](https://www.mapee.net/home)
 
 The Linux build is a single AppImage, self-contained (no .NET needed). Make it executable and run it:
 
-    chmod +x MapeeExpanded-1.7.0-x86_64.AppImage
-    ./MapeeExpanded-1.7.0-x86_64.AppImage [world]
+    chmod +x MapeeExpanded-1.8.0-x86_64.AppImage
+    ./MapeeExpanded-1.8.0-x86_64.AppImage [world]
 
 If it complains about FUSE, run it with `--appimage-extract-and-run`. It runs as a native Wayland app (following the monitor's scale, fractional ones too) and falls back to X11, where it takes the scale from `GDK_SCALE` or `AVALONIA_GLOBAL_SCALE_FACTOR`. The world browser looks in `~/.minecraft/saves` (Java) and `~/.local/share/mcpelauncher/games/com.mojang/minecraftWorlds` (Bedrock through mcpelauncher); anything else opens with Browse, or by dropping it on the window. Differences from Windows: the system's own window frame, and Go to, Add block and the custom-dimension list open as pop-ups under their buttons rather than as small windows. Given a command as its first argument (`render`, `webmap`, `watch`, `find`, `portals`, `structures`, `worlds`, `styles`), the AppImage runs `mapee-cli` instead (see "Command line" below).
 

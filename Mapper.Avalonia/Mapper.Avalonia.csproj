@@ -11,9 +11,9 @@
     <ApplicationIcon>..\Mapper.Gui\Resources\Image\Logo\LogoIcon_48px.ico</ApplicationIcon>
     <ServerGarbageCollection>true</ServerGarbageCollection>
     <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
-    <AssemblyVersion>1.6.0</AssemblyVersion>
-    <FileVersion>1.6.0</FileVersion>
-    <Version>1.6.0</Version>
+    <AssemblyVersion>1.7.0</AssemblyVersion>
+    <FileVersion>1.7.0</FileVersion>
+    <Version>1.7.0</Version>
     <Product>Mapee Expanded</Product>
     <DefineConstants>$(DefineConstants);AVALONIA</DefineConstants>
   </PropertyGroup>

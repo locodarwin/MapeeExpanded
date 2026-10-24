@@ -9,7 +9,7 @@ Upstream website: [mapee.net](https://www.mapee.net/home)
 ![Mapee Expanded with a Bedrock world open: an island base with pins and a zone](docs/images/app-main.webp)
 
 # What's New?
-**Unreleased**
+**Version 1.7.0**
 - Where mobs can spawn: a new overlay shades every block a hostile mob could spawn on at night, so you can see what still needs a torch. With a height cut it shows the floors under the cut, inside a building or a cave (see "Where mobs can spawn" below)
 - Nether portals: a new overlay marks each portal in the Overworld and the Nether with where it leads, and shows in red a portal that leads into one whose way back goes to a different portal (see "Nether portals" below). `mapee-cli portals` lists them
 - The info bar gives the block under the mouse's place in the other dimension (divided by 8 in the Overworld, multiplied by 8 in the Nether), for lining up a portal
@@ -57,8 +57,8 @@ Upstream website: [mapee.net](https://www.mapee.net/home)
 
 The Linux build is a single AppImage, self-contained (no .NET needed). Make it executable and run it:
 
-    chmod +x MapeeExpanded-1.6.0-x86_64.AppImage
-    ./MapeeExpanded-1.6.0-x86_64.AppImage [world]
+    chmod +x MapeeExpanded-1.7.0-x86_64.AppImage
+    ./MapeeExpanded-1.7.0-x86_64.AppImage [world]
 
 If it complains about FUSE, run it with `--appimage-extract-and-run`. It runs as a native Wayland app (following the monitor's scale, fractional ones too) and falls back to X11, where it takes the scale from `GDK_SCALE` or `AVALONIA_GLOBAL_SCALE_FACTOR`. The world browser looks in `~/.minecraft/saves` (Java) and `~/.local/share/mcpelauncher/games/com.mojang/minecraftWorlds` (Bedrock through mcpelauncher); anything else opens with Browse, or by dropping it on the window. Differences from Windows: the system's own window frame, and Go to, Add block and the custom-dimension list open as pop-ups under their buttons rather than as small windows. Given a command as its first argument (`render`, `webmap`, `find`, `portals`, `worlds`, `styles`), the AppImage runs `mapee-cli` instead (see "Command line" below).
 

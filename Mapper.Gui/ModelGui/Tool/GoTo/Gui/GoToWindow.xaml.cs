@@ -18,6 +18,8 @@ namespace Mapper.Gui
         public bool DialogClosed { get; private set; } = true;
 
         private bool _closing = false;
+        // Typing a name rather than a place shows only the places called that
+        private readonly List<(Button Button, string Title, XzPoint Point)> _places = [];
 
         public GoToWindow(XzPoint selected, XzPoint playerPosition, XzPoint playerSpawn, XzPoint worldSpawn)
         {
@@ -42,6 +44,7 @@ namespace Mapper.Gui
                 CoordinateTextBox.Focus();
                 CoordinateTextBox.SelectAll();
             };
+            CoordinateTextBox.TextChanged += (sender, e) => Filter();
             PreviewKeyDown += (sender, e) =>
             {
                 if (e.Key == Key.Escape)
@@ -58,7 +61,7 @@ namespace Mapper.Gui
             };
         }
 
-        // Buttons like the spawn points' for each of the world's pins and zones
+        // Buttons like the spawn points' for each of the world's pins and zones, and its structures
         public void AddPlaces(IEnumerable<(string Title, XzPoint Point)> places)
         {
             foreach (var (title, point) in places)
@@ -71,23 +74,45 @@ namespace Mapper.Gui
                     BorderBrush = WorldSpawnButton.BorderBrush,
                     Height = 25
                 };
-                button.Click += (sender, e) =>
-                {
-                    SelectedPoint = point;
-                    DialogClosed = false;
-
-                    _closing = true;
-                    Close();
-                };
+                button.Click += (sender, e) => Select(point);
                 PlacesPanel.Children.Add(button);
+                _places.Add((button, title, point));
             }
-            PlacesSection.Visibility = PlacesPanel.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            Filter();
         }
 
+        private void Filter()
+        {
+            string text = CoordinateTextBox.Text.Trim();
+            bool all = text.Length == 0 || TryParse(text, out _);
+            int shown = 0;
+            foreach (var (button, title, _) in _places)
+            {
+                bool show = all || title.Contains(text, StringComparison.OrdinalIgnoreCase);
+                button.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+                if (show) shown++;
+            }
+            PlacesSection.Visibility = shown > 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        // A place typed goes there; a name goes to the first place called that
         private void GoToButton_Click(object sender, RoutedEventArgs e)
         {
-            if (!TryParse(CoordinateTextBox.Text, out XzPoint point)) return;
+            if (TryParse(CoordinateTextBox.Text, out XzPoint point))
+            {
+                Select(point);
+                return;
+            }
+            foreach (var (button, _, place) in _places)
+            {
+                if (button.Visibility != Visibility.Visible) continue;
+                Select(place);
+                return;
+            }
+        }
 
+        private void Select(XzPoint point)
+        {
             SelectedPoint = point;
             DialogClosed = false;
 

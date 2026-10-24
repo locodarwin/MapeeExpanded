@@ -26,6 +26,10 @@ namespace Mapee.Cli
                   --full                   draw every region again; otherwise, over an earlier web map
                                            of the same world drawn the same way, only regions the game
                                            has saved since are drawn
+              mapee-cli watch <world> --out <folder> [--every <seconds>] [options]
+                  Exports a web map as webmap does, then keeps it up to date while the game is
+                  played: every 30 seconds (or --every) it looks for saves and draws the regions
+                  saved since. Takes webmap's options. Ctrl+C stops it.
               mapee-cli find <world> --block <name>[,<name>] [options]
                   Lists where blocks are, one line per block found (x y z, then what it is).
                   Names are as Java has them (diamond_ore, ancient_debris), for Bedrock worlds too,
@@ -37,10 +41,17 @@ namespace Mapee.Cli
               mapee-cli portals <world> [--csv]
                   Lists the Nether portals in the Overworld and the Nether, where each leads, and
                   which lead to a portal that leads somewhere else on the way back.
+              mapee-cli structures <world> [options]
+                  Lists the villages, strongholds, temples and other structures the game has
+                  generated, every dimension the world has. Java worlds save them all; Bedrock
+                  saves only fortresses, witch huts, monuments, outposts and villages, and
+                  strongholds, ancient cities and trial chambers are found by their blocks.
+                  --dimension <d>[,<d>]    only these dimensions
+                  --csv                    as comma-separated values with a header line
               mapee-cli worlds             lists the worlds in the game's world folders
               mapee-cli styles             lists the styles
 
-            Options for render and webmap:
+            Options for render, webmap and watch:
               --style <id or name>         how the map is coloured (default: Default; see mapee-cli styles)
               --slice <y>                  draw the world cut at height y, as the height panel's Slice
               --caves <y>                  draw the caves below height y, as the height panel's Caves
@@ -85,6 +96,8 @@ namespace Mapee.Cli
                     "webmap" => WebMap(line, cancel.Token),
                     "find" => Find(line, cancel.Token),
                     "portals" => Portals(line, cancel.Token),
+                    "structures" => Structures(line, cancel.Token),
+                    "watch" => Watch(line, cancel.Token),
                     "worlds" => Worlds(),
                     _ => Styles()
                 };
@@ -170,7 +183,11 @@ namespace Mapee.Cli
             }
         }
 
-        private static int WebMap(CommandLine line, CancellationToken cancellation)
+        private static int WebMap(CommandLine line, CancellationToken cancellation) => WebMap(line, null, cancellation);
+
+        // domain is loaded here if not given; it can be loaded only once. Given a time, as watch's updates are, it
+        // says in one line after it what was drawn again
+        private static int WebMap(CommandLine line, ProgramDomain? domain, CancellationToken cancellation, DateTime? updatedAt = null)
         {
             IList<Dimension> dimensions = line.Dimensions ?? [.. WebMapFolder.Dimensions.Select(d => d.Dimension)];
             string folder = line.Out!;
@@ -185,7 +202,7 @@ namespace Mapee.Cli
 
             (Level level, string source) = OpenWorld(line.World!);
             MarkupDocument? markup = line.Markers ? ReadMarkup(line, source, level) : null;
-            ProgramDomain domain = LoadDomain();
+            domain ??= LoadDomain();
             Style style = WorldStyle(domain, level, line.Style);
 
             List<WebMapTarget> targets = [.. dimensions.Select(dimension =>
@@ -206,6 +223,11 @@ namespace Mapee.Cli
             {
                 Console.Error.WriteLine($"{level.WorldName} has nothing in {string.Join(", ", dimensions.Select(d => d.Name))}");
                 return 1;
+            }
+            if (updatedAt is DateTime time)
+            {
+                Console.WriteLine($"{time:HH:mm:ss}  {(WebMapSaver.DescribeUpdate(written) is { Length: > 0 } changed ? changed : "every region drawn again")}");
+                return 0;
             }
 
             Console.WriteLine($"Wrote {Path.Combine(folder, "index.html")}: {level.WorldName}, " +
@@ -327,6 +349,111 @@ namespace Mapee.Cli
                 ? $"{level.WorldName} has no Nether portals"
                 : $"{level.WorldName}: {map.Overworld.Count} in the Overworld, {map.Nether.Count} in the Nether{(mismatched switch { 0 => "", 1 => "; 1 leads to a portal that doesn't lead back", _ => $"; {mismatched} lead to portals that don't lead back" })}");
             return 0;
+        }
+
+        // One line per structure: what it is and where its middle is
+        private static int Structures(CommandLine line, CancellationToken cancellation)
+        {
+            Directory.SetCurrentDirectory(AppContext.BaseDirectory);
+            (Level level, _) = OpenWorld(line.World!);
+            IList<Dimension> dimensions = line.Dimensions ?? [Dimension.Overworld, Dimension.Nether, Dimension.TheEnd];
+
+            bool interactive = !Console.IsErrorRedirected;
+            List<(Dimension Dimension, List<Structure> Found)> all = [];
+            foreach (Dimension dimension in dimensions)
+            {
+                SceneInfo scene = new(level, dimension);
+                if (scene.RegionStore is IBackgroundRegionStore background) background.Ready.Wait(cancellation);
+                if (!scene.Regions.Any()) continue;
+
+                if (interactive) Console.Error.Write($"\rLooking for structures in {The(dimension)}".PadRight(48));
+                all.Add((dimension, StructureMap.Read(scene, cancellation)));
+            }
+            if (interactive) Console.Error.Write("\r".PadRight(49) + "\r");
+
+            if (line.Csv) Console.WriteLine("dimension,structure,x,y,z,min_x,min_y,min_z,max_x,max_y,max_z,known_by");
+            foreach (var (dimension, found) in all)
+            {
+                foreach (Structure s in found)
+                {
+                    string by = s.Source == StructureSource.Blocks ? "blocks" : "saved";
+                    Console.WriteLine(line.Csv
+                        ? $"{dimension.Name},\"{s.Name.Replace("\"", "\"\"")}\",{s.X},{s.Y},{s.Z},{s.MinX},{s.MinY},{s.MinZ},{s.MaxX},{s.MaxY},{s.MaxZ},{by}"
+                        : $"{dimension.Name} {s.Name} at {s}{(s.Source == StructureSource.Blocks ? " (found by its blocks)" : "")}");
+                }
+            }
+
+            int total = all.Sum(d => d.Found.Count);
+            if (all.Count == 0)
+            {
+                Console.Error.WriteLine($"{level.WorldName} has nothing in {string.Join(", ", dimensions.Select(The))}");
+                return 1;
+            }
+            Console.Error.WriteLine(total == 0
+                ? $"{level.WorldName} has no structures saved{(level.Edition == Edition.Bedrock ? " or found" : "")}"
+                : $"{level.WorldName}: " + string.Join(", ", all.Where(d => d.Found.Count > 0).Select(d => $"{d.Found.Count} in {The(d.Dimension)}")));
+            return 0;
+        }
+
+        // The web map once, then again whenever the world's files change, until Ctrl+C
+        private static int Watch(CommandLine line, CancellationToken cancellation)
+        {
+            (_, string source) = OpenWorld(line.World!);
+            if (File.Exists(source) && !string.Equals(Path.GetFileName(source), "level.dat", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new UsageException($"{Path.GetFileName(source)} is a world packed in one file, which the game doesn't play from; give the world's folder");
+            }
+            string folder = Directory.Exists(source) ? source : Path.GetDirectoryName(source)!;
+
+            ProgramDomain domain = LoadDomain();
+            string? stamp = WorldStamp(folder);
+            int result = WebMap(line, domain, cancellation);
+            if (result != 0) return result;
+
+            Console.WriteLine($"Watching {folder} every {line.Every} s; Ctrl+C stops");
+            while (!cancellation.WaitHandle.WaitOne(TimeSpan.FromSeconds(line.Every)))
+            {
+                string? now = WorldStamp(folder);
+                if (now is not null && now == stamp) continue;
+
+                try
+                {
+                    WebMap(line, domain, cancellation, DateTime.Now);
+                    stamp = now;
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception e) when (e is not UsageException)
+                {
+                    // The game may be partway through a save; the next look tries again
+                    Console.Error.WriteLine();
+                    Console.Error.WriteLine($"mapee-cli: couldn't update the web map: {e.Message}; trying again in {line.Every} s");
+                }
+            }
+            Console.WriteLine("Stopped watching");
+            return 0;
+        }
+
+        // Every file in the world folder, its size and time, folded into one string; null if the folder can't be
+        // read just now. The game's session.lock changes without a save
+        private static string? WorldStamp(string folder)
+        {
+            try
+            {
+                System.Text.StringBuilder output = new();
+                foreach (FileInfo file in new DirectoryInfo(folder).EnumerateFiles("*", SearchOption.AllDirectories).OrderBy(f => f.FullName, StringComparer.Ordinal))
+                {
+                    if (file.Name == "session.lock") continue;
+                    output.Append(file.FullName).Append('|').Append(file.Length).Append('|').Append(file.LastWriteTimeUtc.Ticks).Append('\n');
+                }
+                return output.ToString();
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                return null;
+            }
         }
 
         private static int Worlds()
@@ -509,8 +636,10 @@ namespace Mapee.Cli
         public int? MinY { get; private set; }
         public int? MaxY { get; private set; }
         public bool Csv { get; private set; }
+        // How often watch looks for saves, in seconds
+        public int Every { get; private set; } = 30;
 
-        private static readonly string[] Commands = ["render", "webmap", "find", "portals", "worlds", "styles"];
+        private static readonly string[] Commands = ["render", "webmap", "watch", "find", "portals", "structures", "worlds", "styles"];
 
         // Paths are made full here, before the program moves to its own folder to read its resources
         public static CommandLine Parse(string[] args)
@@ -519,7 +648,8 @@ namespace Mapee.Cli
             if (!Commands.Contains(command)) throw new UsageException($"{args[0]} isn't a command; the commands are {string.Join(", ", Commands)}");
 
             CommandLine line = new() { Command = command };
-            bool drawing = command is "render" or "webmap" or "find" or "portals";
+            bool drawing = command is "render" or "webmap" or "watch" or "find" or "portals" or "structures";
+            bool webMap = command is "webmap" or "watch";
 
             for (int i = 1; i < args.Length; i++)
             {
@@ -538,7 +668,7 @@ namespace Mapee.Cli
                     option = arg[..equals];
                     value = arg[(equals + 1)..];
                 }
-                else if (option is "--out" or "--dimension" or "--style" or "--slice" or "--caves" or "--area" or "--block" or "--y")
+                else if (option is "--out" or "--dimension" or "--style" or "--slice" or "--caves" or "--area" or "--block" or "--y" or "--every")
                 {
                     if (i + 1 >= args.Length) throw new UsageException($"{option} needs a value");
                     value = args[++i];
@@ -572,7 +702,7 @@ namespace Mapee.Cli
                         if (!BlockArea.TryParse(value, out BlockArea area)) throw new UsageException($"--area needs two corners as x1,z1,x2,z2, such as -500,-500,500,500, not {value}");
                         line.Area = area;
                         break;
-                    case "--no-markers" when command == "webmap":
+                    case "--no-markers" when webMap:
                         line.Markers = false;
                         break;
                     case "--markup" when command != "find":
@@ -583,10 +713,10 @@ namespace Mapee.Cli
                             line.MarkupFile = Path.GetFullPath(value);
                         }
                         break;
-                    case "--force" when command == "webmap":
+                    case "--force" when webMap:
                         line.Force = true;
                         break;
-                    case "--full" when command == "webmap":
+                    case "--full" when webMap:
                         line.Full = true;
                         break;
                     case "--block" when command == "find":
@@ -601,16 +731,20 @@ namespace Mapee.Cli
                         }
                         (line.MinY, line.MaxY) = (Math.Min(minY, maxY), Math.Max(minY, maxY));
                         break;
-                    case "--csv" when command is "find" or "portals":
+                    case "--csv" when command is "find" or "portals" or "structures":
                         line.Csv = true;
+                        break;
+                    case "--every" when command == "watch":
+                        if (!int.TryParse(value, out int every) || every < 2) throw new UsageException($"--every needs a number of seconds, 2 or more, not {value}");
+                        line.Every = every;
                         break;
                     default:
                         throw new UsageException($"{command} has no option {option}");
                 }
             }
 
-            if (command == "webmap" && line.Markers) line.Markup = true;
-            if (command == "webmap" && !line.Markers && line.MarkupFile is not null) throw new UsageException("--no-markers leaves the pins and zones out; give --markup or --no-markers, not both");
+            if (webMap && line.Markers) line.Markup = true;
+            if (webMap && !line.Markers && line.MarkupFile is not null) throw new UsageException("--no-markers leaves the pins and zones out; give --markup or --no-markers, not both");
 
             if (drawing)
             {
@@ -623,6 +757,14 @@ namespace Mapee.Cli
                     }
                     return line;
                 }
+                if (command == "structures")
+                {
+                    if (line.Out is not null || line.Style is not null || line.Cut is not null || line.Area is not null || line.Markup)
+                    {
+                        throw new UsageException("structures takes only --dimension and --csv, and writes to the screen");
+                    }
+                    return line;
+                }
                 if (command == "find")
                 {
                     if (line.Blocks is null) throw new UsageException("find needs --block, the blocks to look for");
@@ -630,8 +772,9 @@ namespace Mapee.Cli
                     return line;
                 }
                 if (line.Out is null) throw new UsageException($"{command} needs --out, {(command == "render" ? "the PNG to write" : "the folder to write the web map into")}");
+                if (command == "watch" && line.Full) throw new UsageException("watch draws only what the game saves; to draw everything again, run webmap --full first");
                 if (command == "render" && Directory.Exists(line.Out)) throw new UsageException($"{line.Out} is a folder; --out names the PNG to write");
-                if (command == "webmap" && File.Exists(line.Out)) throw new UsageException($"{line.Out} is a file; --out names the folder to write the web map into");
+                if (webMap && File.Exists(line.Out)) throw new UsageException($"{line.Out} is a file; --out names the folder to write the web map into");
             }
             return line;
         }

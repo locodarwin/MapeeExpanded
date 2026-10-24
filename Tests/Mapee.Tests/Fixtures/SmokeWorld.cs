@@ -1,7 +1,8 @@
 namespace Mapee.Tests.Fixtures
 {
     // A small Java world with something to look at and something to find: 12 by 12 chunks of stone under grass,
-    // a sea along one side, diamond ore deep down, and a spawner and a chest. Made up rather than played, so it can
+    // a sea along one side, diamond ore deep down, a spawner and a chest, and a village saved as starting in the chunk
+    // at 2, 2 (though none is built). Made up rather than played, so it can
     // go into CI, where the Windows smoke test opens it (the sample worlds are private)
     public static class SmokeWorld
     {
@@ -29,6 +30,27 @@ namespace Mapee.Tests.Fixtures
             ["biomes"] = new Dictionary<string, object> { ["palette"] = new List<object> { "minecraft:" + biome } }
         };
 
+        // Two pieces, which together cover blocks 24 to 55 sideways
+        public static readonly (int X, int Y, int Z) VillageMiddle = (39, 66, 39);
+        private static Dictionary<string, object> Village => new()
+        {
+            ["starts"] = new Dictionary<string, object>
+            {
+                ["minecraft:village_plains"] = new Dictionary<string, object>
+                {
+                    ["id"] = "minecraft:village_plains",
+                    ["ChunkX"] = 2,
+                    ["ChunkZ"] = 2,
+                    ["Children"] = new List<object>
+                    {
+                        new Dictionary<string, object> { ["id"] = "minecraft:jigsaw", ["BB"] = new[] { 32, 63, 32, 47, 70, 47 } },
+                        new Dictionary<string, object> { ["id"] = "minecraft:jigsaw", ["BB"] = new[] { 24, 64, 30, 55, 69, 48 } }
+                    }
+                }
+            },
+            ["References"] = new Dictionary<string, object>()
+        };
+
         private static Dictionary<string, object> Chunk(int x, int z)
         {
             bool sea = x <= -3;
@@ -46,7 +68,7 @@ namespace Mapee.Tests.Fixtures
             // Y 64 to 79: open air, or a sea up to Y 70
             sections.Add(Section(4, biome, [State("air"), State("water")], (bx, by, bz) => sea && by <= 6 ? 1 : 0));
 
-            return new()
+            Dictionary<string, object> output = new()
             {
                 ["DataVersion"] = JavaTestWorld.DataVersion,
                 ["xPos"] = x,
@@ -55,6 +77,8 @@ namespace Mapee.Tests.Fixtures
                 ["Status"] = "minecraft:full",
                 ["sections"] = sections
             };
+            if (x == 2 && z == 2) output["structures"] = Village;
+            return output;
         }
     }
 }

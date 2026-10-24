@@ -26,6 +26,8 @@ namespace Mapper.Gui.Controller
         public RecentWorldsTool RecentTool { get; private set; } = null!;
         public LiveReloadTool LiveTool { get; private set; } = null!;
         public OverlaysTool OverlaysTool { get; private set; } = null!;
+        // The structure overlay's, which Go to lists too
+        public WorldStructures Structures { get; private set; } = null!;
 
         public bool ShowLabels
         {
@@ -96,7 +98,8 @@ namespace Mapper.Gui.Controller
             _keyed.Add((button, text, action));
         }
 
-        // Grid, slime chunks, axes, the chunk highlight, where mobs can spawn and the Nether portals, behind one button
+        // Grid, slime chunks, axes, the chunk highlight, where mobs can spawn, the Nether portals and the structures,
+        // behind one button
         private ToolButton CreateOverlaysButton()
         {
             OverlayItem Overlay(string id, string label, ToolIcon icon, IToggleableTool tool, ShortcutAction action)
@@ -107,18 +110,20 @@ namespace Mapper.Gui.Controller
                 return new(id, label, icon, tool, action);
             }
 
+            Structures = new WorldStructures(Renderer.Scene, LiveTool);
             OverlaysTool tool = new([
                 Overlay("grid", "Grid lines", ToolIcons.Grid, new GridTool(ToolScene), ShortcutAction.Grid),
                 Overlay("slime_chunks", "Slime chunks", ToolIcons.Slime, new SlimeChunkTool(ToolScene, new SlimeChunkChecker(Renderer.Scene.Domain)), ShortcutAction.SlimeChunks),
                 Overlay("axes", "Axes (x and z)", ToolIcons.Axes, new AxisTool(ToolScene), ShortcutAction.Axes),
                 Overlay("chunk_highlight", "Chunk under the cursor", ToolIcons.Chunk, new HighlightChunkTool(ToolScene, RenderInvoker, Renderer.GraphicsCanvas), ShortcutAction.ChunkHighlight),
                 Overlay("spawn_spots", "Where mobs can spawn", ToolIcons.Spawn, new SpawnTool(ToolScene, new SpawnSpots(Renderer.Scene, LiveTool), RenderInvoker), ShortcutAction.SpawnSpots),
-                Overlay("portals", "Nether portals", ToolIcons.Portal, new PortalTool(Renderer.Scene, new NetherPortals(Renderer.Scene, LiveTool), Renderer.GraphicsCanvas, RenderInvoker), ShortcutAction.Portals)
+                Overlay("portals", "Nether portals", ToolIcons.Portal, new PortalTool(Renderer.Scene, new NetherPortals(Renderer.Scene, LiveTool), Renderer.GraphicsCanvas, RenderInvoker), ShortcutAction.Portals),
+                Overlay("structures", "Structures", ToolIcons.Structure, new StructureTool(Renderer.Scene, Structures, Renderer.GraphicsCanvas, RenderInvoker), ShortcutAction.Structures)
             ], Keys);
             OverlaysTool = tool;
 
             ToolButton output = new(tool) { Icon = ToolIcons.Overlays, Name = "Overlays", Menu = true };
-            output.ToolTip = "Draw over the map: grid lines, slime chunks, axes, the chunk under the cursor, where mobs can spawn, Nether portals";
+            output.ToolTip = "Draw over the map: grid lines, slime chunks, axes, the chunk under the cursor, where mobs can spawn, Nether portals, structures";
             tool.Owner = output;
 
             return output;
@@ -160,7 +165,7 @@ namespace Mapper.Gui.Controller
         }
         private ToolButton CreateGoToButton()
         {
-            GoToTool tool = new(Renderer.Scene, Renderer.GraphicsCanvas) { Markup = MarkupTool };
+            GoToTool tool = new(Renderer.Scene, Renderer.GraphicsCanvas) { Markup = MarkupTool, Structures = Structures };
             GoToTool = tool;
             ToolButton output = new(tool) { Icon = ToolIcons.GoTo, Name = "Go to" };
             Keyed(output, "Go to position in world", ShortcutAction.GoTo);

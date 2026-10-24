@@ -140,7 +140,7 @@
                 </Button.Style>
             </Button>
 
-            <!-- The world's pins and zones, when it has any -->
+            <!-- The world's pins and zones and its structures, when it has any; typing a name shows only those called that -->
             <StackPanel x:Name="PlacesSection" Grid.Row="4" Visibility="Collapsed">
                 <Border Height="1" Background="#FF707070" Margin="0, 1, 0, 2" />
                 <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">

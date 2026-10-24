@@ -7,6 +7,8 @@ namespace WorldEditor
         public int Dimension { get; }
         public int Count => Regions.Count;
         public Task Ready => _world?.Indexed ?? Task.CompletedTask;
+        // The world database as this store last saw it, for records that aren't chunks' blocks
+        public BedrockWorld? World => _world;
 
         public BedrockChunkReader ChunkReader { get; set; } = new();
         public ILogger<ChunkError> ErrorLogger { get; set; } = new ConsoleWriteLogger<ChunkError>();

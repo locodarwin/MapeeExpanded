@@ -117,13 +117,16 @@ namespace Mapper.Gui
                 int all = toolbar.OverlaysTool.Items.Count;
                 Check($"Overlays: tick all {all}", on == all && Badge("Overlays") == all, $"{on} on, badge {Badge("Overlays")}");
 
-                // The made-up world is open ground, dark at night; it has no portals and no Nether
+                // The made-up world is open ground, dark at night; it has no portals and no Nether, and one village
                 SpawnTool spawn = (SpawnTool)toolbar.Overlays["spawn_spots"];
                 PortalTool portals = (PortalTool)toolbar.Overlays["portals"];
-                await Until(() => spawn.Spots.Regions.Any() && !portals.Portals.Reading, 60);
+                StructureTool structures = (StructureTool)toolbar.Overlays["structures"];
+                await Until(() => spawn.Spots.Regions.Any() && !portals.Portals.Reading && structures.Structures.Current.Any(), 60);
                 int spots = spawn.Spots.Regions.Sum(r => r.Count);
                 Check("Overlays: where mobs can spawn", spots > 0, $"{spots:N0} blocks in {spawn.Spots.Regions.Count()} regions");
                 Check("Overlays: Nether portals", !portals.Portals.Reading && !portals.Portals.Map.Overworld.Any(), $"{portals.Portals.Map.Overworld.Count} in the Overworld");
+                Check("Overlays: structures", structures.Structures.Current.Select(s => s.Name).SequenceEqual(["Plains village"]),
+                    string.Join(", ", structures.Structures.Current.Select(s => $"{s.Name} at {s}")));
                 await Shoot("overlays-on");
                 foreach (OverlayItem item in toolbar.OverlaysTool.Items) item.Tool.IsTurnedOn = false;
             });

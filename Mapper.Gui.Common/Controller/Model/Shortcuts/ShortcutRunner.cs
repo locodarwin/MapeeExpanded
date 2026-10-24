@@ -104,6 +104,7 @@ namespace Mapper.Gui.Controller
                 case ShortcutAction.ChunkHighlight: return Toggle(Toolbar.Overlays["chunk_highlight"]);
                 case ShortcutAction.SpawnSpots: return Toggle(Toolbar.Overlays["spawn_spots"]);
                 case ShortcutAction.Portals: return Toggle(Toolbar.Overlays["portals"]);
+                case ShortcutAction.Structures: return Toggle(Toolbar.Overlays["structures"]);
                 case ShortcutAction.MeasureLength: return Toggle(Toolbar.MeasureLengthTool);
                 case ShortcutAction.NightMode: return Toggle(Toolbar.NightTool);
                 case ShortcutAction.LiveReload: return Toggle(Toolbar.LiveTool);

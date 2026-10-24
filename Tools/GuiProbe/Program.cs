@@ -41,6 +41,7 @@
 //                                     blocks (diamond_ore), search, wait for it to finish and print what it found
 //   find-start:<what>...              the same, without waiting for the search to finish
 //   find-type:<text>                  type into the find window's block search and print the first blocks listed
+//   goto-type:<text>                  type into the open Go to's box and print the places it still lists
 //   find-pick:<row>                   pick a row of the find window's results (from 0): the map goes there
 //   find-pin                          press Add a pin for the picked row
 //   find-stop                         press Stop
@@ -419,6 +420,15 @@ foreach (string step in args.Skip(1))
                 window.FindControl<TextBox>("SearchBox")!.Text = value;
                 Pump(200);
                 Console.WriteLine($"  {window.Panel.Blocks.Count} blocks: {string.Join(" | ", window.Panel.Blocks.Take(6).Select(b => $"{b.Title} ({b.Id})"))}");
+                break;
+            }
+        case "goto-type":
+            {
+                GoToWindow window = main.GetVisualDescendants().OfType<GoToWindow>().FirstOrDefault() ?? throw new InvalidOperationException("Go to isn't open");
+                window.FindControl<TextBox>("CoordinateTextBox")!.Text = value;
+                Pump(200);
+                List<Button> shown = [.. window.FindControl<StackPanel>("PlacesPanel")!.Children.OfType<Button>().Where(b => b.IsVisible)];
+                Console.WriteLine($"  {shown.Count} places: {string.Join(" | ", shown.Take(8).Select(b => b.Content))}");
                 break;
             }
         case "find-pick":

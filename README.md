@@ -9,6 +9,10 @@ Upstream website: [mapee.net](https://www.mapee.net/home)
 ![Mapee Expanded with a Bedrock world open: an island base with pins and a zone](docs/images/app-main.webp)
 
 # What's New?
+**Unreleased**
+- Structures: a new overlay marks the villages, strongholds, temples, monuments, fortresses and other structures the game has generated, with their names, and outlines the ground each covers. While it's on, Go to lists them nearest first, and typing a name there picks them out (see "Structures" below). `mapee-cli structures` lists them
+- `mapee-cli watch` keeps a web map up to date while the game is played, drawing the regions it saves every half minute or so (see "Command line" below)
+
 **Version 1.7.0**
 - Where mobs can spawn: a new overlay shades every block a hostile mob could spawn on at night, so you can see what still needs a torch. With a height cut it shows the floors under the cut, inside a building or a cave (see "Where mobs can spawn" below)
 - Nether portals: a new overlay marks each portal in the Overworld and the Nether with where it leads, and shows in red a portal that leads into one whose way back goes to a different portal (see "Nether portals" below). `mapee-cli portals` lists them
@@ -60,7 +64,7 @@ The Linux build is a single AppImage, self-contained (no .NET needed). Make it e
     chmod +x MapeeExpanded-1.7.0-x86_64.AppImage
     ./MapeeExpanded-1.7.0-x86_64.AppImage [world]
 
-If it complains about FUSE, run it with `--appimage-extract-and-run`. It runs as a native Wayland app (following the monitor's scale, fractional ones too) and falls back to X11, where it takes the scale from `GDK_SCALE` or `AVALONIA_GLOBAL_SCALE_FACTOR`. The world browser looks in `~/.minecraft/saves` (Java) and `~/.local/share/mcpelauncher/games/com.mojang/minecraftWorlds` (Bedrock through mcpelauncher); anything else opens with Browse, or by dropping it on the window. Differences from Windows: the system's own window frame, and Go to, Add block and the custom-dimension list open as pop-ups under their buttons rather than as small windows. Given a command as its first argument (`render`, `webmap`, `find`, `portals`, `worlds`, `styles`), the AppImage runs `mapee-cli` instead (see "Command line" below).
+If it complains about FUSE, run it with `--appimage-extract-and-run`. It runs as a native Wayland app (following the monitor's scale, fractional ones too) and falls back to X11, where it takes the scale from `GDK_SCALE` or `AVALONIA_GLOBAL_SCALE_FACTOR`. The world browser looks in `~/.minecraft/saves` (Java) and `~/.local/share/mcpelauncher/games/com.mojang/minecraftWorlds` (Bedrock through mcpelauncher); anything else opens with Browse, or by dropping it on the window. Differences from Windows: the system's own window frame, and Go to, Add block and the custom-dimension list open as pop-ups under their buttons rather than as small windows. Given a command as its first argument (`render`, `webmap`, `watch`, `find`, `portals`, `structures`, `worlds`, `styles`), the AppImage runs `mapee-cli` instead (see "Command line" below).
 
 # The toolbar
 
@@ -71,7 +75,7 @@ From left to right, in groups:
 | **Open** | Browse for a world, or pick one opened lately (with none yet, it browses straight away) |
 | **Go to**, **Find** | Go to a place or a pin; find blocks anywhere in the dimension |
 | **Mark**, **Measure** | Pins and zones; measure a length (only one of the two takes clicks at a time) |
-| **Overlays** | Grid lines, slime chunks, axes, the chunk under the cursor, where mobs can spawn and the Nether portals, ticked on and off in its menu; the number on it says how many are on |
+| **Overlays** | Grid lines, slime chunks, axes, the chunk under the cursor, where mobs can spawn, the Nether portals and the structures, ticked on and off in its menu; the number on it says how many are on |
 | **Night**, **Live** | Night lighting; redraw what the game saves while the world is open |
 | **Filter**, **Render** | Which blocks are drawn; light, height offset and background |
 | **Export** | Save the map as an image or a web map |
@@ -134,6 +138,19 @@ Mapee links them as the game does: going into the Nether, it takes the portal ne
 
 The info bar also gives the place under the mouse in the other dimension: "Nether: (12; -40)" in the Overworld, "Overworld: (96; -320)" in the Nether. `mapee-cli portals <world>` lists every portal, where it leads and whether it leads back (`--csv` for a spreadsheet).
 
+# Structures
+
+Tick **Structures** in the Overlays menu (or press T) to mark the structures of the dimension on show: villages, strongholds, ancient cities, trial chambers, woodland mansions, ocean monuments, temples, witch huts, igloos, outposts, ruined portals, shipwrecks, ocean ruins, buried treasure, Nether fortresses, bastions and End cities. Each has a dot in its own colour and its name, where there's room for it (the bigger finds win the room), and when zoomed in far enough, a dashed outline of the ground it covers. Mineshafts and Nether fossils, which are everywhere, are left out.
+
+While the overlay is on, **Go to** lists the structures under the pins and zones, nearest the middle of the screen first; type a name, such as "village" or "strong", to see only those, and Enter goes to the first.
+
+What Mapee can show depends on the edition, since it reads what the game saved rather than working it out from the seed:
+
+- **Java** saves every structure it generates, with the chunk it starts in, so they're all there: everything in the ground the game has generated so far, explored or not. Data pack structures are named from their ids. Ground generated before 1.13 and not saved since kept its structures elsewhere, and those don't show.
+- **Bedrock** saves only some: where Nether fortresses, witch huts, ocean monuments and pillager outposts spawn their mobs, and the villages that have had villagers in them. Strongholds, ancient cities and trial chambers are found by blocks only they have (end portal frames, reinforced deepslate, trial spawners and vaults), which takes a few seconds more. Other kinds don't show.
+
+Each dimension is read the first time it's shown with the overlay on, and again when Live redraws something. `mapee-cli structures <world>` lists them all, with the box each covers (`--csv` for a spreadsheet).
+
 # Keyboard shortcuts
 Press **F1** or **?** in the app, or the toolbar's **Keys** button, for this list. None of them work while you're typing in a box, and the ones that need a world do nothing until one is open.
 
@@ -147,7 +164,7 @@ Press **F1** or **?** in the app, or the toolbar's **Keys** button, for this lis
 | , . | Previous, next style |
 | H | Height panel: Surface, Slice, Caves in turn |
 | [ ] | Height down, up; with Shift, by 10 |
-| G S A C D O | Overlays: grid lines, slime chunks, axes, chunk highlighter, where mobs can spawn, Nether portals |
+| G S A C D O T | Overlays: grid lines, slime chunks, axes, chunk highlighter, where mobs can spawn, Nether portals, structures |
 | L | Measure length |
 | N | Night mode |
 | W | Live reload on or off |
@@ -155,7 +172,7 @@ Press **F1** or **?** in the app, or the toolbar's **Keys** button, for this lis
 | Shift+M | Show or hide pins and zones |
 | P Z R V | Markup: Pin, Zone, Rectangle, Select |
 | Ctrl+Z Ctrl+Y | Undo, redo markup (while the bar is open) |
-| Ctrl+G | Go to a place, with the cursor in the coordinate box |
+| Ctrl+G | Go to a place, with the cursor in the coordinate box (or type a name to pick a pin, zone or structure) |
 | F | Find blocks |
 | Ctrl+E | Export as image or web map |
 | Ctrl+O | Browse for a world |
@@ -183,8 +200,10 @@ An entry Mapee can't read is skipped, and that action keeps its usual key.
 ```
 mapee-cli render <world> --out map.png [--dimension overworld|nether|end] [--area x1,z1,x2,z2] [--markup]
 mapee-cli webmap <world> --out <folder> [--dimension overworld,nether] [--no-markers] [--force] [--full]
+mapee-cli watch <world folder> --out <folder> [--every 30] [webmap's options but --full]
 mapee-cli find <world> --block diamonds,spawner [--dimension nether] [--area x1,z1,x2,z2] [--y min,max] [--csv]
 mapee-cli portals <world> [--csv]
+mapee-cli structures <world> [--dimension overworld,nether] [--csv]
 mapee-cli worlds          # the worlds in the game's world folders
 mapee-cli styles          # the style ids
 ```
@@ -192,11 +211,13 @@ mapee-cli styles          # the style ids
 - `<world>` is a world folder, its `level.dat`, a `.mcworld`, or the name of a world that `mapee-cli worlds` lists.
 - `render` writes one dimension at a pixel per block, transparent where nothing has been generated; `--area` keeps the blocks between two corners. It prints where the image lies in block coordinates.
 - `webmap` writes the same web map as the export window, every dimension the world has. An earlier web map in the folder is replaced without asking, so a map can be kept up to date from a script; other files that would be replaced need `--force`. Over an earlier web map of the same world drawn the same way, only the regions the game has saved since are drawn, and the result line says how many (`Updated: Overworld: 3 of 26 regions changed`); `--full` draws everything.
+- `watch` does what `webmap` does, then keeps looking at the world's files: every 30 seconds (or `--every` seconds), if the game has saved anything, it updates the web map, drawing only what changed, and prints a line saying what (`14:02:31  Overworld: 2 of 26 regions changed`). Leave it running beside the game, with the folder served to your friends, and the map keeps up. It needs the world's folder, not a `.mcworld`. Ctrl+C stops it. A save it catches halfway is tried again next time.
 - `find` prints one line per block found, `x y z` and what it is, and a summary on the error stream. `--block` takes Java block names (`diamond_ore`, `ancient_debris`, also for Bedrock worlds) or the groups `diamonds`, `ancient_debris`, `spawners`, `chests`, `emeralds` and `buried`; `--y` keeps between two heights, `--area` between two corners, and `--csv` writes `x,y,z,block` with a header line, for a spreadsheet.
 - `portals` prints each Nether portal in the Overworld and the Nether, the portal it leads to (or where the game would build one) and, when that portal leads back somewhere else, where; `--csv` writes a line for each with `leads_back` yes or no.
-- `render` and `webmap` take `--style <id>` (default `default`), and `--slice <y>` or `--caves <y>` to draw as the height panel's Slice or Caves would.
+- `structures` prints each structure, every dimension the world has, as the overlay finds them (see "Structures" above): its name and the middle of the box it covers, marked "(found by its blocks)" for a Bedrock stronghold, ancient city or trial chambers. `--csv` adds the box's corners and `known_by` (`saved` or `blocks`).
+- `render`, `webmap` and `watch` take `--style <id>` (default `default`), and `--slice <y>` or `--caves <y>` to draw as the height panel's Slice or Caves would.
 - Markup: `render --markup` draws the pins and zones marked on the world in Mapee; `webmap` includes them unless `--no-markers` (which also leaves out the spawn and player). `--markup <file.json>` uses a file from the bar's Export instead.
-- Exit codes: 0 done, 1 failed or nothing to draw, 2 wrong usage, 130 cancelled.
+- Exit codes: 0 done (and for `watch`, stopped with Ctrl+C), 1 failed or nothing to draw, 2 wrong usage, 130 cancelled.
 
 # Screenshots
 

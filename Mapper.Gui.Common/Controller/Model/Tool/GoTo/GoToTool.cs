@@ -18,6 +18,9 @@ namespace Mapper.Gui.Controller
         public CanvasControl Canvas { get; }
         // Its pins and zones are listed under the spawn points, while markup is shown
         public MarkupTool? Markup { get; set; }
+        // And the structures of the dimension on show, nearest first, while the structure overlay is on
+        public WorldStructures? Structures { get; set; }
+        private const int MostStructures = 200;
 
         private bool _isActive = false;
 
@@ -59,6 +62,13 @@ namespace Mapper.Gui.Controller
                     var (x, z) = MarkupTool.CentreOf(item);
                     return (MarkupTool.Title(item), new XzPoint(x, z));
                 }));
+            }
+            if (Structures is { Shown: true })
+            {
+                goToWindow.AddPlaces(Structures.Current
+                    .OrderBy(s => (s.X - centerPoint.X) * (s.X - centerPoint.X) + (s.Z - centerPoint.Z) * (s.Z - centerPoint.Z))
+                    .Take(MostStructures)
+                    .Select(s => (s.Name, new XzPoint(s.X, s.Z))));
             }
 
             void Closed()

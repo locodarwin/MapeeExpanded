@@ -140,7 +140,7 @@ namespace Mapper.Gui.Controller
         // Both take clicks on the map, so only one is on at a time
         private ToolButton CreateMarkupButton()
         {
-            MarkupTool tool = new(Renderer.Scene, WorldOpener, WorldOpener.Settings, RenderInvoker);
+            MarkupTool tool = new(Renderer.Scene, WorldOpener, WorldOpener.Settings, RenderInvoker) { CanOpenFromMap = () => !MeasureLengthTool.IsTurnedOn };
             MarkupTool = tool;
             tool.OnTurnedOn += isTurnedOn =>
             {

@@ -20,6 +20,7 @@ namespace Mapper
     //   Pin: a click drops a pin on the block. Zone: clicks place corners; a double-click, Enter, or a click on the
     //   first corner closes it; Backspace takes the last corner back. Rectangle: a drag. Select: a click picks a pin or
     //   zone, a drag moves a pin or a picked zone's corner, a double-click edits. A right-click edits in any mode.
+    //   View (the Mark button off): a click on a pin or zone, or a double-click anywhere, asks for the Mark bar.
     //   Corners snap to block corners, or chunk corners with Shift. A click that becomes a drag pans the map instead
     public class MarkupEditor
     {
@@ -113,6 +114,8 @@ namespace Mapper
         // Show the details of a pin or zone for editing: a copy for one already in the document, the item itself for
         // a new one. Pass it to Commit, Delete or Cancel
         public event EventHandler<MarkupEditRequest>? EditRequested;
+        // In View mode, open the Mark bar: with the pin or zone clicked picked, or null after a double-click on the map
+        public event EventHandler<MarkupItem?>? OpenRequested;
 
         private readonly List<MarkupDocument> _undo = [], _redo = [];
 
@@ -253,7 +256,12 @@ namespace Mapper
             if (!_down) return;
             _down = false;
             Mouse = (x, y);
-            if (!Visible) return;
+            if (!Visible)
+            {
+                // Hidden markup can't be clicked, but a double-click still opens the bar, which shows it
+                if (!_moved && _downButton == MarkupButton.Left) Click(x, y, shift);
+                return;
+            }
 
             Drag drag = _drag;
             _drag = Drag.None;
@@ -359,6 +367,11 @@ namespace Mapper
 
             switch (Mode)
             {
+                case MarkupMode.View:
+                    if ((Visible ? ItemAt(x, y) : null) is MarkupItem clicked) OpenRequested?.Invoke(this, clicked);
+                    else if (isDouble) OpenRequested?.Invoke(this, null);
+                    return;
+
                 case MarkupMode.Pin:
                     if (PinAt(x, y) is MapPin existing)
                     {

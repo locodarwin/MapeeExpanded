@@ -411,5 +411,49 @@ namespace Mapee.Tests.Markup
             Assert.Empty(editor.Draft);
             Assert.False(editor.Key(MarkupKey.Escape));
         }
+
+        [Fact]
+        public void WithTheBarClosedAClickOnAPinOrZoneOrADoubleClickAsksForIt()
+        {
+            var (editor, requests) = NewEditor(MarkupMode.View);
+            DateTime now = new(2026, 1, 1);
+            editor.Clock = () => now;
+            MapPin pin = new() { X = 0, Z = 0, Label = "Spawn" };
+            MapZone zone = new() { Points = MapZone.Rectangle(20, 20, 29, 29), Label = "Farm" };
+            editor.Document.Pins.Add(pin);
+            editor.Document.Zones.Add(zone);
+            List<MarkupItem?> asked = [];
+            editor.OpenRequested += (sender, item) => asked.Add(item);
+
+            ClickAt(editor, 101, 101);
+            Assert.Same(pin, Assert.Single(asked));
+            now += TimeSpan.FromSeconds(1);
+            ClickAt(editor, 150, 150);
+            Assert.Same(zone, asked[^1]);
+
+            // A single click on bare ground does nothing; a second one soon after in the same place opens the bar
+            now += TimeSpan.FromSeconds(1);
+            ClickAt(editor, 300, 300);
+            Assert.Equal(2, asked.Count);
+            now += TimeSpan.FromMilliseconds(200);
+            ClickAt(editor, 301, 300);
+            Assert.Null(asked[^1]);
+            Assert.Equal(3, asked.Count);
+
+            // A drag pans; and while markup is hidden only a double-click counts
+            now += TimeSpan.FromSeconds(1);
+            editor.PointerDown(100, 100, MarkupButton.Left, false);
+            editor.PointerMove(160, 100, false);
+            editor.PointerUp(160, 100, false);
+            editor.Visible = false;
+            now += TimeSpan.FromSeconds(1);
+            ClickAt(editor, 101, 101);
+            Assert.Equal(3, asked.Count);
+            now += TimeSpan.FromMilliseconds(200);
+            ClickAt(editor, 101, 101);
+            Assert.Null(asked[^1]);
+            Assert.Equal(4, asked.Count);
+            Assert.Empty(requests);
+        }
     }
 }

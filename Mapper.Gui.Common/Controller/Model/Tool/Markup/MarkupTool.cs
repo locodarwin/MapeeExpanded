@@ -22,6 +22,9 @@ namespace Mapper.Gui.Controller
         // The world's markup was read, or changed; the Places list should be filled again
         public event EventHandler? PlacesChanged;
 
+        // Whether a click on the map may open the bar; not while another tool that takes clicks is on
+        public Func<bool> CanOpenFromMap { get; set; } = () => true;
+
         public MarkupTool(Scene scene, WorldOpener worldOpener, AppSettings settings, IRenderInvoker renderInvoker)
         {
             Scene = scene;
@@ -36,6 +39,16 @@ namespace Mapper.Gui.Controller
             {
                 Store.Save(Editor.Document);
                 PlacesChanged?.Invoke(this, EventArgs.Empty);
+            };
+
+            // A click on a pin or zone opens the bar with it picked; a double-click on the map opens it to drop pins
+            Editor.OpenRequested += (sender, item) =>
+            {
+                if (IsTurnedOn || !Enabled || !CanOpenFromMap()) return;
+                IsTurnedOn = true;
+                if (item is null) return;
+                Editor.Mode = MarkupMode.Select;
+                Editor.Select(item);
             };
 
             Scene.WorldChanged += (old, current) => Load(current.Level);

@@ -27,7 +27,7 @@ namespace Mapee.Cli
             _dimension = dimension;
         }
 
-        public bool HasAny => _document.PinsIn(_dimension).Any() || _document.ZonesIn(_dimension).Any();
+        public bool HasAny => _document.PinsIn(_dimension).Any() || _document.ZonesIn(_dimension).Any() || _document.SignsIn(_dimension).Any();
 
         public void Draw(byte[] rgba, int left, int top, int width, int height)
         {
@@ -44,6 +44,7 @@ namespace Mapee.Cli
             {
                 foreach (ZoneShape zone in frame.Zones) DrawZone(canvas, zone);
                 foreach (ZoneShape zone in frame.Zones) DrawZoneLabel(canvas, zone);
+                foreach (SignShape sign in frame.Signs) DrawSign(canvas, sign);
                 foreach (PinShape pin in frame.Pins) DrawPin(canvas, pin);
             }
 
@@ -100,6 +101,24 @@ namespace Mapee.Cli
             {
                 using SKFont font = new(LabelFace, 12);
                 DrawLabel(canvas, font, pin.Pin.Label, x + radius + 4, y);
+            }
+        }
+
+        private static void DrawSign(SKCanvas canvas, SignShape sign)
+        {
+            using SKPaint wood = new() { Color = ColorOf(SignShape.Wood), IsAntialias = true };
+            using SKPaint edge = new() { Color = new SKColor(26, 26, 26), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 1.5f };
+            var (postLeft, postTop, postWidth, postHeight) = sign.Post;
+            var (left, top, width, height) = sign.Board;
+            canvas.DrawRect(SKRect.Create((float)postLeft, (float)postTop, (float)postWidth, (float)postHeight), edge);
+            SKRect board = SKRect.Create((float)left, (float)top, (float)width, (float)height);
+            canvas.DrawRoundRect(board, 1.5f, 1.5f, wood);
+            canvas.DrawRoundRect(board, 1.5f, 1.5f, edge);
+
+            if (sign.Labelled)
+            {
+                using SKFont font = new(LabelFace, 12);
+                DrawLabel(canvas, font, sign.Sign.Title, (float)(sign.X + MarkupEditor.SignRadius + 4), (float)sign.Y);
             }
         }
 

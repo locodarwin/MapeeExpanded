@@ -52,6 +52,11 @@
     display: flex; align-items: center; justify-content: center; }
   .pin b i { width: 5px; height: 5px; border-radius: 50%; }
   .pin svg { width: 12px; height: 12px; }
+  .sign { position: absolute; transform: translate(-7px, -50%); display: flex; align-items: center; }
+  .sign b { position: relative; width: 14px; height: 10px; border-radius: 2px; border: 1.5px solid #1a1a1a; box-sizing: border-box;
+    background: #c8a165; flex: none; margin-top: -4px; }
+  .sign b::after { content: ""; position: absolute; left: 4.5px; top: 8.5px; width: 2px; height: 5px; background: #1a1a1a; }
+  .sign span { margin-left: 4px; padding: 1px 5px; border-radius: 3px; background: rgba(20, 20, 20, 0.8); white-space: nowrap; font-size: 12px; font-weight: 600; }
   .pin span { margin-left: 4px; padding: 1px 5px; border-radius: 3px; background: rgba(20, 20, 20, 0.8); white-space: nowrap; font-size: 12px; font-weight: 600; }
   #card { display: none; z-index: 4; max-width: 260px; pointer-events: none; }
   #card h2 { font-size: 14px; margin: 0; font-weight: 600; }
@@ -85,7 +90,7 @@
   <button id="zoomOut" title="Zoom out (&minus;)">&minus;</button>
   <button id="fit" class="small" title="Show the whole map (Home)">ALL</button>
   <button id="gridToggle" class="small" title="Region and chunk grid (G)">GRID</button>
-  <button id="markerToggle" class="small on" title="Pins and markers (M)">PINS</button>
+  <button id="markerToggle" class="small on" title="Pins, signs and markers (M)">PINS</button>
   <button id="zoneToggle" class="small on" title="Zones (Z)">ZONES</button>
 </div>
 <script>
@@ -261,9 +266,10 @@ function drawMarkers() {
   });
 }
 
-// The world's pins and zones, of the dimension shown. Pins share the markers' layer and switch; zones have their own
+// The world's pins, zones and shown signs, of the dimension shown. Pins and signs share the markers' layer and switch;
+// zones have their own
 const SVG = "http://www.w3.org/2000/svg";
-let pinEls = [], zoneEls = [], hovered = null;
+let pinEls = [], signEls = [], zoneEls = [], hovered = null;
 const isLight = hex => {
   const v = parseInt(hex.slice(1), 16);
   return ((v >> 16) & 255) * 0.299 + ((v >> 8) & 255) * 0.587 + (v & 255) * 0.114 > 170;
@@ -284,6 +290,16 @@ function createMarkup() {
       zoneLayerEl.appendChild(label);
     }
     return { kind: "zone", item: z, shape, label, labelSize: null, area: zoneArea(z.points) };
+  });
+  signEls = (dim.signs || []).map(s => {
+    const el = document.createElement("div");
+    el.className = "sign";
+    el.appendChild(document.createElement("b"));
+    const label = document.createElement("span");
+    label.textContent = s.lines[0];
+    el.appendChild(label);
+    markersEl.appendChild(el);
+    return { kind: "sign", item: s, el, label };
   });
   pinEls = (dim.pins || []).map(p => {
     const el = document.createElement("div");
@@ -345,6 +361,17 @@ function drawMarkup() {
       zone.label.style.top = Math.round(ly) + "px";
     }
   }
+  // Signs stand close together, so a label that would cover one already placed is left off; the card still has it
+  const placed = [];
+  for (const sign of signEls) {
+    const [x, y] = toScreen(sign.item.x + 0.5, sign.item.z + 0.5);
+    sign.el.style.left = Math.round(x) + "px";
+    sign.el.style.top = Math.round(y) + "px";
+    const w = sign.label.textContent.length * 7 + 10, left = x + 11, top = y - 9;
+    const free = !placed.some(p => left < p[0] + p[2] && left + w > p[0] && top < p[1] + 18 && top + 18 > p[1]);
+    if (free) placed.push([left, top, w]);
+    sign.label.style.visibility = free ? "" : "hidden";
+  }
   for (const pin of pinEls) {
     const [x, y] = toScreen(pin.item.x + 0.5, pin.item.z + 0.5);
     pin.el.style.left = Math.round(x) + "px";
@@ -357,6 +384,10 @@ function markupAt(sx, sy) {
     for (let i = pinEls.length - 1; i >= 0; i--) {
       const [x, y] = toScreen(pinEls[i].item.x + 0.5, pinEls[i].item.z + 0.5);
       if (Math.hypot(sx - x, sy - y) <= 12) return pinEls[i];
+    }
+    for (let i = signEls.length - 1; i >= 0; i--) {
+      const [x, y] = toScreen(signEls[i].item.x + 0.5, signEls[i].item.z + 0.5);
+      if (Math.abs(sx - x) <= 10 && Math.abs(sy - y) <= 10) return signEls[i];
     }
   }
   if (zoneLayerEl.classList.contains("hidden")) return null;
@@ -378,6 +409,20 @@ function contains(points, x, z) {
 function showCard(found, sx, sy) {
   const item = found.item;
   cardEl.replaceChildren();
+  if (found.kind === "sign") {
+    const title = document.createElement("h2");
+    title.textContent = item.lines[0];
+    const lines = document.createElement("p");
+    lines.className = "note";
+    lines.textContent = item.lines.slice(1).join("\n");
+    const detail = document.createElement("p");
+    detail.textContent = "X " + item.x + "   Y " + item.y + "   Z " + item.z;
+    cardEl.append(title);
+    if (item.lines.length > 1) cardEl.append(lines);
+    cardEl.append(detail);
+    placeCard(sx, sy);
+    return;
+  }
   const title = document.createElement("h2");
   title.textContent = item.label || (found.kind === "pin" ? "Unnamed pin" : "Unnamed zone");
   const detail = document.createElement("p");
@@ -389,6 +434,9 @@ function showCard(found, sx, sy) {
     note.textContent = item.note;
     cardEl.appendChild(note);
   }
+  placeCard(sx, sy);
+}
+function placeCard(sx, sy) {
   cardEl.style.display = "block";
   let x = sx + 14, y = sy + 14;
   if (x + cardEl.offsetWidth > width()) x = sx - cardEl.offsetWidth - 8;
@@ -587,7 +635,7 @@ function showDimension(next, nextView) {
   createMarkup();
   hovered = null;
   hideCard();
-  markerButton.style.display = dim.markers.length === 0 && pinEls.length === 0 ? "none" : "";
+  markerButton.style.display = dim.markers.length === 0 && pinEls.length === 0 && signEls.length === 0 ? "none" : "";
   zoneButton.style.display = zoneEls.length === 0 ? "none" : "";
   document.querySelector("#info p").textContent = dim.subtitle;
   for (const button of dimsEl.children) button.classList.toggle("on", button.dataset.id === dim.id);

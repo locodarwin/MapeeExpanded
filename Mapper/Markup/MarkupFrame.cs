@@ -1,11 +1,13 @@
 namespace Mapper
 {
     // What to draw for a world's markup on one frame, in screen units, worked out once for both GUIs' painters and
-    // the image export: the zones and pins in view, largest zones first, and whatever the editor has half drawn
+    // the image export: the zones, pins and shown signs in view, largest zones first, and whatever the editor has half
+    // drawn
     public sealed class MarkupFrame
     {
         public List<ZoneShape> Zones { get; } = [];
         public List<PinShape> Pins { get; } = [];
+        public List<SignShape> Signs { get; } = [];
 
         // Corners of the zone picked in Select mode, with the one under the mouse
         public List<(double X, double Y)> Handles { get; } = [];
@@ -20,10 +22,13 @@ namespace Mapper
         public (double Left, double Top, double Right, double Bottom)? Rectangle { get; private set; }
         public string? RectangleText { get; private set; }
 
-        public bool IsEmpty => Zones.Count == 0 && Pins.Count == 0 && Draft.Count == 0 && Rectangle is null;
+        public bool IsEmpty => Zones.Count == 0 && Pins.Count == 0 && Signs.Count == 0 && Draft.Count == 0 && Rectangle is null;
 
         // Pins and zone labels stay readable however far out the map is zoomed; zones too small to see are left out
         private const double MinZoneSize = 2, Margin = 64;
+        // Roughly how much room a sign's label takes; signs stand close together, so a label that would cover one
+        // already placed is left off until the mouse is over its sign
+        private const double CharacterWidth = 7, LabelHeight = 18;
 
         public static MarkupFrame Build(MarkupDocument document, IMarkupView view, double width, double height, MarkupEditor? editor = null)
         {
@@ -61,6 +66,24 @@ namespace Mapper
                 frame.Pins.Add(new PinShape(pin, x, y, editor?.Hovered == pin, editor?.Selected == pin || editor?.Pending == pin));
             }
 
+            // Which labels fit is worked out over every sign, in view or not, so an image drawn a band at a time
+            // labels the same ones in every band
+            List<(double Left, double Top, double Right, double Bottom)> labels = [];
+            foreach (MapSign sign in document.SignsIn(dimension).OrderByDescending(s => editor?.HoveredSign == s))
+            {
+                var (x, y) = view.ToScreen(sign.X + 0.5, sign.Z + 0.5);
+                bool hovered = editor?.HoveredSign == sign;
+                double left = x + MarkupEditor.SignRadius + 4, right = left + sign.Title.Length * CharacterWidth + 10;
+                double top = y - LabelHeight / 2, bottom = top + LabelHeight;
+                bool labelled = hovered || !labels.Any(l => left < l.Right && right > l.Left && top < l.Bottom && bottom > l.Top);
+                if (labelled) labels.Add((left, top, right, bottom));
+
+                if (x < -Margin * 4 || y < -Margin || x > width + Margin || y > height + Margin) continue;
+                frame.Signs.Add(new SignShape(sign, x, y, hovered, labelled));
+            }
+            // The hovered one last, on top
+            frame.Signs.Reverse();
+
             if (editor is null) return frame;
 
             frame.Draft.AddRange(editor.Draft.Select(p => view.ToScreen(p.X, p.Z)));
@@ -87,4 +110,15 @@ namespace Mapper
         bool Hovered, bool Selected, string? Detail);
 
     public record PinShape(MapPin Pin, double X, double Y, bool Hovered, bool Selected);
+
+    // A shown sign's mark at its block; Labelled when there's room for its first line. Hovered shows all its lines
+    public record SignShape(MapSign Sign, double X, double Y, bool Hovered, bool Labelled)
+    {
+        // The board, centred a little above the block's middle, and its post below
+        public (double Left, double Top, double Width, double Height) Board => (X - BoardWidth / 2, Y - BoardHeight / 2 - 2, BoardWidth, BoardHeight);
+        public (double Left, double Top, double Width, double Height) Post => (X - 1, Y + BoardHeight / 2 - 2, 2, 5);
+
+        public const double BoardWidth = 14, BoardHeight = 10;
+        public const string Wood = "#c8a165";
+    }
 }

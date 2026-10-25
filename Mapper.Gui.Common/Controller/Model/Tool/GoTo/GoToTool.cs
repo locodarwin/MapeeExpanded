@@ -1,5 +1,6 @@
 ﻿using Mapper.Gui.Logic;
 using Mapper.Gui.Model;
+using System;
 using System.Linq;
 #if AVALONIA
 using Avalonia;
@@ -16,7 +17,7 @@ namespace Mapper.Gui.Controller
         public ToolButton? Owner { get; set; }
         public Scene Scene { get; }
         public CanvasControl Canvas { get; }
-        // Its pins and zones are listed under the spawn points, while markup is shown
+        // Its pins, zones and shown signs are listed under the spawn points, while markup is shown
         public MarkupTool? Markup { get; set; }
         // And the structures of the dimension on show, nearest first, while the structure overlay is on
         public WorldStructures? Structures { get; set; }
@@ -62,6 +63,10 @@ namespace Mapper.Gui.Controller
                     var (x, z) = MarkupTool.CentreOf(item);
                     return (MarkupTool.Title(item), new XzPoint(x, z));
                 }));
+                // The signs shown, by everything they say, so typing a word finds them
+                goToWindow.AddPlaces(Markup.Editor.Document.SignsIn(Markup.View.Dimension)
+                    .OrderBy(s => s.Text, StringComparer.CurrentCultureIgnoreCase)
+                    .Select(s => ($"Sign: {(s.Text.Length > 0 ? s.Text : "blank")}", new XzPoint(s.X + 0.5, s.Z + 0.5))));
             }
             if (Structures is { Shown: true })
             {

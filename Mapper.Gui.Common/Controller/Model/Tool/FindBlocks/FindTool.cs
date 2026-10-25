@@ -17,13 +17,18 @@ namespace Mapper.Gui.Controller
 {
     // The Find blocks button: opens the find window, searches the whole dimension on show in the background and
     // marks what it finds on the map (FindPainter). While Live is on, regions the game saves are searched again.
-    // Switching dimension or world clears the results; closing the window takes the marks away
+    // Switching dimension or world clears the results; closing the window takes the marks away. The window's other
+    // half lists the signs (WorldSigns), whose ticks stay with the world's markup
     public class FindTool : ToggleableTool
     {
         public Scene Scene { get; }
         public CanvasControl Canvas { get; }
         public MarkupTool Markup { get; }
         public SceneMarkupView View { get; }
+        public WorldSigns? Signs { get; init; }
+
+        // The window opens on the half it was on when it was closed
+        public bool OnSigns { get; set; }
 
         // The search on show, or null; read by the painter on the UI thread
         public FindResults? Results { get; private set; }
@@ -232,6 +237,9 @@ namespace Mapper.Gui.Controller
             Raise();
             _renderer.Render();
         }
+
+        // Centres the map on a sign
+        public void GoTo(Sign sign) => Scene.Map.SetCenterPoint(new XzPoint(sign.X + 0.5, sign.Z + 0.5));
 
         public bool CanPin => Markup.Enabled;
 

@@ -20,6 +20,8 @@ namespace Mapper.Gui.Controller
         public ExportAsImageTool ExportTool { get; private set; } = null!;
         public FilterTool FilterTool { get; private set; } = null!;
         public FindTool FindTool { get; private set; } = null!;
+        // The find window's Signs list's, and the signs shown on the map
+        public WorldSigns Signs { get; private set; } = null!;
         // Browsing has no button of its own: the Open menu leads to it, and Ctrl+O
         public BrowseTool BrowseTool { get; private set; } = null!;
         public ShortcutsTool ShortcutsTool { get; private set; } = null!;
@@ -177,11 +179,12 @@ namespace Mapper.Gui.Controller
         // Its marks are drawn over the other overlays, and under the markup, whose painter comes later
         private ToolButton CreateFindButton()
         {
-            FindTool tool = new(Renderer.Scene, Renderer.GraphicsCanvas, MarkupTool, LiveTool, RenderInvoker);
+            Signs = new WorldSigns(Renderer.Scene, MarkupTool, LiveTool);
+            FindTool tool = new(Renderer.Scene, Renderer.GraphicsCanvas, MarkupTool, LiveTool, RenderInvoker) { Signs = Signs };
             FindTool = tool;
             Renderer.AddPainter(new FindPainter(tool, Renderer.GraphicsCanvas));
             ToolButton output = new(tool) { Icon = ToolIcons.Find, Name = "Find" };
-            Keyed(output, "Find blocks: diamonds, spawners, chests or any block, anywhere in the dimension", ShortcutAction.FindBlocks);
+            Keyed(output, "Find blocks (diamonds, spawners, chests or any block) anywhere in the dimension, or signs by what they say", ShortcutAction.FindBlocks);
 
             return output;
         }

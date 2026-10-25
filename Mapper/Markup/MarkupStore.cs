@@ -115,6 +115,14 @@ namespace Mapper
             {
                 if (PinIcons.PathOf(pin.Icon) is null) pin.Icon = null;
             }
+            // From a Mapee before signs, there are none
+            document.Signs = [.. (document.Signs ?? []).Where(s => s is not null).DistinctBy(s => (s.Dimension, s.X, s.Y, s.Z))];
+            foreach (MapSign sign in document.Signs)
+            {
+                sign.Dimension ??= Dimension.Overworld.Namespace;
+                sign.Front = [.. (sign.Front ?? []).Select(l => l ?? string.Empty)];
+                sign.Back = [.. (sign.Back ?? []).Select(l => l ?? string.Empty)];
+            }
             return document;
         }
 

@@ -8,7 +8,7 @@ using System.Windows.Media;
 
 namespace Mapper.Gui.Logic
 {
-    // Draws the world's pins and zones over the map, and the image export's copy of them. What goes where is
+    // Draws the world's pins, zones and shown signs over the map, and the image export's copy of them. What goes where is
     // MarkupFrame's work, shared with the Avalonia GUI; this only draws it
     public class MarkupPainter : IPainter
     {
@@ -28,6 +28,7 @@ namespace Mapper.Gui.Logic
         private static readonly Brush RectangleFill = Frozen(new SolidColorBrush(Color.FromArgb(40, 255, 255, 255)));
         private static readonly Pen PinEdge = Frozen(new Pen(new SolidColorBrush(Color.FromRgb(26, 26, 26)), 1.5));
         private static readonly Pen Ring = Frozen(new Pen(Brushes.White, 2));
+        private static readonly Brush Wood = Frozen(new SolidColorBrush((Color)ColorConverter.ConvertFromString(SignShape.Wood)));
         private static readonly Pen DraftPen = Frozen(new Pen(Brushes.White, 2) { DashStyle = new DashStyle([2, 1.5], 0) });
         private static readonly Pen DraftShadow = Frozen(new Pen(new SolidColorBrush(Color.FromArgb(160, 0, 0, 0)), 4));
         private static readonly Pen HandleEdge = Frozen(new Pen(new SolidColorBrush(Color.FromRgb(26, 26, 26)), 1));
@@ -52,6 +53,7 @@ namespace Mapper.Gui.Logic
         {
             foreach (ZoneShape zone in frame.Zones) DrawZone(drawingContext, zone);
             foreach (ZoneShape zone in frame.Zones) DrawZoneLabel(drawingContext, zone, pixelsPerDip);
+            foreach (SignShape sign in frame.Signs) DrawSign(drawingContext, sign, pixelsPerDip);
             foreach (PinShape pin in frame.Pins) DrawPin(drawingContext, pin, pixelsPerDip);
 
             DrawHandles(drawingContext, frame);
@@ -117,6 +119,32 @@ namespace Mapper.Gui.Logic
                 if (NoteLine(pin.Pin.Note) is string note) lines.Add(Text(note, DetailFont, 11, DetailBrush, pixelsPerDip));
             }
             if (lines.Count > 0) DrawLines(drawingContext, lines, pin.X + radius + 4, pin.Y, false);
+        }
+
+        // A small sign standing on its block, with its first line beside it, or every line while the mouse is over it
+        private static void DrawSign(DrawingContext drawingContext, SignShape sign, double pixelsPerDip)
+        {
+            var (postLeft, postTop, postWidth, postHeight) = sign.Post;
+            var (left, top, width, height) = sign.Board;
+            drawingContext.DrawRectangle(PinEdge.Brush, null, new Rect(postLeft, postTop, postWidth, postHeight));
+            drawingContext.DrawRoundedRectangle(Wood, sign.Hovered ? Ring : PinEdge, new Rect(left, top, width, height), 1.5, 1.5);
+
+            List<FormattedText> lines = [];
+            if (sign.Hovered)
+            {
+                IReadOnlyList<string> text = sign.Sign.Lines;
+                lines.Add(Text(text[0], LabelFont, 12, Brushes.White, pixelsPerDip));
+                lines.AddRange(text.Skip(1).Select(l => Text(l, DetailFont, 12, Brushes.White, pixelsPerDip)));
+                lines.Add(Text($"{sign.Sign.X}, {sign.Sign.Y}, {sign.Sign.Z}", DetailFont, 11, DetailBrush, pixelsPerDip));
+            }
+            else if (sign.Labelled)
+            {
+                lines.Add(Text(sign.Sign.Title, LabelFont, 12, Brushes.White, pixelsPerDip));
+            }
+            if (lines.Count == 0) return;
+            // While the mouse is over it, above it, clear of the coordinates beside the mouse
+            double y = sign.Hovered ? sign.Y - SignShape.BoardHeight / 2 - (lines.Sum(l => l.Height) + 4) / 2 : sign.Y;
+            DrawLines(drawingContext, lines, sign.X + MarkupEditor.SignRadius + 4, y, false);
         }
 
         private static void DrawHandles(DrawingContext drawingContext, MarkupFrame frame)

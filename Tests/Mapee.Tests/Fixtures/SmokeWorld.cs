@@ -1,8 +1,8 @@
 namespace Mapee.Tests.Fixtures
 {
     // A small Java world with something to look at and something to find: 12 by 12 chunks of stone under grass,
-    // a sea along one side, diamond ore deep down, a spawner and a chest, and a village saved as starting in the chunk
-    // at 2, 2 (though none is built). Made up rather than played, so it can
+    // a sea along one side, diamond ore deep down, a spawner and a chest, a village saved as starting in the chunk
+    // at 2, 2 (though none is built) and a sign that says something. Made up rather than played, so it can
     // go into CI, where the Windows smoke test opens it (the sample worlds are private)
     public static class SmokeWorld
     {
@@ -51,6 +51,31 @@ namespace Mapee.Tests.Fixtures
             ["References"] = new Dictionary<string, object>()
         };
 
+        // A sign standing on the grass, as 1.20 and later save one: each line JSON text, and a back
+        public static readonly (int X, int Y, int Z) SignAt = (20, 64, 20);
+        public static readonly string[] SignFront = ["Welcome to", "the smoke test"];
+        private static Dictionary<string, object> Sign => new()
+        {
+            ["id"] = "minecraft:sign",
+            ["x"] = SignAt.X,
+            ["y"] = SignAt.Y,
+            ["z"] = SignAt.Z,
+            ["keepPacked"] = (byte)0,
+            ["is_waxed"] = (byte)0,
+            ["front_text"] = new Dictionary<string, object>
+            {
+                ["messages"] = new List<object> { "{\"text\":\"Welcome to\"}", "{\"text\":\"the smoke test\"}", "\"\"", "\"\"" },
+                ["color"] = "black",
+                ["has_glowing_text"] = (byte)0
+            },
+            ["back_text"] = new Dictionary<string, object>
+            {
+                ["messages"] = new List<object> { "\"\"", "\"\"", "\"\"", "\"\"" },
+                ["color"] = "black",
+                ["has_glowing_text"] = (byte)0
+            }
+        };
+
         private static Dictionary<string, object> Chunk(int x, int z)
         {
             bool sea = x <= -3;
@@ -78,6 +103,7 @@ namespace Mapee.Tests.Fixtures
                 ["sections"] = sections
             };
             if (x == 2 && z == 2) output["structures"] = Village;
+            if (x == SignAt.X >> 4 && z == SignAt.Z >> 4) output["block_entities"] = new List<object> { Sign };
             return output;
         }
     }

@@ -1,3 +1,5 @@
+using WorldEditor;
+
 namespace Mapper
 {
     public enum MarkupMode { View, Pin, Zone, Rectangle, Select }
@@ -22,6 +24,8 @@ namespace Mapper
     public class MarkupEditor
     {
         public const double PinRadius = 9;
+        // Half a shown sign's mark, for finding the one under the mouse
+        public const double SignRadius = 7;
         public const double HandleRadius = 5;
         private const double Slop = 4, DragThreshold = 4, DoubleClickDistance = 6;
         private static readonly TimeSpan DoubleClickTime = TimeSpan.FromMilliseconds(450);
@@ -54,12 +58,15 @@ namespace Mapper
                 _visible = value;
                 if (!value) Mode = MarkupMode.View;
                 Hovered = null;
+                HoveredSign = null;
                 Repaint();
             }
         }
         private bool _visible = true;
 
         public MarkupItem? Hovered { get; private set; }
+        // The shown sign under the mouse, when no pin or zone is
+        public MapSign? HoveredSign { get; private set; }
         public MarkupItem? Selected { get; private set; }
         public int HoveredCorner { get; private set; } = -1;
 
@@ -137,6 +144,7 @@ namespace Mapper
             _redo.Clear();
             Pending = null;
             Selected = Hovered = null;
+            HoveredSign = null;
             CancelGesture();
             Repaint();
         }
@@ -146,6 +154,7 @@ namespace Mapper
         {
             Pending = null;
             Selected = Hovered = null;
+            HoveredSign = null;
             CancelGesture();
             Repaint();
         }
@@ -290,9 +299,10 @@ namespace Mapper
         {
             Mouse = null;
             DraftCursor = null;
-            if (Hovered is not null || Mode == MarkupMode.Zone)
+            if (Hovered is not null || HoveredSign is not null || Mode == MarkupMode.Zone)
             {
                 Hovered = null;
+                HoveredSign = null;
                 Repaint();
             }
         }
@@ -519,6 +529,70 @@ namespace Mapper
             return added;
         }
 
+        // Signs picked in the Signs list to show, or no longer; neither is undone with the pins and zones, as the list
+        // shows each one's tick. Return how many were added or taken off
+        public int ShowSigns(IEnumerable<Sign> signs)
+        {
+            int added = 0;
+            foreach (Sign sign in signs)
+            {
+                if (Document.SignAt(sign.Dimension.Namespace, sign.X, sign.Y, sign.Z) is not null) continue;
+                Document.Signs.Add(MapSign.Of(sign));
+                added++;
+            }
+            if (added > 0) SignsEdited();
+            return added;
+        }
+
+        public int HideSigns(IEnumerable<MapSign> signs)
+        {
+            HashSet<MapSign> gone = [.. signs];
+            int removed = Document.Signs.RemoveAll(gone.Contains);
+            if (removed > 0) SignsEdited();
+            return removed;
+        }
+
+        // The signs another file has shown that this world doesn't
+        public int ImportSigns(MarkupDocument other)
+        {
+            int added = Document.MergeSigns(other);
+            if (added > 0) SignsEdited();
+            return added;
+        }
+
+        // A dimension's signs as just read: shown ones in the regions read take what they say now, and those no longer
+        // there are taken off the map. Returns whether any changed
+        public bool UpdateSigns(DimensionSigns read)
+        {
+            string dimension = read.Dimension.Namespace;
+            HashSet<Coords> regions = [.. read.Read];
+            bool changed = false;
+            for (int i = Document.Signs.Count - 1; i >= 0; i--)
+            {
+                MapSign shown = Document.Signs[i];
+                if (shown.Dimension != dimension || !regions.Contains(new Coords(shown.X >> 9, shown.Z >> 9))) continue;
+                if (read.At(shown.X, shown.Y, shown.Z) is not Sign now)
+                {
+                    Document.Signs.RemoveAt(i);
+                    changed = true;
+                }
+                else if (!shown.Matches(now))
+                {
+                    Document.Signs[i] = MapSign.Of(now);
+                    changed = true;
+                }
+            }
+            if (changed) SignsEdited();
+            return changed;
+        }
+
+        private void SignsEdited()
+        {
+            if (HoveredSign is not null && !Document.Signs.Contains(HoveredSign)) HoveredSign = null;
+            Edited?.Invoke(this, EventArgs.Empty);
+            Repaint();
+        }
+
         public bool Undo() => Step(_undo, _redo);
         public bool Redo() => Step(_redo, _undo);
 
@@ -575,11 +649,14 @@ namespace Mapper
 
         private bool UpdateHover(double x, double y)
         {
-            MarkupItem? hovered = ItemAt(x, y);
+            MarkupItem? hovered = PinAt(x, y);
+            MapSign? sign = hovered is null ? SignAt(x, y) : null;
+            hovered ??= sign is null ? ZoneAt(x, y) : null;
             int corner = Mode == MarkupMode.Select && Selected is MapZone zone ? CornerAt(zone, x, y) ?? -1 : -1;
-            if (hovered == Hovered && corner == HoveredCorner) return false;
+            if (hovered == Hovered && sign == HoveredSign && corner == HoveredCorner) return false;
 
             Hovered = hovered;
+            HoveredSign = sign;
             HoveredCorner = corner;
             return true;
         }
@@ -595,6 +672,19 @@ namespace Mapper
                 MapPin pin = Document.Pins[i];
                 if (pin.Dimension != dimension) continue;
                 if (Distance((x, y), View.ToScreen(pin.X + 0.5, pin.Z + 0.5)) <= PinRadius + Slop) return pin;
+            }
+            return null;
+        }
+
+        public MapSign? SignAt(double x, double y)
+        {
+            string dimension = View.Dimension;
+            for (int i = Document.Signs.Count - 1; i >= 0; i--)
+            {
+                MapSign sign = Document.Signs[i];
+                if (sign.Dimension != dimension) continue;
+                var (sx, sy) = View.ToScreen(sign.X + 0.5, sign.Z + 0.5);
+                if (Math.Abs(x - sx) <= SignRadius + Slop && Math.Abs(y - sy) <= SignRadius + Slop) return sign;
             }
             return null;
         }

@@ -133,8 +133,9 @@ namespace Mapper.Gui.Controller
             }
 
             var (pins, zones) = Editor.Import(other);
-            if (pins + zones == 0) return other.IsEmpty ? "That file holds no markup." : "Everything in that file is already here.";
-            return $"Added {Count(pins, "pin")} and {Count(zones, "zone")}.";
+            int signs = Editor.ImportSigns(other);
+            if (pins + zones + signs == 0) return other.IsEmpty ? "That file holds no markup." : "Everything in that file is already here.";
+            return signs == 0 ? $"Added {Count(pins, "pin")} and {Count(zones, "zone")}." : $"Added {Count(pins, "pin")}, {Count(zones, "zone")} and {Count(signs, "sign")} to show.";
         }
 
         private static string Count(int count, string what) => $"{count} {what}{(count == 1 ? "" : "s")}";

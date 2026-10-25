@@ -107,6 +107,21 @@ namespace Mapper.Gui
                 await Until(() => !find.Searching, 60);
                 Check("Find diamonds and spawners", (find.Results?.Total ?? 0) > 0, $"{find.Results?.Total ?? 0} found");
                 await Shoot("find-results");
+
+                // The made-up world has one sign; ticked, it's shown with the world's markup
+                FindWindow window = Window<FindWindow>()!;
+                await Click((Button)window.FindName("SignsButton"));
+                await Until(() => toolbar.Signs.Current is not null && !toolbar.Signs.Reading && window.Signs?.Listed.Count > 0, 60);
+                SignRow? row = window.Signs?.Listed.FirstOrDefault();
+                Check("Find > Signs", row?.Title == "Welcome to" && row.More == "the smoke test" && window.Signs!.Listed.Count == 1,
+                    string.Join(", ", window.Signs?.Listed.Select(r => $"{r.Title} {r.More} at {r.Place}") ?? []));
+                if (row is not null) row.Shown = true;
+                await Wait(300);
+                MarkupDocument markup = toolbar.MarkupTool.Editor.Document;
+                Check("Find > Signs: show one on the map", markup.Signs.Count == 1 && toolbar.MarkupTool.ShowMarkup,
+                    $"{markup.Signs.Count} shown, markup {(toolbar.MarkupTool.ShowMarkup ? "shown" : "hidden")}");
+                await Shoot("find-signs");
+                if (row is not null) row.Shown = false;
             });
             await Press("Mark", () => toolbar.MarkupTool.IsTurnedOn && _controller.MarkupBar.IsVisible, turnOff: true);
             await Press("Measure", () => toolbar.MeasureLengthTool.IsTurnedOn, Measure, turnOff: true);

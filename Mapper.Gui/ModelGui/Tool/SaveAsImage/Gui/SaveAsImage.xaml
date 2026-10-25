@@ -87,7 +87,7 @@
           </Grid>
         </Border>
 
-        <CheckBox x:Name="IncludeMarkupCheckBox" Grid.Row="3" IsChecked="True" Content="Include pins and zones" Foreground="#FFEEEEEE"
+        <CheckBox x:Name="IncludeMarkupCheckBox" Grid.Row="3" IsChecked="True" Content="Include pins, zones and signs" Foreground="#FFEEEEEE"
                   HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0, 0, 25, 18" />
 
         <Grid Grid.Row="3" Margin="0, 0, 0, 13" HorizontalAlignment="Left" VerticalAlignment="Bottom">

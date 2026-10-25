@@ -9,17 +9,20 @@ using System.Windows.Threading;
 
 namespace Mapper.Gui
 {
-    // The find window: what to look for on top, what was found below. FindPanel holds what it shows, FindTool runs
-    // the search; this only lays them out (the Avalonia GUI has its own copy)
+    // The find window. Blocks: what to look for on top, what was found below. Signs: the dimension's signs, each with
+    // a tick for showing it on the map. FindPanel and SignsPanel hold what they show, FindTool runs the search and
+    // WorldSigns reads the signs; this only lays them out (the Avalonia GUI has its own copy)
     public partial class FindWindow : Window
     {
         public FindPanel Panel { get; }
         public FindTool Tool => Panel.Tool;
+        public SignsPanel? Signs { get; }
 
         private IReadOnlyList<FoundCluster>? _shown;
         private bool _refreshing;
         private string? _message;
         private readonly DispatcherTimer _pinned = new() { Interval = TimeSpan.FromSeconds(2) };
+        private IReadOnlyList<SignRow>? _signRows;
 
         public FindWindow(FindTool tool)
         {
@@ -34,10 +37,26 @@ namespace Mapper.Gui
             {
                 _pinned.Stop();
                 PinnedText.Text = string.Empty;
+                SignPinnedText.Text = string.Empty;
             };
 
             Tool.Changed += Tool_Changed;
             Closed += (sender, e) => Tool.Changed -= Tool_Changed;
+
+            if (tool.Signs is WorldSigns signs)
+            {
+                Signs = new SignsPanel(signs, tool.Canvas);
+                signs.Changed += RefreshSigns;
+                Closed += (sender, e) =>
+                {
+                    signs.Changed -= RefreshSigns;
+                    signs.Listed = false;
+                };
+            }
+            else
+            {
+                SignsButton.Visibility = Visibility.Collapsed;
+            }
 
             Refresh();
         }
@@ -45,7 +64,110 @@ namespace Mapper.Gui
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             _ = new CustomFrameWindowInitializer(this, Template);
-            SearchBox.Focus();
+            Half(Tool.OnSigns && Signs is not null);
+        }
+
+        // Blocks or signs
+        private void Half(bool signs)
+        {
+            Tool.OnSigns = signs;
+            BlocksHalf.Visibility = signs ? Visibility.Collapsed : Visibility.Visible;
+            SignsHalf.Visibility = signs ? Visibility.Visible : Visibility.Collapsed;
+            BlocksButton.Tag = signs ? null : "on";
+            SignsButton.Tag = signs ? "on" : null;
+            if (Tool.Signs is WorldSigns worldSigns)
+            {
+                worldSigns.Listed = signs;
+                if (signs) worldSigns.Want();
+            }
+            if (signs)
+            {
+                RefreshSigns();
+                SignSearchBox.Focus();
+            }
+            else
+            {
+                SearchBox.Focus();
+            }
+        }
+
+        private void BlocksButton_Click(object sender, RoutedEventArgs e) => Half(false);
+        private void SignsButton_Click(object sender, RoutedEventArgs e) => Half(true);
+
+        private void RefreshSigns()
+        {
+            if (Signs is null || SignsHalf.Visibility != Visibility.Visible) return;
+            _refreshing = true;
+            try
+            {
+                IReadOnlyList<SignRow> rows = Signs.Rows();
+                if (!ReferenceEquals(rows, _signRows))
+                {
+                    _signRows = rows;
+                    SignList.ItemsSource = rows;
+                }
+                SignStatusText.Text = Signs.Status();
+                SignProgress.Visibility = Signs.Signs.Reading ? Visibility.Visible : Visibility.Hidden;
+                SignSortedText.Text = Signs.SortedText();
+                SignSortButton.Visibility = rows.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+                bool chosen = SignList.SelectedItem is SignRow;
+                ShowListedButton.IsEnabled = rows.Count > 0 && Signs.Signs.CanShow;
+                HideAllButton.IsEnabled = Signs.Signs.ShownHere > 0;
+                SignGoButton.IsEnabled = chosen;
+                SignPinButton.IsEnabled = chosen && Tool.CanPin;
+            }
+            finally
+            {
+                _refreshing = false;
+            }
+        }
+
+        private void SignSearchBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (Signs is null) return;
+            Signs.Filter(SignSearchBox.Text);
+            RefreshSigns();
+        }
+
+        private void BlankBox_Changed(object sender, RoutedEventArgs e)
+        {
+            if (Signs is null) return;
+            Signs.IncludeBlank = BlankBox.IsChecked == true;
+            RefreshSigns();
+        }
+
+        private void SignList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_refreshing) return;
+            if (SignList.SelectedItem is SignRow row) Tool.GoTo(row.Sign);
+            RefreshSigns();
+        }
+
+        private void SignList_MouseDoubleClick(object sender, MouseButtonEventArgs e) => SignGoButton_Click(sender, e);
+
+        private void SignSortButton_Click(object sender, RoutedEventArgs e)
+        {
+            Signs?.SortFromHere();
+            RefreshSigns();
+        }
+
+        private void ShowListedButton_Click(object sender, RoutedEventArgs e) => Signs?.ShowListed();
+
+        private void HideAllButton_Click(object sender, RoutedEventArgs e) => Signs?.HideAll();
+
+        private void SignGoButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (SignList.SelectedItem is SignRow row) Tool.GoTo(row.Sign);
+        }
+
+        private void SignPinButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (SignList.SelectedItem is not SignRow row || Tool.Signs is null) return;
+            Tool.Signs.Pin(row.Sign);
+            SignPinnedText.Text = "Pinned";
+            _pinned.Stop();
+            _pinned.Start();
         }
 
         private void Tool_Changed(object? sender, EventArgs e) => Refresh();

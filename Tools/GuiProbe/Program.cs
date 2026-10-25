@@ -46,6 +46,13 @@
 //   find-pin                          press Add a pin for the picked row
 //   find-stop                         press Stop
 //   find-state                        print the find window's status, counts and first rows, and the marks on screen
+//   signs[:<words>]                   open the find window's Signs, list only signs saying the words, wait for the
+//                                     reading and print the status and first rows
+//   signs-blank:<on|off>              tick or untick Include blank signs
+//   signs-tick:<row>[,<row>]          tick (or with !<row>, untick) rows of the Signs list (from 0)
+//   signs-pick:<row>                  pick a row: the map goes there
+//   signs-press:<button name>         press a button of the Signs half (ShowListedButton, HideAllButton, SignPinButton)
+//   signs-hover:<n>                   move the mouse onto the nth sign shown in view and print what the map labels
 //   keys                              print the key list's state, the changed keys kept, and tooltips that name keys
 //   keys:<action>                     click that action's key in the key list (Grid, HeightUp, ...); keys:reset:<action>,
 //                                     keys:reset-all, keys:card, keys:outside (the dimmed map around it)
@@ -452,10 +459,72 @@ foreach (string step in args.Skip(1))
         case "find-state":
             PrintFind(OpenFind());
             break;
+        case "signs":
+            {
+                FindWindow window = OpenFind();
+                window.FindControl<Button>("SignsButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                window.FindControl<TextBox>("SignSearchBox")!.Text = value;
+                Pump(200);
+                DateTime giveUp = DateTime.Now.AddSeconds(120);
+                while (controller.ToolbarWidget.Signs.Reading && DateTime.Now < giveUp) Pump(50);
+                Pump(300);
+                PrintSigns(window);
+                break;
+            }
+        case "signs-blank":
+            {
+                FindWindow window = OpenFind();
+                window.FindControl<CheckBox>("BlankBox")!.IsChecked = value == "on";
+                Pump(300);
+                PrintSigns(window);
+                break;
+            }
+        case "signs-tick":
+            {
+                FindWindow window = OpenFind();
+                foreach (string row in value.Split(','))
+                {
+                    bool on = !row.StartsWith('!');
+                    window.Signs!.Listed[int.Parse(row.TrimStart('!'))].Shown = on;
+                }
+                Pump(400);
+                PrintSigns(window);
+                break;
+            }
+        case "signs-pick":
+            {
+                FindWindow window = OpenFind();
+                window.FindControl<ListBox>("SignList")!.SelectedIndex = int.Parse(value);
+                Pump(400);
+                Console.WriteLine($"  map centre {controller.Domain.CurrentWorld?.CurrentDimension.Scaling.CenterPoint}");
+                PrintSigns(window);
+                break;
+            }
+        case "signs-press":
+            {
+                FindWindow window = OpenFind();
+                window.FindControl<Button>(value)!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                Pump(800);
+                PrintSigns(window);
+                break;
+            }
+        case "signs-hover":
+            {
+                MarkupTool tool = controller.ToolbarWidget.MarkupTool;
+                MarkupFrame before = MarkupFrame.Build(tool.Editor.Document, tool.View, controller.GraphicsCanvas.ActualWidth, controller.GraphicsCanvas.ActualHeight, tool.Editor);
+                SignShape target = before.Signs.Where(s => s.X >= 0 && s.Y >= 0 && s.X < controller.GraphicsCanvas.ActualWidth && s.Y < controller.GraphicsCanvas.ActualHeight).ElementAt(int.Parse(value));
+                Point onMain = controller.GraphicsCanvas.TranslatePoint(new Point(target.X, target.Y), main) ?? new Point(target.X, target.Y);
+                main.MouseMove(onMain, RawInputModifiers.None);
+                Pump(300);
+                MarkupFrame after = MarkupFrame.Build(tool.Editor.Document, tool.View, controller.GraphicsCanvas.ActualWidth, controller.GraphicsCanvas.ActualHeight, tool.Editor);
+                Console.WriteLine($"  hovered: {(tool.Editor.HoveredSign is MapSign hovered ? string.Join(" | ", hovered.Lines) : "nothing")}; labelled {after.Signs.Count(s => s.Labelled)} of {after.Signs.Count}");
+                break;
+            }
         case "marks":
             MarkupTool marks = controller.ToolbarWidget.MarkupTool;
             foreach (MapPin pin in marks.Editor.Document.Pins) Console.WriteLine($"  pin {pin.Label} at {pin.X}, {pin.Z} in {pin.Dimension}, {pin.Color} {pin.Icon ?? "dot"}{(pin.Note is null ? "" : $", note {pin.Note}")}");
             foreach (MapZone zone in marks.Editor.Document.Zones) Console.WriteLine($"  zone {zone.Label} in {zone.Dimension}, {zone.Color}: {string.Join(" ", zone.Points.Select(p => $"{p.X},{p.Z}"))} ({ZoneGeometry.Describe(zone.Points)})");
+            foreach (MapSign sign in marks.Editor.Document.Signs) Console.WriteLine($"  sign at {sign.X}, {sign.Y}, {sign.Z} in {sign.Dimension}: {string.Join(" | ", sign.Lines)}");
             Console.WriteLine($"  places: {string.Join(" | ", marks.Places().Select(MarkupTool.Title))}; mode {marks.Editor.Mode}, shown {marks.ShowMarkup}, file {marks.Store.FileFor(marks.Editor.Document.World ?? "?")}");
             break;
         default:
@@ -543,6 +612,13 @@ void PrintFind(FindWindow window)
         FindFrame frame = FindFrame.Build(results, tool.View, controller.GraphicsCanvas.ActualWidth, controller.GraphicsCanvas.ActualHeight, tool.Picked);
         Console.WriteLine($"  on screen: {frame.Marks.Count} {(frame.Dots ? "dots" : "chunk squares")}{(frame.Ring is null ? "" : ", a ring")}; buttons: go {window.FindControl<Button>("GoButton")!.IsEnabled}, pin {window.FindControl<Button>("PinButton")!.IsEnabled}");
     }
+}
+
+void PrintSigns(FindWindow window)
+{
+    Console.WriteLine($"  status: {window.FindControl<TextBlock>("SignStatusText")!.Text}; {window.FindControl<TextBlock>("SignSortedText")!.Text}");
+    foreach (SignRow row in window.Signs!.Listed.Take(5)) Console.WriteLine($"  row: [{(row.Shown ? "x" : " ")}] {row.Title}{(row.HasMore ? " / " + row.More : "")} ({row.Place}, {row.Distance})");
+    Console.WriteLine($"  buttons: show all {window.FindControl<Button>("ShowListedButton")!.IsEnabled}, hide all {window.FindControl<Button>("HideAllButton")!.IsEnabled}, go {window.FindControl<Button>("SignGoButton")!.IsEnabled}, pin {window.FindControl<Button>("SignPinButton")!.IsEnabled}");
 }
 
 IEnumerable<Button> RecentRows() => main.GetVisualDescendants().OfType<RecentWorldsMenu>().SelectMany(menu => menu.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("recent")));

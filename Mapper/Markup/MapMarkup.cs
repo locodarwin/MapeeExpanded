@@ -2,8 +2,9 @@ using System.Text.Json.Serialization;
 
 namespace Mapper
 {
-    // What a user has marked on a world's map: labelled pins and labelled zones, each in one dimension. Kept apart
-    // from the world itself (see MarkupStore), so the game's save folder is never written to
+    // What a user has marked on a world's map: labelled pins and labelled zones, each in one dimension, and the
+    // world's signs picked to show. Kept apart from the world itself (see MarkupStore), so the game's save folder is
+    // never written to
     public class MarkupDocument
     {
         public const int CurrentVersion = 1;
@@ -17,12 +18,16 @@ namespace Mapper
 
         public List<MapPin> Pins { get; set; } = [];
         public List<MapZone> Zones { get; set; } = [];
+        public List<MapSign> Signs { get; set; } = [];
 
         [JsonIgnore]
-        public bool IsEmpty => Pins.Count == 0 && Zones.Count == 0;
+        public bool IsEmpty => Pins.Count == 0 && Zones.Count == 0 && Signs.Count == 0;
 
         public IEnumerable<MapPin> PinsIn(string dimension) => Pins.Where(p => p.Dimension == dimension);
         public IEnumerable<MapZone> ZonesIn(string dimension) => Zones.Where(z => z.Dimension == dimension);
+        public IEnumerable<MapSign> SignsIn(string dimension) => Signs.Where(s => s.Dimension == dimension);
+
+        public MapSign? SignAt(string dimension, int x, int y, int z) => Signs.FirstOrDefault(s => s.Dimension == dimension && s.X == x && s.Y == y && s.Z == z);
 
         public MarkupDocument Clone() => new()
         {
@@ -30,7 +35,8 @@ namespace Mapper
             World = World,
             Name = Name,
             Pins = [.. Pins.Select(p => p.Clone())],
-            Zones = [.. Zones.Select(z => z.Clone())]
+            Zones = [.. Zones.Select(z => z.Clone())],
+            Signs = [.. Signs.Select(s => s.Clone())]
         };
 
         // Brings in what another document has and this one doesn't, by id; returns how many pins and zones came in
@@ -44,6 +50,14 @@ namespace Mapper
             Pins.AddRange(pins);
             Zones.AddRange(zones);
             return (pins.Count, zones.Count);
+        }
+
+        // Brings in the shown signs another document has and this one doesn't, by place; returns how many came in
+        public int MergeSigns(MarkupDocument other)
+        {
+            List<MapSign> signs = [.. other.Signs.Where(s => SignAt(s.Dimension, s.X, s.Y, s.Z) is null).DistinctBy(s => (s.Dimension, s.X, s.Y, s.Z)).Select(s => s.Clone())];
+            Signs.AddRange(signs);
+            return signs.Count;
         }
     }
 
@@ -110,6 +124,56 @@ namespace Mapper
     }
 
     public record struct MarkupPoint(int X, int Z);
+
+    // A sign picked in the Signs list to show on the map. Known by its place; its words are kept as last read, so an
+    // export, or the command line, draws it without reading the world, and they're brought up to date whenever the
+    // world is read
+    public class MapSign
+    {
+        public string Dimension { get; set; } = "minecraft:overworld";
+        public int X { get; set; }
+        public int Y { get; set; }
+        public int Z { get; set; }
+        public bool Hanging { get; set; }
+        public List<string> Front { get; set; } = [];
+        public List<string> Back { get; set; } = [];
+
+        public static MapSign Of(Sign sign) => new()
+        {
+            Dimension = sign.Dimension.Namespace,
+            X = sign.X,
+            Y = sign.Y,
+            Z = sign.Z,
+            Hanging = sign.Hanging,
+            Front = [.. sign.Front],
+            Back = [.. sign.Back]
+        };
+
+        // The first line with something on it, for its label
+        [JsonIgnore]
+        public string Title => Front.Concat(Back).Select(l => l.Trim()).FirstOrDefault(l => l.Length > 0) ?? "Blank sign";
+
+        // Both sides' words, run together, for finding it by what it says
+        [JsonIgnore]
+        public string Text => SignText.Join(Front.Concat(Back));
+
+        // Each side's lines with something on them, the back after a line of its own
+        [JsonIgnore]
+        public IReadOnlyList<string> Lines
+        {
+            get
+            {
+                List<string> front = [.. Front.Select(l => l.Trim()).Where(l => l.Length > 0)];
+                List<string> back = [.. Back.Select(l => l.Trim()).Where(l => l.Length > 0)];
+                if (back.Count > 0) front.AddRange(["Back:", .. back]);
+                return front.Count > 0 ? front : ["Blank sign"];
+            }
+        }
+
+        public bool Matches(Sign sign) => sign.Hanging == Hanging && sign.Front.SequenceEqual(Front) && sign.Back.SequenceEqual(Back);
+
+        public MapSign Clone() => new() { Dimension = Dimension, X = X, Y = Y, Z = Z, Hanging = Hanging, Front = [.. Front], Back = [.. Back] };
+    }
 
     // The colours markup can be drawn in, as "#rrggbb"; anything else read from a file falls back to the default
     public static class MarkupColors

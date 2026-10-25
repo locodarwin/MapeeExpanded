@@ -85,7 +85,9 @@
                 <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True"/>
                 <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling"/>
             </Style>
+            <!-- Text in the rows takes its colour from here: the window's TextBlock style doesn't reach into templates -->
             <Style TargetType="{x:Type ListBoxItem}">
+                <Setter Property="Foreground" Value="#FFEEEEEE"/>
                 <Setter Property="Padding" Value="8,3"/>
                 <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                 <Setter Property="Template">

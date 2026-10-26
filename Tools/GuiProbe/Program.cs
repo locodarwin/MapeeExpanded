@@ -59,6 +59,10 @@
 //   pets-pick:<row>                   pick a row: the map goes there
 //   pets-press:<button name>          press a button of the Pets half (ShowListedPetsButton, HideAllPetsButton, PetPinButton)
 //   pets-hover:<n>                    move the mouse onto the nth pet shown in view and print what the map shows
+//   biomes[:<words>]                  open the find window's Biomes, list only biomes named by the words, wait for the
+//                                     reading and print the status, first rows and how much the map shades
+//   biomes-pick:<row>                 pick a row: the map goes there and shades it more strongly
+//   biomes-press:<button name>        press a button of the Biomes half (BiomeGoButton, BiomePinButton, BiomeSortButton)
 //   keys                              print the key list's state, the changed keys kept, and tooltips that name keys
 //   keys:<action>                     click that action's key in the key list (Grid, HeightUp, ...); keys:reset:<action>,
 //                                     keys:reset-all, keys:card, keys:outside (the dimmed map around it)
@@ -580,6 +584,36 @@ foreach (string step in args.Skip(1))
                 Console.WriteLine($"  hovered: {(hovered is null ? "nothing" : string.Join(" | ", hovered.Lines))}; labelled {after.Pets.Count(p => p.Labelled)} of {after.Pets.Count}");
                 break;
             }
+        case "biomes":
+            {
+                FindWindow window = OpenFind();
+                window.FindControl<Button>("BiomesButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                window.FindControl<TextBox>("BiomeSearchBox")!.Text = value;
+                Pump(200);
+                DateTime giveUp = DateTime.Now.AddSeconds(120);
+                while (controller.ToolbarWidget.Biomes.Reading && DateTime.Now < giveUp) Pump(50);
+                Pump(300);
+                PrintBiomes(window);
+                break;
+            }
+        case "biomes-pick":
+            {
+                FindWindow window = OpenFind();
+                window.FindControl<ListBox>("BiomeList")!.SelectedIndex = int.Parse(value);
+                Pump(400);
+                Console.WriteLine($"  map centre {controller.Domain.CurrentWorld?.CurrentDimension.Scaling.CenterPoint}");
+                PrintBiomes(window);
+                break;
+            }
+        case "biomes-press":
+            {
+                FindWindow window = OpenFind();
+                window.FindControl<Button>(value)!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                Pump(800);
+                Console.WriteLine($"  map centre {controller.Domain.CurrentWorld?.CurrentDimension.Scaling.CenterPoint}");
+                PrintBiomes(window);
+                break;
+            }
         case "marks":
             MarkupTool marks = controller.ToolbarWidget.MarkupTool;
             foreach (MapPin pin in marks.Editor.Document.Pins) Console.WriteLine($"  pin {pin.Label} at {pin.X}, {pin.Z} in {pin.Dimension}, {pin.Color} {pin.Icon ?? "dot"}{(pin.Note is null ? "" : $", note {pin.Note}")}");
@@ -687,6 +721,16 @@ void PrintPets(FindWindow window)
     Console.WriteLine($"  status: {window.FindControl<TextBlock>("PetStatusText")!.Text}; {window.FindControl<TextBlock>("PetSortedText")!.Text}");
     foreach (PetRow row in window.Pets!.Listed.Take(8)) Console.WriteLine($"  row: [{(row.Shown ? "x" : " ")}] {row.Title} / {row.More} ({row.Place}, {row.Distance})");
     Console.WriteLine($"  buttons: show all {window.FindControl<Button>("ShowListedPetsButton")!.IsEnabled}, hide all {window.FindControl<Button>("HideAllPetsButton")!.IsEnabled}, go {window.FindControl<Button>("PetGoButton")!.IsEnabled}, pin {window.FindControl<Button>("PetPinButton")!.IsEnabled}");
+}
+
+void PrintBiomes(FindWindow window)
+{
+    WorldBiomes biomes = controller.ToolbarWidget.Biomes;
+    Console.WriteLine($"  status: {window.FindControl<TextBlock>("BiomeStatusText")!.Text}; {window.FindControl<TextBlock>("BiomeSortedText")!.Text}");
+    foreach (BiomeRow row in window.Biomes!.Listed.Take(8)) Console.WriteLine($"  row: {row.Title} / {row.More} ({row.Place}, {row.Distance})");
+    var marks = BiomeFrame.Build(biomes.Shaded, biomes.Picked, controller.ToolbarWidget.FindTool.View, controller.GraphicsCanvas.ActualWidth, controller.GraphicsCanvas.ActualHeight);
+    Console.WriteLine($"  shaded: {biomes.Shaded.Count} patches, picked {biomes.Picked?.ToString() ?? "none"}, listed {biomes.Listed}; {marks.Count} rectangles in view ({marks.Count(m => m.Picked)} picked)");
+    Console.WriteLine($"  buttons: go {window.FindControl<Button>("BiomeGoButton")!.IsEnabled}, pin {window.FindControl<Button>("BiomePinButton")!.IsEnabled}");
 }
 
 IEnumerable<Button> RecentRows() => main.GetVisualDescendants().OfType<RecentWorldsMenu>().SelectMany(menu => menu.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("recent")));

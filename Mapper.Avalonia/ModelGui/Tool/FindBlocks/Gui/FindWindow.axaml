@@ -26,7 +26,7 @@
             <Setter Property="Foreground" Value="#FFBBBBBB" />
         </Style>
         <Style Selector="Button.half">
-            <Setter Property="Width" Value="90" />
+            <Setter Property="Width" Value="80" />
             <Setter Property="Height" Value="26" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
         </Style>
@@ -36,12 +36,13 @@
         </Style>
     </Window.Styles>
 
-    <!-- Blocks, signs or pets: a switch on top, and the part picked below it -->
+    <!-- Blocks, signs, pets or biomes: a switch on top, and the part picked below it -->
     <Grid Margin="15,10,15,15" RowDefinitions="Auto,*">
         <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
             <Button x:Name="BlocksButton" Classes="dialog half" Content="Blocks" Click="BlocksButton_Click" ToolTip.Tip="Find blocks anywhere in the dimension" />
             <Button x:Name="SignsButton" Classes="dialog half" Content="Signs" Click="SignsButton_Click" ToolTip.Tip="List the signs and what they say, and pick which to show on the map" />
             <Button x:Name="PetsButton" Classes="dialog half" Content="Pets" Click="PetsButton_Click" ToolTip.Tip="List the mobs given a name, and pick which to show on the map" />
+            <Button x:Name="BiomesButton" Classes="dialog half" Content="Biomes" Click="BiomesButton_Click" ToolTip.Tip="Find the nearest patches of a biome, shaded on the map" />
         </StackPanel>
 
         <Grid Grid.Row="1" x:Name="BlocksHalf" RowDefinitions="Auto,Auto,110,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*,Auto">
@@ -234,6 +235,48 @@
                 <Button x:Name="PetPinButton" Content="Add a pin" Classes="dialog" Height="26" Padding="10,0" Margin="0,0,8,4" Click="PetPinButton_Click"
                         ToolTip.Tip="Put a pin where it was, labelled with its name" />
                 <TextBlock x:Name="PetPinnedText" Classes="dim" VerticalAlignment="Center" Margin="0,0,0,4" />
+            </WrapPanel>
+        </Grid>
+
+        <!-- Patches are shaded on the map only while this list is open -->
+        <Grid Grid.Row="1" x:Name="BiomesHalf" IsVisible="False" RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">
+            <TextBlock Grid.Row="0" Text="Biomes in this dimension" Classes="heading" Margin="0,4,0,4" />
+            <TextBox Grid.Row="1" x:Name="BiomeSearchBox" PlaceholderText="A biome's name, such as cherry grove or deep dark" FontSize="13" Height="25" Padding="4,1,0,0" />
+            <TextBlock Grid.Row="2" x:Name="BiomeStatusText" Classes="dim" TextWrapping="Wrap" Margin="0,6,0,0" />
+            <ProgressBar Grid.Row="3" x:Name="BiomeProgress" Height="4" MinHeight="4" Margin="0,4,0,6" IsIndeterminate="True" />
+
+            <Border Grid.Row="4" BorderBrush="#FF404040" BorderThickness="1">
+                <DockPanel>
+                    <Border DockPanel.Dock="Top" Background="#FF262626" Height="25">
+                        <Grid ColumnDefinitions="*,Auto" Margin="8,0,4,0">
+                            <TextBlock x:Name="BiomeSortedText" Classes="dim" FontSize="12" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" x:Name="BiomeSortButton" Classes="flat" Content="Sort from the map's middle" FontSize="12" Padding="6,1" Click="BiomeSortButton_Click"
+                                    ToolTip.Tip="List the nearest to the middle of the map first, from where it is now" />
+                        </Grid>
+                    </Border>
+                    <ListBox x:Name="BiomeList" Classes="list">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="gui:BiomeRow">
+                                <Grid ColumnDefinitions="*,Auto" ToolTip.Tip="{Binding ToolTip}">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding More}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding Place}" Classes="dim" FontSize="11" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="1" Text="{Binding Distance}" Classes="dim" FontSize="11" VerticalAlignment="Center" Margin="8,0,0,0" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <WrapPanel Grid.Row="5" Margin="0,8,0,0">
+                <Button x:Name="BiomeGoButton" Content="Go there" Classes="dialog" Height="26" Padding="10,0" Margin="0,0,8,4" Click="BiomeGoButton_Click"
+                        ToolTip.Tip="Go to its part nearest where the list was sorted from" />
+                <Button x:Name="BiomePinButton" Content="Add a pin" Classes="dialog" Height="26" Padding="10,0" Margin="0,0,8,4" Click="BiomePinButton_Click"
+                        ToolTip.Tip="Put a pin in its middle, labelled with the biome" />
+                <TextBlock x:Name="BiomePinnedText" Classes="dim" VerticalAlignment="Center" Margin="0,0,0,4" />
             </WrapPanel>
         </Grid>
     </Grid>

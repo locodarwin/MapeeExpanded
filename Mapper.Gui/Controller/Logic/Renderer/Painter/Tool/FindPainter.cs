@@ -6,8 +6,8 @@ using System.Windows.Media;
 
 namespace Mapper.Gui.Logic
 {
-    // Marks what the block finder found. Where the marks go is FindFrame's work, shared with the Avalonia GUI; this
-    // only draws it
+    // Marks what the block finder found, and shades the biome patches the Biomes list names. Where they go is
+    // FindFrame's and BiomeFrame's work, shared with the Avalonia GUI; this only draws it
     public class FindPainter : IPainter
     {
         public DrawingGroup? DrawingGroup { get; set; }
@@ -29,9 +29,21 @@ namespace Mapper.Gui.Logic
             Canvas = canvas;
         }
 
+        private static readonly Brush BiomeShade = Shade(BiomeFrame.ShadedOpacity), BiomePicked = Shade(BiomeFrame.PickedOpacity);
+
         public void Paint(DrawingContext drawingContext)
         {
-            if (Tool.Results is not FindResults results || Tool.Scene.Domain.CurrentWorld is null) return;
+            if (Tool.Scene.Domain.CurrentWorld is null) return;
+
+            if (Tool.Biomes is { Listed: true } biomes && (biomes.Shaded.Count > 0 || biomes.Picked is not null))
+            {
+                foreach (BiomeMark mark in BiomeFrame.Build(biomes.Shaded, biomes.Picked, Tool.View, Canvas.ActualWidth, Canvas.ActualHeight))
+                {
+                    drawingContext.DrawRectangle(mark.Picked ? BiomePicked : BiomeShade, null, new Rect(mark.X, mark.Y, mark.Width, mark.Height));
+                }
+            }
+
+            if (Tool.Results is not FindResults results) return;
 
             FindFrame frame = FindFrame.Build(results, Tool.View, Canvas.ActualWidth, Canvas.ActualHeight, Tool.Picked);
             foreach (FindMark mark in frame.Marks)
@@ -45,6 +57,12 @@ namespace Mapper.Gui.Logic
                 drawingContext.DrawEllipse(null, RingShadow, new Point(x, y), radius, radius);
                 drawingContext.DrawEllipse(null, RingPen, new Point(x, y), radius, radius);
             }
+        }
+
+        private static Brush Shade(double opacity)
+        {
+            Color color = (Color)ColorConverter.ConvertFromString(BiomeFrame.Color);
+            return Frozen(new SolidColorBrush(Color.FromArgb((byte)(opacity * 255), color.R, color.G, color.B)));
         }
 
         private Brush Brush(int target, double opacity)

@@ -10,15 +10,17 @@ using System.Windows.Threading;
 namespace Mapper.Gui
 {
     // The find window. Blocks: what to look for on top, what was found below. Signs and Pets: the dimension's signs
-    // and named mobs, each with a tick for showing it on the map. FindPanel, SignsPanel and PetsPanel hold what they
-    // show, FindTool runs the search, WorldSigns and WorldPets read the world; this only lays them out (the Avalonia
-    // GUI has its own copy)
+    // and named mobs, each with a tick for showing it on the map. Biomes: the dimension's biomes, nearest first, those
+    // named shaded on the map. FindPanel, SignsPanel, PetsPanel and BiomesPanel hold what they show, FindTool runs the
+    // search, WorldSigns, WorldPets and WorldBiomes read the world; this only lays them out (the Avalonia GUI has its
+    // own copy)
     public partial class FindWindow : Window
     {
         public FindPanel Panel { get; }
         public FindTool Tool => Panel.Tool;
         public SignsPanel? Signs { get; }
         public PetsPanel? Pets { get; }
+        public BiomesPanel? Biomes { get; }
 
         private IReadOnlyList<FoundCluster>? _shown;
         private bool _refreshing;
@@ -26,6 +28,7 @@ namespace Mapper.Gui
         private readonly DispatcherTimer _pinned = new() { Interval = TimeSpan.FromSeconds(2) };
         private IReadOnlyList<SignRow>? _signRows;
         private IReadOnlyList<PetRow>? _petRows;
+        private IReadOnlyList<BiomeRow>? _biomeRows;
 
         public FindWindow(FindTool tool)
         {
@@ -42,6 +45,7 @@ namespace Mapper.Gui
                 PinnedText.Text = string.Empty;
                 SignPinnedText.Text = string.Empty;
                 PetPinnedText.Text = string.Empty;
+                BiomePinnedText.Text = string.Empty;
             };
 
             Tool.Changed += Tool_Changed;
@@ -77,6 +81,21 @@ namespace Mapper.Gui
                 PetsButton.Visibility = Visibility.Collapsed;
             }
 
+            if (tool.Biomes is WorldBiomes biomes)
+            {
+                Biomes = new BiomesPanel(biomes, tool.Canvas);
+                biomes.Changed += RefreshBiomes;
+                Closed += (sender, e) =>
+                {
+                    biomes.Changed -= RefreshBiomes;
+                    biomes.Listed = false;
+                };
+            }
+            else
+            {
+                BiomesButton.Visibility = Visibility.Collapsed;
+            }
+
             Refresh();
         }
 
@@ -87,21 +106,24 @@ namespace Mapper.Gui
             {
                 FindHalf.Signs when Signs is not null => FindHalf.Signs,
                 FindHalf.Pets when Pets is not null => FindHalf.Pets,
+                FindHalf.Biomes when Biomes is not null => FindHalf.Biomes,
                 _ => FindHalf.Blocks
             });
         }
 
-        // Blocks, signs or pets
+        // Blocks, signs, pets or biomes
         private void Half(FindHalf half)
         {
             Tool.Half = half;
-            bool signs = half == FindHalf.Signs, pets = half == FindHalf.Pets;
+            bool signs = half == FindHalf.Signs, pets = half == FindHalf.Pets, biomes = half == FindHalf.Biomes;
             BlocksHalf.Visibility = half == FindHalf.Blocks ? Visibility.Visible : Visibility.Collapsed;
             SignsHalf.Visibility = signs ? Visibility.Visible : Visibility.Collapsed;
             PetsHalf.Visibility = pets ? Visibility.Visible : Visibility.Collapsed;
+            BiomesHalf.Visibility = biomes ? Visibility.Visible : Visibility.Collapsed;
             BlocksButton.Tag = half == FindHalf.Blocks ? "on" : null;
             SignsButton.Tag = signs ? "on" : null;
             PetsButton.Tag = pets ? "on" : null;
+            BiomesButton.Tag = biomes ? "on" : null;
             if (Tool.Signs is WorldSigns worldSigns)
             {
                 worldSigns.Listed = signs;
@@ -111,6 +133,11 @@ namespace Mapper.Gui
             {
                 worldPets.Listed = pets;
                 if (pets) worldPets.Want();
+            }
+            if (Tool.Biomes is WorldBiomes worldBiomes)
+            {
+                worldBiomes.Listed = biomes;
+                if (biomes) worldBiomes.Want();
             }
             if (signs)
             {
@@ -122,6 +149,11 @@ namespace Mapper.Gui
                 RefreshPets();
                 PetSearchBox.Focus();
             }
+            else if (biomes)
+            {
+                RefreshBiomes();
+                BiomeSearchBox.Focus();
+            }
             else
             {
                 SearchBox.Focus();
@@ -131,6 +163,74 @@ namespace Mapper.Gui
         private void BlocksButton_Click(object sender, RoutedEventArgs e) => Half(FindHalf.Blocks);
         private void SignsButton_Click(object sender, RoutedEventArgs e) => Half(FindHalf.Signs);
         private void PetsButton_Click(object sender, RoutedEventArgs e) => Half(FindHalf.Pets);
+        private void BiomesButton_Click(object sender, RoutedEventArgs e) => Half(FindHalf.Biomes);
+
+        private void RefreshBiomes()
+        {
+            if (Biomes is null || BiomesHalf.Visibility != Visibility.Visible) return;
+            _refreshing = true;
+            try
+            {
+                IReadOnlyList<BiomeRow> rows = Biomes.Rows();
+                if (!ReferenceEquals(rows, _biomeRows))
+                {
+                    _biomeRows = rows;
+                    BiomeList.ItemsSource = rows;
+                    BiomePatch? picked = Biomes.Biomes.Picked;
+                    if (picked is not null) BiomeList.SelectedItem = rows.FirstOrDefault(r => r.Patch == picked);
+                }
+                BiomeStatusText.Text = Biomes.Status();
+                BiomeProgress.Visibility = Biomes.Biomes.Reading ? Visibility.Visible : Visibility.Hidden;
+                BiomeSortedText.Text = Biomes.SortedText();
+                BiomeSortButton.Visibility = rows.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+                bool chosen = BiomeList.SelectedItem is BiomeRow;
+                BiomeGoButton.IsEnabled = chosen;
+                BiomePinButton.IsEnabled = chosen && Tool.CanPin;
+            }
+            finally
+            {
+                _refreshing = false;
+            }
+        }
+
+        private void BiomeSearchBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (Biomes is null) return;
+            Biomes.Filter(BiomeSearchBox.Text);
+            RefreshBiomes();
+        }
+
+        private void BiomeList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_refreshing || Biomes is null) return;
+            BiomeRow? row = BiomeList.SelectedItem as BiomeRow;
+            Biomes.Pick(row);
+            if (row is not null) Tool.GoTo(row.X, row.Z);
+            RefreshBiomes();
+        }
+
+        private void BiomeList_MouseDoubleClick(object sender, MouseButtonEventArgs e) => BiomeGoButton_Click(sender, e);
+
+        private void BiomeSortButton_Click(object sender, RoutedEventArgs e)
+        {
+            Biomes?.SortFromHere();
+            RefreshBiomes();
+        }
+
+        private void BiomeGoButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (BiomeList.SelectedItem is BiomeRow row) Tool.GoTo(row.X, row.Z);
+        }
+
+        private void BiomePinButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (BiomeList.SelectedItem is not BiomeRow row || Tool.Biomes is null) return;
+            Tool.Biomes.Pin(row.Patch);
+            BiomePinnedText.Text = "Pinned";
+            _pinned.Stop();
+            _pinned.Start();
+        }
 
         private void RefreshPets()
         {

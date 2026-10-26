@@ -59,6 +59,14 @@ namespace Mapee.Cli
                   --dimension <d>[,<d>]    only these dimensions
                   --text <words>           only mobs whose name or kind has all these words, in any case
                   --csv                    as comma-separated values with a header line
+              mapee-cli biomes <world> [options]
+                  Lists the biomes, every dimension the world has: how many patches of each and how
+                  much ground they cover, and the nearest to the spawn. With --text, every patch of
+                  the biomes named, nearest first. A column's biome is the one at its surface, and
+                  lush caves, dripstone caves and the deep dark count under it too.
+                  --dimension <d>[,<d>]    only these dimensions
+                  --text <words>           every patch of the biomes whose name has all these words
+                  --csv                    every patch, as comma-separated values with a header line
               mapee-cli worlds             lists the worlds in the game's world folders
               mapee-cli styles             lists the styles
 
@@ -110,6 +118,7 @@ namespace Mapee.Cli
                     "structures" => Structures(line, cancel.Token),
                     "signs" => Signs(line, cancel.Token),
                     "pets" => Pets(line, cancel.Token),
+                    "biomes" => Biomes(line, cancel.Token),
                     "watch" => Watch(line, cancel.Token),
                     "worlds" => Worlds(),
                     _ => Styles()
@@ -502,6 +511,79 @@ namespace Mapee.Cli
             return 0;
         }
 
+        // One line per biome, or per patch of the biomes asked for, each measured from the spawn (in the Nether, the
+        // spawn's place there; in the End, its middle)
+        private static int Biomes(CommandLine line, CancellationToken cancellation)
+        {
+            Directory.SetCurrentDirectory(AppContext.BaseDirectory);
+            (Level level, _) = OpenWorld(line.World!);
+            IList<Dimension> dimensions = line.Dimensions ?? [Dimension.Overworld, Dimension.Nether, Dimension.TheEnd];
+            string[] words = line.Text?.Split(' ', StringSplitOptions.RemoveEmptyEntries) ?? [];
+            double spawnX = level.WorldGen.WorldSpawn.X, spawnZ = level.WorldGen.WorldSpawn.Z;
+
+            bool interactive = !Console.IsErrorRedirected;
+            List<(Dimension Dimension, DimensionBiomes Read)> all = [];
+            foreach (Dimension dimension in dimensions)
+            {
+                SceneInfo scene = new(level, dimension);
+                if (scene.RegionStore is IBackgroundRegionStore background) background.Ready.Wait(cancellation);
+                if (!scene.Regions.Any()) continue;
+
+                if (interactive) Console.Error.Write($"\rReading the biomes of {The(dimension)}".PadRight(48));
+                all.Add((dimension, BiomeMap.Read(scene, cancellation)));
+            }
+            if (interactive) Console.Error.Write("\r".PadRight(49) + "\r");
+            if (all.Count == 0)
+            {
+                Console.Error.WriteLine($"{level.WorldName} has nothing in {string.Join(", ", dimensions.Select(The))}");
+                return 1;
+            }
+
+            (double X, double Z) From(Dimension dimension) => dimension == Dimension.Nether ? (spawnX / 8, spawnZ / 8) : dimension == Dimension.TheEnd ? (0, 0) : (spawnX, spawnZ);
+            static string Csv(string text) => $"\"{text.Replace("\"", "\"\"")}\"";
+            static string Size(BiomePatch p) => $"{p.Width:N0} × {p.Depth:N0} blocks, {Chunks(p.Cells)}";
+
+            int shown = 0;
+            if (line.Csv) Console.WriteLine("dimension,biome,id,x,z,width,depth,area,nearest_x,nearest_z,distance");
+            foreach (var (dimension, read) in all)
+            {
+                var (fromX, fromZ) = From(dimension);
+                List<BiomePatch> patches = [.. read.Patches.Where(p => BiomeText.Says(p.Biome, words))];
+                var nearest = DimensionBiomes.ByDistance(patches, fromX, fromZ);
+                if (line.Csv || words.Length > 0)
+                {
+                    foreach (var (p, x, z, distance) in nearest)
+                    {
+                        Console.WriteLine(line.Csv
+                            ? $"{dimension.Name},{Csv(p.Name)},{p.Biome},{p.X},{p.Z},{p.Width},{p.Depth},{p.Cells * 16},{x},{z},{distance:0}"
+                            : $"{dimension.Name}  {p.Name} around {p.X}, {p.Z}: {Size(p)}; nearest {x}, {z}, {distance:N0} from {Where(dimension)}");
+                    }
+                    shown += nearest.Count;
+                    continue;
+                }
+
+                foreach (var group in nearest.GroupBy(n => n.Patch.Biome).OrderBy(g => g.First().Patch.Name, StringComparer.CurrentCultureIgnoreCase))
+                {
+                    var (p, x, z, distance) = group.First();
+                    int count = group.Count();
+                    Console.WriteLine($"{dimension.Name}  {p.Name}: {count:N0} {(count == 1 ? "patch" : "patches")}, {Chunks(group.Sum(g => g.Patch.Cells))} in all; nearest {x}, {z}, {distance:N0} from {Where(dimension)}");
+                    shown++;
+                }
+            }
+
+            string what = words.Length > 0 ? $"biome called {line.Text}" : "biomes";
+            Console.Error.WriteLine(shown == 0
+                ? $"{level.WorldName} has no {what}"
+                : $"{level.WorldName}: " + string.Join(", ", all.Where(d => d.Read.Patches.Any(p => BiomeText.Says(p.Biome, words)))
+                    .Select(d => $"{Count(d.Read.Patches.Where(p => BiomeText.Says(p.Biome, words)).Select(p => p.Biome).Distinct().Count(), "biome")} in {The(d.Dimension)}")));
+            return 0;
+        }
+
+        // The ground a patch covers, in chunks' worth
+        private static string Chunks(int cells) => cells < 16 ? "under a chunk" : $"{cells / 16.0:N0} {(cells < 24 ? "chunk" : "chunks")}";
+
+        private static string Where(Dimension dimension) => dimension == Dimension.Nether ? "the spawn's place" : dimension == Dimension.TheEnd ? "the middle" : "the spawn";
+
         // The web map once, then again whenever the world's files change, until Ctrl+C
         private static int Watch(CommandLine line, CancellationToken cancellation)
         {
@@ -748,7 +830,7 @@ namespace Mapee.Cli
         // How often watch looks for saves, in seconds
         public int Every { get; private set; } = 30;
 
-        private static readonly string[] Commands = ["render", "webmap", "watch", "find", "portals", "structures", "signs", "pets", "worlds", "styles"];
+        private static readonly string[] Commands = ["render", "webmap", "watch", "find", "portals", "structures", "signs", "pets", "biomes", "worlds", "styles"];
 
         // Paths are made full here, before the program moves to its own folder to read its resources
         public static CommandLine Parse(string[] args)
@@ -757,7 +839,7 @@ namespace Mapee.Cli
             if (!Commands.Contains(command)) throw new UsageException($"{args[0]} isn't a command; the commands are {string.Join(", ", Commands)}");
 
             CommandLine line = new() { Command = command };
-            bool drawing = command is "render" or "webmap" or "watch" or "find" or "portals" or "structures" or "signs" or "pets";
+            bool drawing = command is "render" or "webmap" or "watch" or "find" or "portals" or "structures" or "signs" or "pets" or "biomes";
             bool webMap = command is "webmap" or "watch";
 
             for (int i = 1; i < args.Length; i++)
@@ -840,10 +922,10 @@ namespace Mapee.Cli
                         }
                         (line.MinY, line.MaxY) = (Math.Min(minY, maxY), Math.Max(minY, maxY));
                         break;
-                    case "--csv" when command is "find" or "portals" or "structures" or "signs" or "pets":
+                    case "--csv" when command is "find" or "portals" or "structures" or "signs" or "pets" or "biomes":
                         line.Csv = true;
                         break;
-                    case "--text" when command is "signs" or "pets":
+                    case "--text" when command is "signs" or "pets" or "biomes":
                         line.Text = value;
                         break;
                     case "--every" when command == "watch":
@@ -869,11 +951,11 @@ namespace Mapee.Cli
                     }
                     return line;
                 }
-                if (command is "structures" or "signs" or "pets")
+                if (command is "structures" or "signs" or "pets" or "biomes")
                 {
                     if (line.Out is not null || line.Style is not null || line.Cut is not null || line.Area is not null || line.Markup)
                     {
-                        throw new UsageException($"{command} takes only --dimension{(command is "signs" or "pets" ? ", --text" : "")} and --csv, and writes to the screen");
+                        throw new UsageException($"{command} takes only --dimension{(command is "signs" or "pets" or "biomes" ? ", --text" : "")} and --csv, and writes to the screen");
                     }
                     return line;
                 }

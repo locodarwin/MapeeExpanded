@@ -9,6 +9,9 @@ Upstream website: [mapee.net](https://www.mapee.net/home)
 ![Mapee Expanded with a Bedrock world open: an island base with pins and a zone](docs/images/app-main.webp)
 
 # What's New?
+**Unreleased**
+- Biomes: the Find window's new **Biomes** list names every biome in the dimension with its nearest patch. Type a name (cherry grove, mushroom fields, deep dark) to list every patch of it nearest first and shade them all on the map; picking one goes there (see "Biomes" below). Lush caves, dripstone caves and the deep dark are found under the ground too. `mapee-cli biomes` lists them
+
 **Version 1.9.0**
 - Pets: the Find window's new **Pets** list has every mob given a name (a pet, a horse, a name-tagged villager), what it is and where the game last saved it, nearest first. As with signs, nothing is drawn until you tick one; ticked mobs show on the map with a paw and their name, and follow their mob each time the world is read (see "Pets" below). `mapee-cli pets` lists them
 - Web map search: a box on the web map (F or /) finds pins, zones, ticked signs and pets, and the spawn and player, by name in every dimension; Enter or a click goes there and shows its card
@@ -72,7 +75,7 @@ The Linux build is a single AppImage, self-contained (no .NET needed). Make it e
     chmod +x MapeeExpanded-1.9.0-x86_64.AppImage
     ./MapeeExpanded-1.9.0-x86_64.AppImage [world]
 
-If it complains about FUSE, run it with `--appimage-extract-and-run`. It runs as a native Wayland app (following the monitor's scale, fractional ones too) and falls back to X11, where it takes the scale from `GDK_SCALE` or `AVALONIA_GLOBAL_SCALE_FACTOR`. The world browser looks in `~/.minecraft/saves` (Java) and `~/.local/share/mcpelauncher/games/com.mojang/minecraftWorlds` (Bedrock through mcpelauncher); anything else opens with Browse, or by dropping it on the window. Differences from Windows: the system's own window frame, and Go to, Add block and the custom-dimension list open as pop-ups under their buttons rather than as small windows. Given a command as its first argument (`render`, `webmap`, `watch`, `find`, `portals`, `structures`, `signs`, `pets`, `worlds`, `styles`), the AppImage runs `mapee-cli` instead (see "Command line" below).
+If it complains about FUSE, run it with `--appimage-extract-and-run`. It runs as a native Wayland app (following the monitor's scale, fractional ones too) and falls back to X11, where it takes the scale from `GDK_SCALE` or `AVALONIA_GLOBAL_SCALE_FACTOR`. The world browser looks in `~/.minecraft/saves` (Java) and `~/.local/share/mcpelauncher/games/com.mojang/minecraftWorlds` (Bedrock through mcpelauncher); anything else opens with Browse, or by dropping it on the window. Differences from Windows: the system's own window frame, and Go to, Add block and the custom-dimension list open as pop-ups under their buttons rather than as small windows. Given a command as its first argument (`render`, `webmap`, `watch`, `find`, `portals`, `structures`, `signs`, `pets`, `biomes`, `worlds`, `styles`), the AppImage runs `mapee-cli` instead (see "Command line" below).
 
 # The toolbar
 
@@ -81,7 +84,7 @@ From left to right, in groups:
 | Button | Does |
 |---|---|
 | **Open** | Browse for a world, or pick one opened lately (with none yet, it browses straight away) |
-| **Go to**, **Find** | Go to a place or a pin; find blocks anywhere in the dimension, signs by what they say, or named pets |
+| **Go to**, **Find** | Go to a place or a pin; find blocks anywhere in the dimension, signs by what they say, named pets, or biomes |
 | **Mark**, **Measure** | Pins and zones; measure a length (only one of the two takes clicks at a time) |
 | **Overlays** | Grid lines, slime chunks, axes, the chunk under the cursor, where mobs can spawn, the Nether portals and the structures, ticked on and off in its menu; the number on it says how many are on |
 | **Night**, **Live** | Night lighting; redraw what the game saves while the world is open |
@@ -125,6 +128,12 @@ Nothing is drawn on the map for a sign until its box is ticked. A ticked sign sh
 **Pets** at the top of the Find window lists every mob in the dimension on show that has been given a name, with a name tag or an anvil: tamed wolves, cats and parrots, horses, and anything else named, with what it is ("Tamed wolf") and the block it stood on when the game last saved it, nearest first. Type in the box to list only those whose name or kind has those words. Clicking a row takes the map there; **Add a pin** puts a pin where it was, labelled with its name. Armor stands, item frames, boats and other things that aren't mobs are left out.
 
 As with signs, nothing is drawn until a box is ticked. A ticked mob shows as a paw on a pale disc with its name beside it, and with the mouse over it, what it is and where. **Show all listed** and **Hide all** work as for signs. Ticked mobs are kept with the world's markup, listed by name in Go to, and drawn in exported images and web maps. Mobs walk about, so each time the dimension is read again (when the world opens, or when Live sees a save), a ticked mob moves to where it was saved, into another dimension if it went through a portal, and one that's gone (died, or lost its name) is taken off. `mapee-cli pets <world>` lists them too (`--text <words>`, `--csv`).
+
+# Biomes
+
+**Biomes** at the top of the Find window lists the biomes of the dimension on show, each once, by its patch nearest the middle of the map: how far it spans and how many patches there are. Type a biome's name to list every patch of it, nearest first, and shade them all on the map in magenta; the one picked in the list is shaded more strongly, and the map goes to its part nearest where the list was sorted from. **Add a pin** puts a pin in the middle of a patch, labelled with the biome. The shading is there only while the list is open.
+
+A column's biome is the one at its surface, as the map shows it. Lush caves, dripstone caves and the deep dark are underground, so they count wherever they are below a column. The Nether's biomes change with height, so there every biome at any height counts. Biomes are kept in 4 by 4 block cells, so a patch's edge is in steps of 4; slivers of a few cells at another patch's edge are left out. Bedrock has a single biome in the End, listed as The End. `mapee-cli biomes <world>` lists them too (`--text <words>`, `--csv`).
 
 # Live reload
 
@@ -193,7 +202,7 @@ Press **F1** or **?** in the app, or the toolbar's **Keys** button, for this lis
 | P Z R V | Markup: Pin, Zone, Rectangle, Select |
 | Ctrl+Z Ctrl+Y | Undo, redo markup (while the bar is open) |
 | Ctrl+G | Go to a place, with the cursor in the coordinate box (or type a name to pick a pin, zone, structure or ticked sign or pet) |
-| F | Find blocks, signs or pets |
+| F | Find blocks, signs, pets or biomes |
 | Ctrl+E | Export as image or web map |
 | Ctrl+O | Browse for a world |
 | Ctrl+Shift+O | The Open menu: recent worlds (Up, Down and Enter pick one) |
@@ -226,6 +235,7 @@ mapee-cli portals <world> [--csv]
 mapee-cli structures <world> [--dimension overworld,nether] [--csv]
 mapee-cli signs <world> [--dimension overworld,nether] [--text <words>] [--csv]
 mapee-cli pets <world> [--dimension overworld,nether] [--text <words>] [--csv]
+mapee-cli biomes <world> [--dimension overworld,nether] [--text <words>] [--csv]
 mapee-cli worlds          # the worlds in the game's world folders
 mapee-cli styles          # the style ids
 ```
@@ -239,6 +249,7 @@ mapee-cli styles          # the style ids
 - `structures` prints each structure, every dimension the world has, as the overlay finds them (see "Structures" above): its name and the middle of the box it covers, marked "(found by its blocks)" for a Bedrock stronghold, ancient city or trial chambers. `--csv` adds the box's corners and `known_by` (`saved` or `blocks`).
 - `signs` prints each sign with something on it, every dimension the world has: where it is and what it says, the back after a slash. `--text` keeps only the signs saying all the words given, in any case; `--csv` writes `dimension,x,y,z,kind,front,back`, each side's lines on lines of their own.
 - `pets` prints each named mob, every dimension the world has: where the game last saved it, what it is, "(tamed)" if it has an owner, and its name. `--text` keeps those whose name or kind has all the words; `--csv` writes `dimension,x,y,z,kind,name,tamed,id`.
+- `biomes` prints each biome, every dimension the world has: how many patches, how much ground they cover in all, and the nearest to the spawn (in the Nether, the spawn's place there; in the End, the middle). `--text` prints every patch of the biomes whose name has all the words instead, nearest first, with its size; `--csv` writes every patch as `dimension,biome,id,x,z,width,depth,area,nearest_x,nearest_z,distance`, x and z its middle and area in blocks.
 - `render`, `webmap` and `watch` take `--style <id>` (default `default`), and `--slice <y>` or `--caves <y>` to draw as the height panel's Slice or Caves would.
 - Markup: `render --markup` draws the pins, zones and ticked signs and pets marked on the world in Mapee; `webmap` includes them unless `--no-markers` (which also leaves out the spawn and player). `--markup <file.json>` uses a file from the bar's Export instead.
 - Exit codes: 0 done (and for `watch`, stopped with Ctrl+C), 1 failed or nothing to draw, 2 wrong usage, 130 cancelled.

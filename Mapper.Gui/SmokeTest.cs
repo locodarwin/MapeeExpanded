@@ -134,6 +134,17 @@ namespace Mapper.Gui
                 Check("Find > Pets: show one on the map", markup.Pets.Count == 1, $"{markup.Pets.Count} shown");
                 await Shoot("find-pets");
                 if (pet is not null) pet.Shown = false;
+
+                // Plains with a sea along one side: two biomes. Named, the sea is shaded on the map
+                await Click((Button)window.FindName("BiomesButton"));
+                await Until(() => toolbar.Biomes.Current is not null && !toolbar.Biomes.Reading && window.Biomes?.Listed.Count > 0, 60);
+                string biomes = string.Join(", ", window.Biomes?.Listed.Select(r => $"{r.Title} {r.More} at {r.Place}") ?? []);
+                Check("Find > Biomes", window.Biomes?.Listed.Select(r => r.Title).Order().SequenceEqual(["Ocean", "Plains"]) == true, biomes);
+                ((TextBox)window.FindName("BiomeSearchBox")).Text = "ocean";
+                await Wait(300);
+                Check("Find > Biomes: shade the sea", toolbar.Biomes.Shaded.Count > 0 && toolbar.Biomes.Shaded.All(p => p.Name == "Ocean"),
+                    $"{toolbar.Biomes.Shaded.Count} shaded: {string.Join(", ", toolbar.Biomes.Shaded.Select(p => p.Name))}");
+                await Shoot("find-biomes");
             });
             await Press("Mark", () => toolbar.MarkupTool.IsTurnedOn && _controller.MarkupBar.IsVisible, turnOff: true);
             await Press("Measure", () => toolbar.MeasureLengthTool.IsTurnedOn, Measure, turnOff: true);

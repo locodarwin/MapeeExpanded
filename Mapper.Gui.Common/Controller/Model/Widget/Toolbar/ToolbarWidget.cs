@@ -24,6 +24,8 @@ namespace Mapper.Gui.Controller
         public WorldSigns Signs { get; private set; } = null!;
         // The Pets list's, and the named mobs shown on the map
         public WorldPets Pets { get; private set; } = null!;
+        // The Biomes list's, and the patches it shades
+        public WorldBiomes Biomes { get; private set; } = null!;
         // Browsing has no button of its own: the Open menu leads to it, and Ctrl+O
         public BrowseTool BrowseTool { get; private set; } = null!;
         public ShortcutsTool ShortcutsTool { get; private set; } = null!;
@@ -183,11 +185,12 @@ namespace Mapper.Gui.Controller
         {
             Signs = new WorldSigns(Renderer.Scene, MarkupTool, LiveTool);
             Pets = new WorldPets(Renderer.Scene, MarkupTool, LiveTool);
-            FindTool tool = new(Renderer.Scene, Renderer.GraphicsCanvas, MarkupTool, LiveTool, RenderInvoker) { Signs = Signs, Pets = Pets };
+            Biomes = new WorldBiomes(Renderer.Scene, MarkupTool, LiveTool, RenderInvoker);
+            FindTool tool = new(Renderer.Scene, Renderer.GraphicsCanvas, MarkupTool, LiveTool, RenderInvoker) { Signs = Signs, Pets = Pets, Biomes = Biomes };
             FindTool = tool;
             Renderer.AddPainter(new FindPainter(tool, Renderer.GraphicsCanvas));
             ToolButton output = new(tool) { Icon = ToolIcons.Find, Name = "Find" };
-            Keyed(output, "Find blocks (diamonds, spawners, chests or any block) anywhere in the dimension, signs by what they say, or named pets", ShortcutAction.FindBlocks);
+            Keyed(output, "Find blocks (diamonds, spawners, chests or any block) anywhere in the dimension, signs by what they say, named pets, or biomes", ShortcutAction.FindBlocks);
 
             return output;
         }

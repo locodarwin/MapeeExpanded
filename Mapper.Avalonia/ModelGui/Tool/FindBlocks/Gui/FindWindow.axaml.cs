@@ -10,21 +10,24 @@ using Avalonia.Threading;
 namespace Mapper.Gui
 {
     // The find window. Blocks: what to look for on top, what was found below. Signs and Pets: the dimension's signs
-    // and named mobs, each with a tick for showing it on the map. FindPanel, SignsPanel and PetsPanel hold what they
-    // show, FindTool runs the search, WorldSigns and WorldPets read the world; this only lays them out (the WPF GUI
-    // has its own copy)
+    // and named mobs, each with a tick for showing it on the map. Biomes: the dimension's biomes, nearest first, those
+    // named shaded on the map. FindPanel, SignsPanel, PetsPanel and BiomesPanel hold what they show, FindTool runs the
+    // search, WorldSigns, WorldPets and WorldBiomes read the world; this only lays them out (the WPF GUI has its own
+    // copy)
     public partial class FindWindow : Window
     {
         public FindPanel Panel { get; }
         public FindTool Tool => Panel.Tool;
         public SignsPanel? Signs { get; }
         public PetsPanel? Pets { get; }
+        public BiomesPanel? Biomes { get; }
 
         private IReadOnlyList<FoundCluster>? _shown;
         private bool _refreshing;
         private string? _message;
         private IReadOnlyList<SignRow>? _signRows;
         private IReadOnlyList<PetRow>? _petRows;
+        private IReadOnlyList<BiomeRow>? _biomeRows;
 
         public FindWindow(FindTool tool)
         {
@@ -131,27 +134,59 @@ namespace Mapper.Gui
                 PetsButton.IsVisible = false;
             }
 
+            if (tool.Biomes is WorldBiomes biomes)
+            {
+                Biomes = new BiomesPanel(biomes, tool.Canvas);
+                BiomeList.DoubleTapped += (sender, e) => BiomeGoButton_Click(sender, e);
+                BiomeSearchBox.TextChanged += (sender, e) =>
+                {
+                    Biomes.Filter(BiomeSearchBox.Text ?? string.Empty);
+                    RefreshBiomes();
+                };
+                BiomeList.SelectionChanged += (sender, e) =>
+                {
+                    if (_refreshing) return;
+                    BiomeRow? row = BiomeList.SelectedItem as BiomeRow;
+                    Biomes.Pick(row);
+                    if (row is not null) Tool.GoTo(row.X, row.Z);
+                    RefreshBiomes();
+                };
+                biomes.Changed += RefreshBiomes;
+                Closed += (sender, e) =>
+                {
+                    biomes.Changed -= RefreshBiomes;
+                    biomes.Listed = false;
+                };
+            }
+            else
+            {
+                BiomesButton.IsVisible = false;
+            }
+
             Opened += (sender, e) => Half(Tool.Half switch
             {
                 FindHalf.Signs when Signs is not null => FindHalf.Signs,
                 FindHalf.Pets when Pets is not null => FindHalf.Pets,
+                FindHalf.Biomes when Biomes is not null => FindHalf.Biomes,
                 _ => FindHalf.Blocks
             });
 
             Refresh();
         }
 
-        // Blocks, signs or pets
+        // Blocks, signs, pets or biomes
         private void Half(FindHalf half)
         {
             Tool.Half = half;
-            bool signs = half == FindHalf.Signs, pets = half == FindHalf.Pets;
+            bool signs = half == FindHalf.Signs, pets = half == FindHalf.Pets, biomes = half == FindHalf.Biomes;
             BlocksHalf.IsVisible = half == FindHalf.Blocks;
             SignsHalf.IsVisible = signs;
             PetsHalf.IsVisible = pets;
+            BiomesHalf.IsVisible = biomes;
             BlocksButton.Classes.Set("on", half == FindHalf.Blocks);
             SignsButton.Classes.Set("on", signs);
             PetsButton.Classes.Set("on", pets);
+            BiomesButton.Classes.Set("on", biomes);
             if (Tool.Signs is WorldSigns worldSigns)
             {
                 worldSigns.Listed = signs;
@@ -161,6 +196,11 @@ namespace Mapper.Gui
             {
                 worldPets.Listed = pets;
                 if (pets) worldPets.Want();
+            }
+            if (Tool.Biomes is WorldBiomes worldBiomes)
+            {
+                worldBiomes.Listed = biomes;
+                if (biomes) worldBiomes.Want();
             }
             if (signs)
             {
@@ -172,6 +212,11 @@ namespace Mapper.Gui
                 RefreshPets();
                 PetSearchBox.Focus();
             }
+            else if (biomes)
+            {
+                RefreshBiomes();
+                BiomeSearchBox.Focus();
+            }
             else
             {
                 SearchBox.Focus();
@@ -181,6 +226,55 @@ namespace Mapper.Gui
         private void BlocksButton_Click(object? sender, RoutedEventArgs e) => Half(FindHalf.Blocks);
         private void SignsButton_Click(object? sender, RoutedEventArgs e) => Half(FindHalf.Signs);
         private void PetsButton_Click(object? sender, RoutedEventArgs e) => Half(FindHalf.Pets);
+        private void BiomesButton_Click(object? sender, RoutedEventArgs e) => Half(FindHalf.Biomes);
+
+        private void RefreshBiomes()
+        {
+            if (Biomes is null || !BiomesHalf.IsVisible) return;
+            _refreshing = true;
+            try
+            {
+                IReadOnlyList<BiomeRow> rows = Biomes.Rows();
+                if (!ReferenceEquals(rows, _biomeRows))
+                {
+                    _biomeRows = rows;
+                    BiomeList.ItemsSource = rows;
+                    BiomePatch? picked = Biomes.Biomes.Picked;
+                    if (picked is not null) BiomeList.SelectedItem = rows.FirstOrDefault(r => r.Patch == picked);
+                }
+                BiomeStatusText.Text = Biomes.Status();
+                BiomeProgress.IsVisible = Biomes.Biomes.Reading;
+                BiomeSortedText.Text = Biomes.SortedText();
+                BiomeSortButton.IsVisible = rows.Count > 0;
+
+                bool chosen = BiomeList.SelectedItem is BiomeRow;
+                BiomeGoButton.IsEnabled = chosen;
+                BiomePinButton.IsEnabled = chosen && Tool.CanPin;
+            }
+            finally
+            {
+                _refreshing = false;
+            }
+        }
+
+        private void BiomeSortButton_Click(object? sender, RoutedEventArgs e)
+        {
+            Biomes?.SortFromHere();
+            RefreshBiomes();
+        }
+
+        private void BiomeGoButton_Click(object? sender, RoutedEventArgs e)
+        {
+            if (BiomeList.SelectedItem is BiomeRow row) Tool.GoTo(row.X, row.Z);
+        }
+
+        private void BiomePinButton_Click(object? sender, RoutedEventArgs e)
+        {
+            if (BiomeList.SelectedItem is not BiomeRow row || Tool.Biomes is null) return;
+            Tool.Biomes.Pin(row.Patch);
+            BiomePinnedText.Text = "Pinned";
+            DispatcherTimer.RunOnce(() => BiomePinnedText.Text = string.Empty, TimeSpan.FromSeconds(2));
+        }
 
         private void RefreshPets()
         {

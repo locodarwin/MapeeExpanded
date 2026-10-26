@@ -25,6 +25,9 @@ namespace Mapper.Gui.Logic
         private static readonly IPen PinEdge = new Pen(new SolidColorBrush(Color.FromRgb(26, 26, 26)), 1.5);
         private static readonly IPen Ring = new Pen(Brushes.White, 2);
         private static readonly IBrush Wood = new SolidColorBrush(Color.Parse(SignShape.Wood));
+        private static readonly IBrush Fur = new SolidColorBrush(Color.Parse(PetShape.Fur));
+        private static readonly IBrush PawBrush = new SolidColorBrush(Color.Parse(PetShape.PawColor));
+        private static readonly Geometry Paw = Geometry.Parse("F0 " + PetShape.Paw);
         private static readonly IPen DraftPen = new Pen(Brushes.White, 2) { DashStyle = new DashStyle([4, 3], 0) };
         private static readonly IPen DraftShadow = new Pen(new SolidColorBrush(Color.FromArgb(160, 0, 0, 0)), 4);
         private static readonly IPen HandleEdge = new Pen(new SolidColorBrush(Color.FromRgb(26, 26, 26)), 1);
@@ -50,6 +53,7 @@ namespace Mapper.Gui.Logic
             foreach (ZoneShape zone in frame.Zones) DrawZone(drawingContext, zone);
             foreach (ZoneShape zone in frame.Zones) DrawZoneLabel(drawingContext, zone);
             foreach (SignShape sign in frame.Signs) DrawSign(drawingContext, sign);
+            foreach (PetShape pet in frame.Pets) DrawPet(drawingContext, pet);
             foreach (PinShape pin in frame.Pins) DrawPin(drawingContext, pin);
 
             DrawHandles(drawingContext, frame);
@@ -139,6 +143,33 @@ namespace Mapper.Gui.Logic
             // While the mouse is over it, above it, clear of the coordinates beside the mouse
             double y = sign.Hovered ? sign.Y - SignShape.BoardHeight / 2 - (lines.Sum(l => l.Height) + 4) / 2 : sign.Y;
             DrawLines(drawingContext, lines, sign.X + MarkupEditor.SignRadius + 4, y, false);
+        }
+
+        // A paw on a pale disc where the mob was last saved, with its name beside it, or what it is and where while
+        // the mouse is over it
+        private static void DrawPet(DrawingContext drawingContext, PetShape pet)
+        {
+            double radius = MarkupEditor.PetRadius;
+            drawingContext.DrawEllipse(Fur, pet.Hovered ? Ring : PinEdge, new Point(pet.X, pet.Y), radius, radius);
+            using (drawingContext.PushTransform(Matrix.CreateScale(0.7, 0.7) * Matrix.CreateTranslation(pet.X - 5.6, pet.Y - 5.6)))
+            {
+                drawingContext.DrawGeometry(PawBrush, null, Paw);
+            }
+
+            List<FormattedText> lines = [];
+            if (pet.Hovered)
+            {
+                IReadOnlyList<string> text = pet.Lines;
+                lines.Add(Text(text[0], LabelFont, 12, Brushes.White));
+                lines.AddRange(text.Skip(1).Select(l => Text(l, DetailFont, 11, DetailBrush)));
+            }
+            else if (pet.Labelled)
+            {
+                lines.Add(Text(pet.Pet.Name, LabelFont, 12, Brushes.White));
+            }
+            if (lines.Count == 0) return;
+            double y = pet.Hovered ? pet.Y - radius - (lines.Sum(l => l.Height) + 4) / 2 : pet.Y;
+            DrawLines(drawingContext, lines, pet.X + radius + 4, y, false);
         }
 
         private static void DrawHandles(DrawingContext drawingContext, MarkupFrame frame)

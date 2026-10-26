@@ -111,7 +111,7 @@
         </ResourceDictionary>
     </Window.Resources>
 
-    <!-- Blocks or signs: a switch on top, and the half picked below it -->
+    <!-- Blocks, signs or pets: a switch on top, and the part picked below it -->
     <Grid Margin="15,10,15,15" Grid.Row="1">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -120,6 +120,7 @@
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,4">
             <Button x:Name="BlocksButton" Style="{StaticResource Half}" Content="Blocks" Click="BlocksButton_Click" ToolTip="Find blocks anywhere in the dimension"/>
             <Button x:Name="SignsButton" Style="{StaticResource Half}" Content="Signs" Click="SignsButton_Click" ToolTip="List the signs and what they say, and pick which to show on the map"/>
+            <Button x:Name="PetsButton" Style="{StaticResource Half}" Content="Pets" Click="PetsButton_Click" ToolTip="List the mobs given a name, and pick which to show on the map"/>
         </StackPanel>
 
         <Grid Grid.Row="1" x:Name="BlocksHalf">
@@ -343,6 +344,81 @@
                 <Button x:Name="SignGoButton" Content="Go there" Height="26" Padding="10,0" Margin="0,0,8,4" Click="SignGoButton_Click"/>
                 <Button x:Name="SignPinButton" Content="Add a pin" Height="26" Padding="10,0" Margin="0,0,8,4" Click="SignPinButton_Click" ToolTip="Put a pin on it, labelled with its first line"/>
                 <TextBlock x:Name="SignPinnedText" Style="{StaticResource Dim}" VerticalAlignment="Center" Margin="0,0,0,4"/>
+            </WrapPanel>
+        </Grid>
+
+        <!-- Nothing is drawn for a named mob until its box is ticked -->
+        <Grid Grid.Row="1" x:Name="PetsHalf" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Text="Named mobs in this dimension" Style="{StaticResource Heading}" Margin="0,4,0,4"/>
+            <Grid Grid.Row="1">
+                <TextBox x:Name="PetSearchBox" FontSize="13" Height="25" Padding="4,1,0,0" TextChanged="PetSearchBox_TextChanged"/>
+                <TextBlock IsHitTestVisible="False" Text="Only mobs with these words in their name or kind" FontSize="13" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="7,0,0,1" Foreground="#FF969696">
+                    <TextBlock.Style>
+                        <Style TargetType="{x:Type TextBlock}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Text, ElementName=PetSearchBox}" Value="">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
+            <TextBlock Grid.Row="2" x:Name="PetStatusText" Style="{StaticResource Dim}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+            <ProgressBar Grid.Row="3" x:Name="PetProgress" Height="4" Margin="0,4,0,6" IsIndeterminate="True" Background="#FF303030" BorderThickness="0" Foreground="#FF528753"/>
+
+            <Border Grid.Row="4" BorderBrush="#FF404040" BorderThickness="1">
+                <DockPanel>
+                    <Border DockPanel.Dock="Top" Background="#FF262626" Height="25">
+                        <Grid Margin="8,0,4,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="PetSortedText" Style="{StaticResource Dim}" FontSize="12" VerticalAlignment="Center"/>
+                            <Button Grid.Column="1" x:Name="PetSortButton" Style="{StaticResource Flat}" Content="Sort from the map's middle" FontSize="12" Padding="6,1" Click="PetSortButton_Click"
+                                    ToolTip="List the nearest to the middle of the map first, from where it is now"/>
+                        </Grid>
+                    </Border>
+                    <ListBox x:Name="PetList" SelectionChanged="PetList_SelectionChanged" MouseDoubleClick="PetList_MouseDoubleClick">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ToolTip="{Binding ToolTip}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <CheckBox IsChecked="{Binding Shown, Mode=TwoWay}" IsEnabled="{Binding CanShow}" VerticalAlignment="Center" Margin="0,0,8,0" ToolTip="Show it on the map"/>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding More}" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Place}" Style="{StaticResource Dim}" FontSize="11"/>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="2" Text="{Binding Distance}" Style="{StaticResource Dim}" FontSize="11" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <WrapPanel Grid.Row="5" Margin="0,8,0,0">
+                <Button x:Name="ShowListedPetsButton" Content="Show all listed" Height="26" Padding="10,0" Margin="0,0,8,4" Click="ShowListedPetsButton_Click" ToolTip="Tick every mob in the list"/>
+                <Button x:Name="HideAllPetsButton" Content="Hide all" Height="26" Padding="10,0" Margin="0,0,8,4" Click="HideAllPetsButton_Click" ToolTip="Take every named mob in this dimension off the map"/>
+                <Button x:Name="PetGoButton" Content="Go there" Height="26" Padding="10,0" Margin="0,0,8,4" Click="PetGoButton_Click"/>
+                <Button x:Name="PetPinButton" Content="Add a pin" Height="26" Padding="10,0" Margin="0,0,8,4" Click="PetPinButton_Click" ToolTip="Put a pin where it was, labelled with its name"/>
+                <TextBlock x:Name="PetPinnedText" Style="{StaticResource Dim}" VerticalAlignment="Center" Margin="0,0,0,4"/>
             </WrapPanel>
         </Grid>
     </Grid>

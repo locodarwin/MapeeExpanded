@@ -303,7 +303,7 @@ namespace Mapper
     }
 
     // The page over the dimensions: index.html, the viewer with the dimensions' data in it,
-    // and, when given, the world's pins, zones and shown signs
+    // and, when given, the world's pins, zones and shown signs and mobs
     public static class WebMapPage
     {
         public static void Write(string directory, string title, IList<WebMapDimension> dimensions, string? initial = null, MarkupDocument? markup = null)
@@ -316,6 +316,7 @@ namespace Mapper
                 tileSize = WebMapWriter.TileSize,
                 initial = dimensions.Any(d => d.Id == initial) ? initial : dimensions.FirstOrDefault()?.Id,
                 icons = PinIcons.All.ToDictionary(i => i.Id, i => i.Path),
+                paw = PetShape.Paw,
                 dimensions = dimensions.Select(d => new
                 {
                     id = d.Id,
@@ -326,6 +327,7 @@ namespace Mapper
                     markers = d.Markers.Select(m => new { name = m.Name, x = m.X, z = m.Z }),
                     pins = (markup?.Pins ?? []).Where(p => In(p, d)).Select(p => new { label = p.Label, x = p.X, z = p.Z, color = p.Color, icon = p.Icon, note = p.Note }),
                     signs = (markup?.Signs ?? []).Where(s => WebMapFolder.IdOf(new Dimension(s.Dimension)) == d.Id).Select(s => new { x = s.X, y = s.Y, z = s.Z, lines = s.Lines }),
+                    pets = (markup?.Pets ?? []).Where(p => WebMapFolder.IdOf(new Dimension(p.Dimension)) == d.Id).Select(p => new { x = p.X, y = p.Y, z = p.Z, name = p.Name, kind = p.Description }),
                     // Largest first, so smaller zones lie on top
                     zones = (markup?.Zones ?? []).Where(z => In(z, d)).OrderByDescending(z => ZoneGeometry.Area(z.Points)).Select(z =>
                     {

@@ -29,6 +29,9 @@ namespace Mapper.Gui.Logic
         private static readonly Pen PinEdge = Frozen(new Pen(new SolidColorBrush(Color.FromRgb(26, 26, 26)), 1.5));
         private static readonly Pen Ring = Frozen(new Pen(Brushes.White, 2));
         private static readonly Brush Wood = Frozen(new SolidColorBrush((Color)ColorConverter.ConvertFromString(SignShape.Wood)));
+        private static readonly Brush Fur = Frozen(new SolidColorBrush((Color)ColorConverter.ConvertFromString(PetShape.Fur)));
+        private static readonly Brush PawBrush = Frozen(new SolidColorBrush((Color)ColorConverter.ConvertFromString(PetShape.PawColor)));
+        private static readonly Geometry Paw = Frozen(Geometry.Parse("F0 " + PetShape.Paw));
         private static readonly Pen DraftPen = Frozen(new Pen(Brushes.White, 2) { DashStyle = new DashStyle([2, 1.5], 0) });
         private static readonly Pen DraftShadow = Frozen(new Pen(new SolidColorBrush(Color.FromArgb(160, 0, 0, 0)), 4));
         private static readonly Pen HandleEdge = Frozen(new Pen(new SolidColorBrush(Color.FromRgb(26, 26, 26)), 1));
@@ -54,6 +57,7 @@ namespace Mapper.Gui.Logic
             foreach (ZoneShape zone in frame.Zones) DrawZone(drawingContext, zone);
             foreach (ZoneShape zone in frame.Zones) DrawZoneLabel(drawingContext, zone, pixelsPerDip);
             foreach (SignShape sign in frame.Signs) DrawSign(drawingContext, sign, pixelsPerDip);
+            foreach (PetShape pet in frame.Pets) DrawPet(drawingContext, pet, pixelsPerDip);
             foreach (PinShape pin in frame.Pins) DrawPin(drawingContext, pin, pixelsPerDip);
 
             DrawHandles(drawingContext, frame);
@@ -145,6 +149,35 @@ namespace Mapper.Gui.Logic
             // While the mouse is over it, above it, clear of the coordinates beside the mouse
             double y = sign.Hovered ? sign.Y - SignShape.BoardHeight / 2 - (lines.Sum(l => l.Height) + 4) / 2 : sign.Y;
             DrawLines(drawingContext, lines, sign.X + MarkupEditor.SignRadius + 4, y, false);
+        }
+
+        // A paw on a pale disc where the mob was last saved, with its name beside it, or what it is and where while
+        // the mouse is over it
+        private static void DrawPet(DrawingContext drawingContext, PetShape pet, double pixelsPerDip)
+        {
+            double radius = MarkupEditor.PetRadius;
+            drawingContext.DrawEllipse(Fur, pet.Hovered ? Ring : PinEdge, new Point(pet.X, pet.Y), radius, radius);
+            TransformGroup transform = new();
+            transform.Children.Add(new ScaleTransform(0.7, 0.7));
+            transform.Children.Add(new TranslateTransform(pet.X - 5.6, pet.Y - 5.6));
+            drawingContext.PushTransform(transform);
+            drawingContext.DrawGeometry(PawBrush, null, Paw);
+            drawingContext.Pop();
+
+            List<FormattedText> lines = [];
+            if (pet.Hovered)
+            {
+                IReadOnlyList<string> text = pet.Lines;
+                lines.Add(Text(text[0], LabelFont, 12, Brushes.White, pixelsPerDip));
+                lines.AddRange(text.Skip(1).Select(l => Text(l, DetailFont, 11, DetailBrush, pixelsPerDip)));
+            }
+            else if (pet.Labelled)
+            {
+                lines.Add(Text(pet.Pet.Name, LabelFont, 12, Brushes.White, pixelsPerDip));
+            }
+            if (lines.Count == 0) return;
+            double y = pet.Hovered ? pet.Y - radius - (lines.Sum(l => l.Height) + 4) / 2 : pet.Y;
+            DrawLines(drawingContext, lines, pet.X + radius + 4, y, false);
         }
 
         private static void DrawHandles(DrawingContext drawingContext, MarkupFrame frame)

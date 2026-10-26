@@ -57,6 +57,11 @@
     background: #c8a165; flex: none; margin-top: -4px; }
   .sign b::after { content: ""; position: absolute; left: 4.5px; top: 8.5px; width: 2px; height: 5px; background: #1a1a1a; }
   .sign span { margin-left: 4px; padding: 1px 5px; border-radius: 3px; background: rgba(20, 20, 20, 0.8); white-space: nowrap; font-size: 12px; font-weight: 600; }
+  .pet { position: absolute; transform: translate(-8px, -50%); display: flex; align-items: center; }
+  .pet b { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid #1a1a1a; box-sizing: border-box; background: #f3e3c3; flex: none;
+    display: flex; align-items: center; justify-content: center; }
+  .pet svg { width: 11px; height: 11px; }
+  .pet span { margin-left: 4px; padding: 1px 5px; border-radius: 3px; background: rgba(20, 20, 20, 0.8); white-space: nowrap; font-size: 12px; font-weight: 600; }
   .pin span { margin-left: 4px; padding: 1px 5px; border-radius: 3px; background: rgba(20, 20, 20, 0.8); white-space: nowrap; font-size: 12px; font-weight: 600; }
   #card { display: none; z-index: 4; max-width: 260px; pointer-events: none; }
   #card h2 { font-size: 14px; margin: 0; font-weight: 600; }
@@ -68,6 +73,19 @@
     font: 12px/1 system-ui, sans-serif; padding: 5px 9px; cursor: pointer; }
   #dims button:hover { background: #383838; }
   #dims button.on { color: var(--accent); border-color: var(--accent); }
+  /* Finding a pin, zone, sign, pet or marker by name, in any dimension */
+  #search { margin-top: 6px; }
+  #search:empty { display: none; }
+  #find { width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 4px; background: #1e1e1e; color: var(--text);
+    font: 13px system-ui, sans-serif; padding: 5px 7px; outline: none; }
+  #find:focus { border-color: var(--accent); }
+  #results { margin: 4px -4px 0; max-height: min(320px, 50vh); overflow-y: auto; }
+  #results:empty { display: none; }
+  #results div { padding: 4px 6px; border-radius: 4px; cursor: pointer; }
+  #results div.on, #results div:hover { background: #383838; }
+  #results b { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #results small { color: var(--muted); font-size: 11px; }
+  #results p { margin: 2px 6px; color: var(--muted); }
   /* The block under a resting mouse, as Mapee shows it */
   #tip { position: absolute; z-index: 3; pointer-events: none; display: none; white-space: pre;
     background: rgba(24, 24, 24, 0.82); border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 3px;
@@ -81,7 +99,7 @@
   <div id="zoneLayer"><svg id="zones"></svg></div>
   <div id="markers"></div>
 </div>
-<div id="info" class="panel"><h1></h1><p></p><div id="dims"></div></div>
+<div id="info" class="panel"><h1></h1><p></p><div id="dims"></div><div id="search"></div><div id="results"></div></div>
 <div id="tip"></div>
 <div id="card" class="panel"></div>
 <div id="status" class="panel"><span id="cursor">&nbsp;</span> &nbsp; <span id="scale"></span></div>
@@ -90,7 +108,7 @@
   <button id="zoomOut" title="Zoom out (&minus;)">&minus;</button>
   <button id="fit" class="small" title="Show the whole map (Home)">ALL</button>
   <button id="gridToggle" class="small" title="Region and chunk grid (G)">GRID</button>
-  <button id="markerToggle" class="small on" title="Pins, signs and markers (M)">PINS</button>
+  <button id="markerToggle" class="small on" title="Pins, signs, pets and markers (M)">PINS</button>
   <button id="zoneToggle" class="small on" title="Zones (Z)">ZONES</button>
 </div>
 <script>
@@ -266,10 +284,10 @@ function drawMarkers() {
   });
 }
 
-// The world's pins, zones and shown signs, of the dimension shown. Pins and signs share the markers' layer and switch;
-// zones have their own
+// The world's pins, zones and shown signs and pets, of the dimension shown. Pins, signs and pets share the markers'
+// layer and switch; zones have their own
 const SVG = "http://www.w3.org/2000/svg";
-let pinEls = [], signEls = [], zoneEls = [], hovered = null;
+let pinEls = [], signEls = [], petEls = [], zoneEls = [], hovered = null;
 const isLight = hex => {
   const v = parseInt(hex.slice(1), 16);
   return ((v >> 16) & 255) * 0.299 + ((v >> 8) & 255) * 0.587 + (v & 255) * 0.114 > 170;
@@ -300,6 +318,26 @@ function createMarkup() {
     el.appendChild(label);
     markersEl.appendChild(el);
     return { kind: "sign", item: s, el, label };
+  });
+  petEls = (dim.pets || []).map(p => {
+    const el = document.createElement("div");
+    el.className = "pet";
+    const disc = document.createElement("b");
+    if (MAP.paw) {
+      const svg = document.createElementNS(SVG, "svg");
+      svg.setAttribute("viewBox", "0 0 16 16");
+      const path = document.createElementNS(SVG, "path");
+      path.setAttribute("d", MAP.paw);
+      path.setAttribute("fill", "#6d4c41");
+      svg.appendChild(path);
+      disc.appendChild(svg);
+    }
+    el.appendChild(disc);
+    const label = document.createElement("span");
+    label.textContent = p.name;
+    el.appendChild(label);
+    markersEl.appendChild(el);
+    return { kind: "pet", item: p, el, label };
   });
   pinEls = (dim.pins || []).map(p => {
     const el = document.createElement("div");
@@ -372,13 +410,22 @@ function drawMarkup() {
     if (free) placed.push([left, top, w]);
     sign.label.style.visibility = free ? "" : "hidden";
   }
+  for (const pet of petEls) {
+    const [x, y] = toScreen(pet.item.x + 0.5, pet.item.z + 0.5);
+    pet.el.style.left = Math.round(x) + "px";
+    pet.el.style.top = Math.round(y) + "px";
+    const w = pet.label.textContent.length * 7 + 10, left = x + 12, top = y - 9;
+    const free = !placed.some(p => left < p[0] + p[2] && left + w > p[0] && top < p[1] + 18 && top + 18 > p[1]);
+    if (free) placed.push([left, top, w]);
+    pet.label.style.visibility = free ? "" : "hidden";
+  }
   for (const pin of pinEls) {
     const [x, y] = toScreen(pin.item.x + 0.5, pin.item.z + 0.5);
     pin.el.style.left = Math.round(x) + "px";
     pin.el.style.top = Math.round(y) + "px";
   }
 }
-// The pin or zone at a point on the screen: pins first, then the smallest zone holding it
+// The pin, sign, pet or zone at a point on the screen: pins first, then the smallest zone holding it
 function markupAt(sx, sy) {
   if (!markersEl.classList.contains("hidden")) {
     for (let i = pinEls.length - 1; i >= 0; i--) {
@@ -388,6 +435,10 @@ function markupAt(sx, sy) {
     for (let i = signEls.length - 1; i >= 0; i--) {
       const [x, y] = toScreen(signEls[i].item.x + 0.5, signEls[i].item.z + 0.5);
       if (Math.abs(sx - x) <= 10 && Math.abs(sy - y) <= 10) return signEls[i];
+    }
+    for (let i = petEls.length - 1; i >= 0; i--) {
+      const [x, y] = toScreen(petEls[i].item.x + 0.5, petEls[i].item.z + 0.5);
+      if (Math.hypot(sx - x, sy - y) <= 11) return petEls[i];
     }
   }
   if (zoneLayerEl.classList.contains("hidden")) return null;
@@ -420,6 +471,17 @@ function showCard(found, sx, sy) {
     cardEl.append(title);
     if (item.lines.length > 1) cardEl.append(lines);
     cardEl.append(detail);
+    placeCard(sx, sy);
+    return;
+  }
+  if (found.kind === "pet") {
+    const title = document.createElement("h2");
+    title.textContent = item.name;
+    const what = document.createElement("p");
+    what.textContent = item.kind;
+    const detail = document.createElement("p");
+    detail.textContent = "X " + item.x + "   Y " + item.y + "   Z " + item.z + " when last saved";
+    cardEl.append(title, what, detail);
     placeCard(sx, sy);
     return;
   }
@@ -635,7 +697,7 @@ function showDimension(next, nextView) {
   createMarkup();
   hovered = null;
   hideCard();
-  markerButton.style.display = dim.markers.length === 0 && pinEls.length === 0 && signEls.length === 0 ? "none" : "";
+  markerButton.style.display = dim.markers.length === 0 && pinEls.length === 0 && signEls.length === 0 && petEls.length === 0 ? "none" : "";
   zoneButton.style.display = zoneEls.length === 0 ? "none" : "";
   document.querySelector("#info p").textContent = dim.subtitle;
   for (const button of dimsEl.children) button.classList.toggle("on", button.dataset.id === dim.id);
@@ -659,9 +721,10 @@ if (MAP.dimensions.length > 1) {
 }
 
 document.addEventListener("keydown", e => {
-  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.ctrlKey || e.metaKey || e.altKey || e.target === findEl) return;
   const pan = 120 / scale();
   switch (e.key) {
+    case "f": case "F": case "/": if (findEl) { findEl.focus(); findEl.select(); } break;
     case "+": case "=": animateZoom(view.zoom + 1, width() / 2, height() / 2); break;
     case "-": case "_": animateZoom(view.zoom - 1, width() / 2, height() / 2); break;
     case "ArrowLeft": view.x -= pan; scheduleDraw(); break;
@@ -681,6 +744,112 @@ document.addEventListener("keydown", e => {
   restartTip();
   e.preventDefault();
 });
+
+// Finding things by name: every dimension's pins, zones, shown signs and pets, and the spawn and player markers.
+// Each word typed must be in the name (or a sign's lines, a pin's or zone's note, a pet's kind); this dimension's
+// come first. Picking one goes there, to its dimension if need be, and shows its card
+const searchEl = document.getElementById("search");
+const resultsEl = document.getElementById("results");
+const KINDS = { pin: "Pin", zone: "Zone", sign: "Sign", pet: "Pet", marker: "Marker" };
+const ORDER = ["pin", "zone", "sign", "pet", "marker"];
+const places = [];
+for (const d of MAP.dimensions) {
+  for (const p of d.pins || []) places.push({ d, kind: "pin", item: p, title: p.label || "Unnamed pin", text: p.label + " " + (p.note || ""), x: p.x + 0.5, z: p.z + 0.5 });
+  for (const z of d.zones || []) places.push({ d, kind: "zone", item: z, title: z.label || "Unnamed zone", text: z.label + " " + (z.note || ""), x: z.labelAt[0], z: z.labelAt[1] });
+  for (const s of d.signs || []) places.push({ d, kind: "sign", item: s, title: s.lines.filter(l => l !== "Back:").join(" "), text: s.lines.join(" "), x: s.x + 0.5, z: s.z + 0.5 });
+  for (const p of d.pets || []) places.push({ d, kind: "pet", item: p, title: p.name, text: p.name + " " + p.kind, x: p.x + 0.5, z: p.z + 0.5, what: p.kind });
+  for (const m of d.markers || []) places.push({ d, kind: "marker", item: m, title: m.name, text: m.name, x: m.x, z: m.z });
+}
+let findEl = null, found = [], chosen = 0;
+if (places.length > 0) {
+  findEl = document.createElement("input");
+  findEl.id = "find";
+  findEl.type = "search";
+  findEl.placeholder = "Find a pin, zone, sign or pet (F)";
+  findEl.autocomplete = "off";
+  findEl.spellcheck = false;
+  searchEl.appendChild(findEl);
+  findEl.addEventListener("input", () => { chosen = 0; showResults(); });
+  findEl.addEventListener("focus", () => { hideCard(); hideTip(); showResults(); });
+  findEl.addEventListener("keydown", e => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      if (found.length) chosen = (chosen + (e.key === "ArrowDown" ? 1 : found.length - 1)) % found.length;
+      markChosen();
+    } else if (e.key === "Enter") {
+      if (found[chosen]) goToPlace(found[chosen]);
+    } else if (e.key === "Escape") {
+      if (findEl.value) { findEl.value = ""; showResults(); } else findEl.blur();
+    } else return;
+    e.preventDefault();
+  });
+  // A click on the map closes the list; the words stay for next time
+  mapEl.addEventListener("pointerdown", () => { findEl.blur(); resultsEl.replaceChildren(); });
+}
+function matches(text) {
+  const words = text.toLowerCase().split(/\s+/).filter(w => w);
+  if (!words.length) return [];
+  return places.filter(p => { const t = p.text.toLowerCase(); return words.every(w => t.includes(w)); })
+    .sort((a, b) => (a.d !== dim) - (b.d !== dim) || ORDER.indexOf(a.kind) - ORDER.indexOf(b.kind) || a.title.localeCompare(b.title));
+}
+function showResults() {
+  resultsEl.replaceChildren();
+  if (!findEl || !findEl.value.trim()) { found = []; return; }
+  found = matches(findEl.value).slice(0, 30);
+  if (!found.length) {
+    const none = document.createElement("p");
+    none.textContent = "Nothing called that";
+    resultsEl.appendChild(none);
+    return;
+  }
+  chosen = Math.min(chosen, found.length - 1);
+  found.forEach((p, i) => {
+    const row = document.createElement("div");
+    const title = document.createElement("b");
+    title.textContent = p.title;
+    const detail = document.createElement("small");
+    detail.textContent = [p.what || KINDS[p.kind], MAP.dimensions.length > 1 ? p.d.name : null, Math.floor(p.x) + ", " + Math.floor(p.z)].filter(t => t).join(" · ");
+    row.append(title, detail);
+    // On mousedown, ahead of the box losing focus
+    row.addEventListener("mousedown", e => { e.preventDefault(); goToPlace(p); });
+    resultsEl.appendChild(row);
+  });
+  markChosen();
+}
+function markChosen() {
+  [...resultsEl.children].forEach((row, i) => row.classList.toggle("on", i === chosen));
+  const row = resultsEl.children[chosen];
+  if (row && row.scrollIntoView) row.scrollIntoView({ block: "nearest" });
+}
+function goToPlace(p) {
+  findEl.blur();
+  resultsEl.replaceChildren();
+  if (p.d !== dim) showDimension(p.d);
+  // Its layer is shown if it was hidden
+  if (p.kind === "zone" && zoneLayerEl.classList.contains("hidden")) toggleZones();
+  if (p.kind !== "zone" && markersEl.classList.contains("hidden")) toggleMarkers();
+  if (animation) { cancelAnimationFrame(animation); animation = null; }
+  if (p.kind === "zone") {
+    // The whole zone in view, with room around it
+    const pts = p.item.points;
+    let minX = Infinity, minZ = Infinity, maxX = -Infinity, maxZ = -Infinity;
+    for (let i = 0; i < pts.length; i += 2) {
+      minX = Math.min(minX, pts[i]); maxX = Math.max(maxX, pts[i]); minZ = Math.min(minZ, pts[i + 1]); maxZ = Math.max(maxZ, pts[i + 1]);
+    }
+    const fitZoom = Math.log2(Math.min(width() / Math.max(1, maxX - minX), height() / Math.max(1, maxZ - minZ)) * 0.6);
+    view.zoom = clampZoom(Math.min(2, Math.floor(fitZoom * 4) / 4));
+  } else {
+    view.zoom = clampZoom(Math.max(view.zoom, 1));
+  }
+  view.x = p.x;
+  view.z = p.z;
+  draw();
+  saveHash();
+  const el = [...pinEls, ...signEls, ...petEls, ...zoneEls].find(e => e.item === p.item);
+  if (el) {
+    const [sx, sy] = toScreen(p.x, p.z);
+    showCard(el, sx, sy);
+  }
+}
 
 // The address keeps the dimension and the view, so a link opens where it was copied: #nether/x,z,zoom
 let hashTimer = null;

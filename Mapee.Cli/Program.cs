@@ -17,11 +17,11 @@ namespace Mapee.Cli
                   Draws one dimension into a PNG, a pixel per block.
                   --dimension <d>          overworld (default), nether, end
                   --area <x1>,<z1>,<x2>,<z2>  only the blocks between these corners
-                  --markup                 draw the pins, zones and signs marked on the world in Mapee
+                  --markup                 draw the pins, zones, signs and pets marked on the world in Mapee
               mapee-cli webmap <world> --out <folder> [options]
                   Exports a zoomable web map (open index.html), every dimension the world has.
                   --dimension <d>[,<d>]    only these dimensions
-                  --no-markers             leave out the spawn and player markers, and the pins, zones and signs
+                  --no-markers             leave out the spawn and player markers, and the pins, zones, signs and pets
                   --force                  replace files in a folder that isn't an earlier web map
                   --full                   draw every region again; otherwise, over an earlier web map
                                            of the same world drawn the same way, only regions the game
@@ -53,6 +53,12 @@ namespace Mapee.Cli
                   --dimension <d>[,<d>]    only these dimensions
                   --text <words>           only signs saying all these words, in any case
                   --csv                    as comma-separated values with a header line
+              mapee-cli pets <world> [options]
+                  Lists the mobs given a name, tamed or not, where the game last saved them, every
+                  dimension the world has.
+                  --dimension <d>[,<d>]    only these dimensions
+                  --text <words>           only mobs whose name or kind has all these words, in any case
+                  --csv                    as comma-separated values with a header line
               mapee-cli worlds             lists the worlds in the game's world folders
               mapee-cli styles             lists the styles
 
@@ -60,7 +66,7 @@ namespace Mapee.Cli
               --style <id or name>         how the map is coloured (default: Default; see mapee-cli styles)
               --slice <y>                  draw the world cut at height y, as the height panel's Slice
               --caves <y>                  draw the caves below height y, as the height panel's Caves
-              --markup <file.json>         the pins, zones and signs in a file exported from Mapee, in place of
+              --markup <file.json>         the pins, zones, signs and pets in a file exported from Mapee, in place of
                                            those marked on the world (the web map shows the world's anyway)
 
             <world> is a world folder, its level.dat, a .mcworld file, or the name of a world in the
@@ -103,6 +109,7 @@ namespace Mapee.Cli
                     "portals" => Portals(line, cancel.Token),
                     "structures" => Structures(line, cancel.Token),
                     "signs" => Signs(line, cancel.Token),
+                    "pets" => Pets(line, cancel.Token),
                     "watch" => Watch(line, cancel.Token),
                     "worlds" => Worlds(),
                     _ => Styles()
@@ -165,8 +172,8 @@ namespace Mapee.Cli
 
             if (marks is not null && markup is not null)
             {
-                int signs = markup.SignsIn(dimension.Namespace).Count();
-                description += $", {Count(markup.PinsIn(dimension.Namespace).Count(), "pin")}{(signs > 0 ? $", {Count(signs, "sign")}" : "")} and {Count(markup.ZonesIn(dimension.Namespace).Count(), "zone")}";
+                int signs = markup.SignsIn(dimension.Namespace).Count(), pets = markup.PetsIn(dimension.Namespace).Count();
+                description += $", {Count(markup.PinsIn(dimension.Namespace).Count(), "pin")}{(signs > 0 ? $", {Count(signs, "sign")}" : "")}{(pets > 0 ? $", {Count(pets, "pet")}" : "")} and {Count(markup.ZonesIn(dimension.Namespace).Count(), "zone")}";
             }
             Console.WriteLine($"Wrote {line.Out}: {drawn.Width:N0} x {drawn.Height:N0} px, {level.WorldName}'s {dimension.Name} ({description}), " +
                 $"blocks {drawn.X}, {drawn.Z} to {drawn.X + drawn.Width - 1}, {drawn.Z + drawn.Height - 1}");
@@ -242,7 +249,7 @@ namespace Mapee.Cli
 
             Console.WriteLine($"Wrote {Path.Combine(folder, "index.html")}: {level.WorldName}, " +
                 string.Join(", ", written.Select(d => $"{d.Name} {d.Regions.Count} region{(d.Regions.Count == 1 ? "" : "s")}")) + $" ({targets[0].Subtitle})" +
-                (markup is { IsEmpty: false } ? $", {Count(markup.Pins.Count, "pin")}{(markup.Signs.Count > 0 ? $", {Count(markup.Signs.Count, "sign")}" : "")} and {Count(markup.Zones.Count, "zone")}" : ""));
+                (markup is { IsEmpty: false } ? $", {Count(markup.Pins.Count, "pin")}{(markup.Signs.Count > 0 ? $", {Count(markup.Signs.Count, "sign")}" : "")}{(markup.Pets.Count > 0 ? $", {Count(markup.Pets.Count, "pet")}" : "")} and {Count(markup.Zones.Count, "zone")}" : ""));
             if (WebMapSaver.DescribeUpdate(written) is { Length: > 0 } update) Console.WriteLine($"Updated: {update}");
             return 0;
         }
@@ -444,6 +451,51 @@ namespace Mapee.Cli
                 return 1;
             }
             string what = words.Length > 0 ? $"signs saying {line.Text}" : "signs with anything on them";
+            Console.Error.WriteLine(total == 0
+                ? $"{level.WorldName} has no {what}"
+                : $"{level.WorldName}: " + string.Join(", ", all.Where(d => d.Found.Count > 0).Select(d => $"{d.Found.Count} in {The(d.Dimension)}")));
+            return 0;
+        }
+
+        private static int Pets(CommandLine line, CancellationToken cancellation)
+        {
+            Directory.SetCurrentDirectory(AppContext.BaseDirectory);
+            (Level level, _) = OpenWorld(line.World!);
+            IList<Dimension> dimensions = line.Dimensions ?? [Dimension.Overworld, Dimension.Nether, Dimension.TheEnd];
+            string[] words = line.Text?.Split(' ', StringSplitOptions.RemoveEmptyEntries) ?? [];
+
+            bool interactive = !Console.IsErrorRedirected;
+            List<(Dimension Dimension, List<Pet> Found)> all = [];
+            foreach (Dimension dimension in dimensions)
+            {
+                SceneInfo scene = new(level, dimension);
+                if (scene.RegionStore is IBackgroundRegionStore background) background.Ready.Wait(cancellation);
+                if (!scene.Regions.Any()) continue;
+
+                if (interactive) Console.Error.Write($"\rLooking for named mobs in {The(dimension)}".PadRight(48));
+                all.Add((dimension, [.. PetMap.Read(scene, cancellation).Where(p => PetText.Says(p, words))]));
+            }
+            if (interactive) Console.Error.Write("\r".PadRight(49) + "\r");
+
+            static string Csv(string text) => $"\"{text.Replace("\"", "\"\"")}\"";
+            if (line.Csv) Console.WriteLine("dimension,x,y,z,kind,name,tamed,id");
+            foreach (var (dimension, found) in all)
+            {
+                foreach (Pet p in found)
+                {
+                    Console.WriteLine(line.Csv
+                        ? $"{dimension.Name},{p.BlockX},{p.BlockY},{p.BlockZ},{Csv(p.Kind)},{Csv(p.Name)},{(p.Tamed ? "yes" : "no")},{p.Id}"
+                        : $"{dimension.Name} {p} {p.Kind}{(p.Tamed ? " (tamed)" : "")}: {p.Name}");
+                }
+            }
+
+            int total = all.Sum(d => d.Found.Count);
+            if (all.Count == 0)
+            {
+                Console.Error.WriteLine($"{level.WorldName} has nothing in {string.Join(", ", dimensions.Select(The))}");
+                return 1;
+            }
+            string what = words.Length > 0 ? $"named mobs matching {line.Text}" : "named mobs";
             Console.Error.WriteLine(total == 0
                 ? $"{level.WorldName} has no {what}"
                 : $"{level.WorldName}: " + string.Join(", ", all.Where(d => d.Found.Count > 0).Select(d => $"{d.Found.Count} in {The(d.Dimension)}")));
@@ -691,12 +743,12 @@ namespace Mapee.Cli
         public int? MinY { get; private set; }
         public int? MaxY { get; private set; }
         public bool Csv { get; private set; }
-        // The words signs must say
+        // The words signs must say, or named mobs be called
         public string? Text { get; private set; }
         // How often watch looks for saves, in seconds
         public int Every { get; private set; } = 30;
 
-        private static readonly string[] Commands = ["render", "webmap", "watch", "find", "portals", "structures", "signs", "worlds", "styles"];
+        private static readonly string[] Commands = ["render", "webmap", "watch", "find", "portals", "structures", "signs", "pets", "worlds", "styles"];
 
         // Paths are made full here, before the program moves to its own folder to read its resources
         public static CommandLine Parse(string[] args)
@@ -705,7 +757,7 @@ namespace Mapee.Cli
             if (!Commands.Contains(command)) throw new UsageException($"{args[0]} isn't a command; the commands are {string.Join(", ", Commands)}");
 
             CommandLine line = new() { Command = command };
-            bool drawing = command is "render" or "webmap" or "watch" or "find" or "portals" or "structures" or "signs";
+            bool drawing = command is "render" or "webmap" or "watch" or "find" or "portals" or "structures" or "signs" or "pets";
             bool webMap = command is "webmap" or "watch";
 
             for (int i = 1; i < args.Length; i++)
@@ -788,10 +840,10 @@ namespace Mapee.Cli
                         }
                         (line.MinY, line.MaxY) = (Math.Min(minY, maxY), Math.Max(minY, maxY));
                         break;
-                    case "--csv" when command is "find" or "portals" or "structures" or "signs":
+                    case "--csv" when command is "find" or "portals" or "structures" or "signs" or "pets":
                         line.Csv = true;
                         break;
-                    case "--text" when command == "signs":
+                    case "--text" when command is "signs" or "pets":
                         line.Text = value;
                         break;
                     case "--every" when command == "watch":
@@ -817,11 +869,11 @@ namespace Mapee.Cli
                     }
                     return line;
                 }
-                if (command is "structures" or "signs")
+                if (command is "structures" or "signs" or "pets")
                 {
                     if (line.Out is not null || line.Style is not null || line.Cut is not null || line.Area is not null || line.Markup)
                     {
-                        throw new UsageException($"{command} takes only --dimension{(command == "signs" ? ", --text" : "")} and --csv, and writes to the screen");
+                        throw new UsageException($"{command} takes only --dimension{(command is "signs" or "pets" ? ", --text" : "")} and --csv, and writes to the screen");
                     }
                     return line;
                 }

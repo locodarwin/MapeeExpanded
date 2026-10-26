@@ -20,14 +20,21 @@ namespace Mapee.Tests.Fixtures
 
         // Dimension folder and region coordinates -> chunks in that region, each with the compression type its sector
         // header names
-        private readonly Dictionary<(string Dimension, int X, int Z), List<(int X, int Z, byte Compression, byte[] Nbt)>> _regions = [];
+        private readonly Dictionary<(string Dimension, string Folder, int X, int Z), List<(int X, int Z, byte Compression, byte[] Nbt)>> _regions = [];
         private Dictionary<string, object>? _player;
 
         // compression: 1 gzip, 2 zlib (what the game writes), 3 none. dimension: the game's folder under
         // dimensions/minecraft (overworld, the_nether, the_end)
-        public JavaTestWorld Chunk(int x, int z, Dictionary<string, object> chunk, byte compression = 2, string dimension = "overworld")
+        public JavaTestWorld Chunk(int x, int z, Dictionary<string, object> chunk, byte compression = 2, string dimension = "overworld") =>
+            Add("region", x, z, chunk, compression, dimension);
+
+        // A chunk's mobs, in the entities folder beside region, as the game keeps them from 1.17
+        public JavaTestWorld Entities(int x, int z, List<object> entities, string dimension = "overworld") =>
+            Add("entities", x, z, new() { ["DataVersion"] = DataVersion, ["Position"] = new[] { x, z }, ["Entities"] = entities }, 2, dimension);
+
+        private JavaTestWorld Add(string folder, int x, int z, Dictionary<string, object> chunk, byte compression, string dimension)
         {
-            var key = (dimension, x >> 5, z >> 5);
+            var key = (dimension, folder, x >> 5, z >> 5);
             if (!_regions.TryGetValue(key, out var chunks)) _regions[key] = chunks = [];
             chunks.Add((x, z, compression, Nbt.Compound(chunk, littleEndian: false)));
             return this;
@@ -70,7 +77,7 @@ namespace Mapee.Tests.Fixtures
             // The game's own layout since 26.1, spelled out rather than asked of Mapee, so a wrong folder there shows
             foreach (var (region, chunks) in _regions)
             {
-                string regionFolder = Path.Combine(Directory, "dimensions", "minecraft", region.Dimension, "region");
+                string regionFolder = Path.Combine(Directory, "dimensions", "minecraft", region.Dimension, region.Folder);
                 System.IO.Directory.CreateDirectory(regionFolder);
                 File.WriteAllBytes(Path.Combine(regionFolder, $"r.{region.X}.{region.Z}.mca"), RegionFile(chunks));
             }

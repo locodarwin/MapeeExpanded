@@ -147,8 +147,13 @@ namespace Mapper.Gui.Controller
 
             var (pins, zones) = Editor.Import(other);
             int signs = Editor.ImportSigns(other);
-            if (pins + zones + signs == 0) return other.IsEmpty ? "That file holds no markup." : "Everything in that file is already here.";
-            return signs == 0 ? $"Added {Count(pins, "pin")} and {Count(zones, "zone")}." : $"Added {Count(pins, "pin")}, {Count(zones, "zone")} and {Count(signs, "sign")} to show.";
+            int pets = Editor.ImportPets(other);
+            if (pins + zones + signs + pets == 0) return other.IsEmpty ? "That file holds no markup." : "Everything in that file is already here.";
+            if (signs + pets == 0) return $"Added {Count(pins, "pin")} and {Count(zones, "zone")}.";
+            List<string> shown = [];
+            if (signs > 0) shown.Add(Count(signs, "sign"));
+            if (pets > 0) shown.Add(Count(pets, "named mob"));
+            return $"Added {Count(pins, "pin")}, {Count(zones, "zone")} and {string.Join(" and ", shown)} to show.";
         }
 
         private static string Count(int count, string what) => $"{count} {what}{(count == 1 ? "" : "s")}";

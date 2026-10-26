@@ -20,6 +20,7 @@ namespace Mapee.Cli
             path.FillType = SKPathFillType.EvenOdd;
             return path;
         });
+        private static readonly SKPath Paw = SKPath.ParseSvgPathData(PetShape.Paw);
 
         public MarkupImage(MarkupDocument document, string dimension)
         {
@@ -27,7 +28,7 @@ namespace Mapee.Cli
             _dimension = dimension;
         }
 
-        public bool HasAny => _document.PinsIn(_dimension).Any() || _document.ZonesIn(_dimension).Any() || _document.SignsIn(_dimension).Any();
+        public bool HasAny => _document.PinsIn(_dimension).Any() || _document.ZonesIn(_dimension).Any() || _document.SignsIn(_dimension).Any() || _document.PetsIn(_dimension).Any();
 
         public void Draw(byte[] rgba, int left, int top, int width, int height)
         {
@@ -45,6 +46,7 @@ namespace Mapee.Cli
                 foreach (ZoneShape zone in frame.Zones) DrawZone(canvas, zone);
                 foreach (ZoneShape zone in frame.Zones) DrawZoneLabel(canvas, zone);
                 foreach (SignShape sign in frame.Signs) DrawSign(canvas, sign);
+                foreach (PetShape pet in frame.Pets) DrawPet(canvas, pet);
                 foreach (PinShape pin in frame.Pins) DrawPin(canvas, pin);
             }
 
@@ -119,6 +121,28 @@ namespace Mapee.Cli
             {
                 using SKFont font = new(LabelFace, 12);
                 DrawLabel(canvas, font, sign.Sign.Title, (float)(sign.X + MarkupEditor.SignRadius + 4), (float)sign.Y);
+            }
+        }
+
+        private static void DrawPet(SKCanvas canvas, PetShape pet)
+        {
+            float x = (float)pet.X, y = (float)pet.Y, radius = (float)MarkupEditor.PetRadius;
+            using SKPaint fur = new() { Color = ColorOf(PetShape.Fur), IsAntialias = true };
+            using SKPaint edge = new() { Color = new SKColor(26, 26, 26), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 1.5f };
+            canvas.DrawCircle(x, y, radius, fur);
+            canvas.DrawCircle(x, y, radius, edge);
+
+            using SKPaint paw = new() { Color = ColorOf(PetShape.PawColor), IsAntialias = true };
+            canvas.Save();
+            canvas.Translate(x - 5.6f, y - 5.6f);
+            canvas.Scale(0.7f);
+            canvas.DrawPath(Paw, paw);
+            canvas.Restore();
+
+            if (pet.Labelled)
+            {
+                using SKFont font = new(LabelFace, 12);
+                DrawLabel(canvas, font, pet.Pet.Name, x + radius + 4, y);
             }
         }
 

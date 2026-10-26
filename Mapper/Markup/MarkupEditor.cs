@@ -27,6 +27,8 @@ namespace Mapper
         public const double PinRadius = 9;
         // Half a shown sign's mark, for finding the one under the mouse
         public const double SignRadius = 7;
+        // Half a shown mob's mark
+        public const double PetRadius = 8;
         public const double HandleRadius = 5;
         private const double Slop = 4, DragThreshold = 4, DoubleClickDistance = 6;
         private static readonly TimeSpan DoubleClickTime = TimeSpan.FromMilliseconds(450);
@@ -60,6 +62,7 @@ namespace Mapper
                 if (!value) Mode = MarkupMode.View;
                 Hovered = null;
                 HoveredSign = null;
+                HoveredPet = null;
                 Repaint();
             }
         }
@@ -68,6 +71,8 @@ namespace Mapper
         public MarkupItem? Hovered { get; private set; }
         // The shown sign under the mouse, when no pin or zone is
         public MapSign? HoveredSign { get; private set; }
+        // The shown named mob under the mouse, when no pin or sign is
+        public MapPet? HoveredPet { get; private set; }
         public MarkupItem? Selected { get; private set; }
         public int HoveredCorner { get; private set; } = -1;
 
@@ -148,6 +153,7 @@ namespace Mapper
             Pending = null;
             Selected = Hovered = null;
             HoveredSign = null;
+            HoveredPet = null;
             CancelGesture();
             Repaint();
         }
@@ -158,6 +164,7 @@ namespace Mapper
             Pending = null;
             Selected = Hovered = null;
             HoveredSign = null;
+            HoveredPet = null;
             CancelGesture();
             Repaint();
         }
@@ -307,10 +314,11 @@ namespace Mapper
         {
             Mouse = null;
             DraftCursor = null;
-            if (Hovered is not null || HoveredSign is not null || Mode == MarkupMode.Zone)
+            if (Hovered is not null || HoveredSign is not null || HoveredPet is not null || Mode == MarkupMode.Zone)
             {
                 Hovered = null;
                 HoveredSign = null;
+                HoveredPet = null;
                 Repaint();
             }
         }
@@ -368,6 +376,8 @@ namespace Mapper
             switch (Mode)
             {
                 case MarkupMode.View:
+                    // A shown sign or mob is only read, by hovering over it, even where it stands in a zone
+                    if (Visible && (SignAt(x, y) is not null || PetAt(x, y) is not null)) return;
                     if ((Visible ? ItemAt(x, y) : null) is MarkupItem clicked) OpenRequested?.Invoke(this, clicked);
                     else if (isDouble) OpenRequested?.Invoke(this, null);
                     return;
@@ -606,6 +616,70 @@ namespace Mapper
             Repaint();
         }
 
+        // Named mobs picked in the Pets list to show, or no longer; as with signs, not undone. Return how many were
+        // added or taken off
+        public int ShowPets(IEnumerable<Pet> pets)
+        {
+            int added = 0;
+            foreach (Pet pet in pets)
+            {
+                if (Document.PetById(pet.Id) is not null) continue;
+                Document.Pets.Add(MapPet.Of(pet));
+                added++;
+            }
+            if (added > 0) PetsEdited();
+            return added;
+        }
+
+        public int HidePets(IEnumerable<MapPet> pets)
+        {
+            HashSet<MapPet> gone = [.. pets];
+            int removed = Document.Pets.RemoveAll(gone.Contains);
+            if (removed > 0) PetsEdited();
+            return removed;
+        }
+
+        // The mobs another file has shown that this world doesn't
+        public int ImportPets(MarkupDocument other)
+        {
+            int added = Document.MergePets(other);
+            if (added > 0) PetsEdited();
+            return added;
+        }
+
+        // A dimension's named mobs as just read: shown ones found take where they are and what they're called now,
+        // even from another dimension; one last seen in a region read and not found is gone (it died, or lost its
+        // name) and taken off the map. Returns whether any changed
+        public bool UpdatePets(DimensionPets read)
+        {
+            string dimension = read.Dimension.Namespace;
+            bool changed = false;
+            for (int i = Document.Pets.Count - 1; i >= 0; i--)
+            {
+                MapPet shown = Document.Pets[i];
+                if (read.Find(shown.Id) is Pet now)
+                {
+                    if (shown.Matches(now)) continue;
+                    Document.Pets[i] = MapPet.Of(now);
+                    changed = true;
+                }
+                else if (shown.Dimension == dimension && read.WasRead(shown.X, shown.Z))
+                {
+                    Document.Pets.RemoveAt(i);
+                    changed = true;
+                }
+            }
+            if (changed) PetsEdited();
+            return changed;
+        }
+
+        private void PetsEdited()
+        {
+            if (HoveredPet is not null && !Document.Pets.Contains(HoveredPet)) HoveredPet = null;
+            Edited?.Invoke(this, EventArgs.Empty);
+            Repaint();
+        }
+
         public bool Undo() => Step(_undo, _redo);
         public bool Redo() => Step(_redo, _undo);
 
@@ -664,12 +738,14 @@ namespace Mapper
         {
             MarkupItem? hovered = PinAt(x, y);
             MapSign? sign = hovered is null ? SignAt(x, y) : null;
-            hovered ??= sign is null ? ZoneAt(x, y) : null;
+            MapPet? pet = hovered is null && sign is null ? PetAt(x, y) : null;
+            hovered ??= sign is null && pet is null ? ZoneAt(x, y) : null;
             int corner = Mode == MarkupMode.Select && Selected is MapZone zone ? CornerAt(zone, x, y) ?? -1 : -1;
-            if (hovered == Hovered && sign == HoveredSign && corner == HoveredCorner) return false;
+            if (hovered == Hovered && sign == HoveredSign && pet == HoveredPet && corner == HoveredCorner) return false;
 
             Hovered = hovered;
             HoveredSign = sign;
+            HoveredPet = pet;
             HoveredCorner = corner;
             return true;
         }
@@ -698,6 +774,18 @@ namespace Mapper
                 if (sign.Dimension != dimension) continue;
                 var (sx, sy) = View.ToScreen(sign.X + 0.5, sign.Z + 0.5);
                 if (Math.Abs(x - sx) <= SignRadius + Slop && Math.Abs(y - sy) <= SignRadius + Slop) return sign;
+            }
+            return null;
+        }
+
+        public MapPet? PetAt(double x, double y)
+        {
+            string dimension = View.Dimension;
+            for (int i = Document.Pets.Count - 1; i >= 0; i--)
+            {
+                MapPet pet = Document.Pets[i];
+                if (pet.Dimension != dimension) continue;
+                if (Distance((x, y), View.ToScreen(pet.X + 0.5, pet.Z + 0.5)) <= PetRadius + Slop) return pet;
             }
             return null;
         }

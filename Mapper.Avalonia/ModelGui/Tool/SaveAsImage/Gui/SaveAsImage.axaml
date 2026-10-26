@@ -40,7 +40,7 @@
           </Grid>
         </Border>
 
-        <CheckBox x:Name="IncludeMarkupCheckBox" Grid.Row="3" IsChecked="True" Content="Include pins, zones and signs"
+        <CheckBox x:Name="IncludeMarkupCheckBox" Grid.Row="3" IsChecked="True" Content="Include pins, zones, signs and pets"
                   HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,10,12" />
 
         <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,13" HorizontalAlignment="Left" VerticalAlignment="Bottom">

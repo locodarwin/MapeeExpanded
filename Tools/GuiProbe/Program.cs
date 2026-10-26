@@ -53,6 +53,12 @@
 //   signs-pick:<row>                  pick a row: the map goes there
 //   signs-press:<button name>         press a button of the Signs half (ShowListedButton, HideAllButton, SignPinButton)
 //   signs-hover:<n>                   move the mouse onto the nth sign shown in view and print what the map labels
+//   pets[:<words>]                    open the find window's Pets, list only mobs matching the words, wait for the
+//                                     reading and print the status and first rows
+//   pets-tick:<row>[,<row>]           tick (or with !<row>, untick) rows of the Pets list (from 0)
+//   pets-pick:<row>                   pick a row: the map goes there
+//   pets-press:<button name>          press a button of the Pets half (ShowListedPetsButton, HideAllPetsButton, PetPinButton)
+//   pets-hover:<n>                    move the mouse onto the nth pet shown in view and print what the map shows
 //   keys                              print the key list's state, the changed keys kept, and tooltips that name keys
 //   keys:<action>                     click that action's key in the key list (Grid, HeightUp, ...); keys:reset:<action>,
 //                                     keys:reset-all, keys:card, keys:outside (the dimmed map around it)
@@ -520,11 +526,66 @@ foreach (string step in args.Skip(1))
                 Console.WriteLine($"  hovered: {(tool.Editor.HoveredSign is MapSign hovered ? string.Join(" | ", hovered.Lines) : "nothing")}; labelled {after.Signs.Count(s => s.Labelled)} of {after.Signs.Count}");
                 break;
             }
+        case "pets":
+            {
+                FindWindow window = OpenFind();
+                window.FindControl<Button>("PetsButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                window.FindControl<TextBox>("PetSearchBox")!.Text = value;
+                Pump(200);
+                DateTime giveUp = DateTime.Now.AddSeconds(120);
+                while (controller.ToolbarWidget.Pets.Reading && DateTime.Now < giveUp) Pump(50);
+                Pump(300);
+                PrintPets(window);
+                break;
+            }
+        case "pets-tick":
+            {
+                FindWindow window = OpenFind();
+                foreach (string row in value.Split(','))
+                {
+                    bool on = !row.StartsWith('!');
+                    window.Pets!.Listed[int.Parse(row.TrimStart('!'))].Shown = on;
+                }
+                Pump(400);
+                PrintPets(window);
+                break;
+            }
+        case "pets-pick":
+            {
+                FindWindow window = OpenFind();
+                window.FindControl<ListBox>("PetList")!.SelectedIndex = int.Parse(value);
+                Pump(400);
+                Console.WriteLine($"  map centre {controller.Domain.CurrentWorld?.CurrentDimension.Scaling.CenterPoint}");
+                PrintPets(window);
+                break;
+            }
+        case "pets-press":
+            {
+                FindWindow window = OpenFind();
+                window.FindControl<Button>(value)!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                Pump(800);
+                PrintPets(window);
+                break;
+            }
+        case "pets-hover":
+            {
+                MarkupTool tool = controller.ToolbarWidget.MarkupTool;
+                MarkupFrame before = MarkupFrame.Build(tool.Editor.Document, tool.View, controller.GraphicsCanvas.ActualWidth, controller.GraphicsCanvas.ActualHeight, tool.Editor);
+                PetShape target = before.Pets.Where(p => p.X >= 0 && p.Y >= 0 && p.X < controller.GraphicsCanvas.ActualWidth && p.Y < controller.GraphicsCanvas.ActualHeight).ElementAt(int.Parse(value));
+                Point onMain = controller.GraphicsCanvas.TranslatePoint(new Point(target.X, target.Y), main) ?? new Point(target.X, target.Y);
+                main.MouseMove(onMain, RawInputModifiers.None);
+                Pump(300);
+                MarkupFrame after = MarkupFrame.Build(tool.Editor.Document, tool.View, controller.GraphicsCanvas.ActualWidth, controller.GraphicsCanvas.ActualHeight, tool.Editor);
+                PetShape? hovered = after.Pets.FirstOrDefault(p => p.Hovered);
+                Console.WriteLine($"  hovered: {(hovered is null ? "nothing" : string.Join(" | ", hovered.Lines))}; labelled {after.Pets.Count(p => p.Labelled)} of {after.Pets.Count}");
+                break;
+            }
         case "marks":
             MarkupTool marks = controller.ToolbarWidget.MarkupTool;
             foreach (MapPin pin in marks.Editor.Document.Pins) Console.WriteLine($"  pin {pin.Label} at {pin.X}, {pin.Z} in {pin.Dimension}, {pin.Color} {pin.Icon ?? "dot"}{(pin.Note is null ? "" : $", note {pin.Note}")}");
             foreach (MapZone zone in marks.Editor.Document.Zones) Console.WriteLine($"  zone {zone.Label} in {zone.Dimension}, {zone.Color}: {string.Join(" ", zone.Points.Select(p => $"{p.X},{p.Z}"))} ({ZoneGeometry.Describe(zone.Points)})");
             foreach (MapSign sign in marks.Editor.Document.Signs) Console.WriteLine($"  sign at {sign.X}, {sign.Y}, {sign.Z} in {sign.Dimension}: {string.Join(" | ", sign.Lines)}");
+            foreach (MapPet pet in marks.Editor.Document.Pets) Console.WriteLine($"  pet {pet.Name} ({pet.Description}) at {pet.X}, {pet.Y}, {pet.Z} in {pet.Dimension}");
             Console.WriteLine($"  places: {string.Join(" | ", marks.Places().Select(MarkupTool.Title))}; mode {marks.Editor.Mode}, shown {marks.ShowMarkup}, file {marks.Store.FileFor(marks.Editor.Document.World ?? "?")}");
             break;
         default:
@@ -619,6 +680,13 @@ void PrintSigns(FindWindow window)
     Console.WriteLine($"  status: {window.FindControl<TextBlock>("SignStatusText")!.Text}; {window.FindControl<TextBlock>("SignSortedText")!.Text}");
     foreach (SignRow row in window.Signs!.Listed.Take(5)) Console.WriteLine($"  row: [{(row.Shown ? "x" : " ")}] {row.Title}{(row.HasMore ? " / " + row.More : "")} ({row.Place}, {row.Distance})");
     Console.WriteLine($"  buttons: show all {window.FindControl<Button>("ShowListedButton")!.IsEnabled}, hide all {window.FindControl<Button>("HideAllButton")!.IsEnabled}, go {window.FindControl<Button>("SignGoButton")!.IsEnabled}, pin {window.FindControl<Button>("SignPinButton")!.IsEnabled}");
+}
+
+void PrintPets(FindWindow window)
+{
+    Console.WriteLine($"  status: {window.FindControl<TextBlock>("PetStatusText")!.Text}; {window.FindControl<TextBlock>("PetSortedText")!.Text}");
+    foreach (PetRow row in window.Pets!.Listed.Take(8)) Console.WriteLine($"  row: [{(row.Shown ? "x" : " ")}] {row.Title} / {row.More} ({row.Place}, {row.Distance})");
+    Console.WriteLine($"  buttons: show all {window.FindControl<Button>("ShowListedPetsButton")!.IsEnabled}, hide all {window.FindControl<Button>("HideAllPetsButton")!.IsEnabled}, go {window.FindControl<Button>("PetGoButton")!.IsEnabled}, pin {window.FindControl<Button>("PetPinButton")!.IsEnabled}");
 }
 
 IEnumerable<Button> RecentRows() => main.GetVisualDescendants().OfType<RecentWorldsMenu>().SelectMany(menu => menu.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("recent")));

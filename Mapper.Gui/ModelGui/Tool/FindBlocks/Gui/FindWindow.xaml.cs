@@ -9,20 +9,23 @@ using System.Windows.Threading;
 
 namespace Mapper.Gui
 {
-    // The find window. Blocks: what to look for on top, what was found below. Signs: the dimension's signs, each with
-    // a tick for showing it on the map. FindPanel and SignsPanel hold what they show, FindTool runs the search and
-    // WorldSigns reads the signs; this only lays them out (the Avalonia GUI has its own copy)
+    // The find window. Blocks: what to look for on top, what was found below. Signs and Pets: the dimension's signs
+    // and named mobs, each with a tick for showing it on the map. FindPanel, SignsPanel and PetsPanel hold what they
+    // show, FindTool runs the search, WorldSigns and WorldPets read the world; this only lays them out (the Avalonia
+    // GUI has its own copy)
     public partial class FindWindow : Window
     {
         public FindPanel Panel { get; }
         public FindTool Tool => Panel.Tool;
         public SignsPanel? Signs { get; }
+        public PetsPanel? Pets { get; }
 
         private IReadOnlyList<FoundCluster>? _shown;
         private bool _refreshing;
         private string? _message;
         private readonly DispatcherTimer _pinned = new() { Interval = TimeSpan.FromSeconds(2) };
         private IReadOnlyList<SignRow>? _signRows;
+        private IReadOnlyList<PetRow>? _petRows;
 
         public FindWindow(FindTool tool)
         {
@@ -38,6 +41,7 @@ namespace Mapper.Gui
                 _pinned.Stop();
                 PinnedText.Text = string.Empty;
                 SignPinnedText.Text = string.Empty;
+                PetPinnedText.Text = string.Empty;
             };
 
             Tool.Changed += Tool_Changed;
@@ -58,32 +62,65 @@ namespace Mapper.Gui
                 SignsButton.Visibility = Visibility.Collapsed;
             }
 
+            if (tool.Pets is WorldPets pets)
+            {
+                Pets = new PetsPanel(pets, tool.Canvas);
+                pets.Changed += RefreshPets;
+                Closed += (sender, e) =>
+                {
+                    pets.Changed -= RefreshPets;
+                    pets.Listed = false;
+                };
+            }
+            else
+            {
+                PetsButton.Visibility = Visibility.Collapsed;
+            }
+
             Refresh();
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             _ = new CustomFrameWindowInitializer(this, Template);
-            Half(Tool.OnSigns && Signs is not null);
+            Half(Tool.Half switch
+            {
+                FindHalf.Signs when Signs is not null => FindHalf.Signs,
+                FindHalf.Pets when Pets is not null => FindHalf.Pets,
+                _ => FindHalf.Blocks
+            });
         }
 
-        // Blocks or signs
-        private void Half(bool signs)
+        // Blocks, signs or pets
+        private void Half(FindHalf half)
         {
-            Tool.OnSigns = signs;
-            BlocksHalf.Visibility = signs ? Visibility.Collapsed : Visibility.Visible;
+            Tool.Half = half;
+            bool signs = half == FindHalf.Signs, pets = half == FindHalf.Pets;
+            BlocksHalf.Visibility = half == FindHalf.Blocks ? Visibility.Visible : Visibility.Collapsed;
             SignsHalf.Visibility = signs ? Visibility.Visible : Visibility.Collapsed;
-            BlocksButton.Tag = signs ? null : "on";
+            PetsHalf.Visibility = pets ? Visibility.Visible : Visibility.Collapsed;
+            BlocksButton.Tag = half == FindHalf.Blocks ? "on" : null;
             SignsButton.Tag = signs ? "on" : null;
+            PetsButton.Tag = pets ? "on" : null;
             if (Tool.Signs is WorldSigns worldSigns)
             {
                 worldSigns.Listed = signs;
                 if (signs) worldSigns.Want();
             }
+            if (Tool.Pets is WorldPets worldPets)
+            {
+                worldPets.Listed = pets;
+                if (pets) worldPets.Want();
+            }
             if (signs)
             {
                 RefreshSigns();
                 SignSearchBox.Focus();
+            }
+            else if (pets)
+            {
+                RefreshPets();
+                PetSearchBox.Focus();
             }
             else
             {
@@ -91,8 +128,78 @@ namespace Mapper.Gui
             }
         }
 
-        private void BlocksButton_Click(object sender, RoutedEventArgs e) => Half(false);
-        private void SignsButton_Click(object sender, RoutedEventArgs e) => Half(true);
+        private void BlocksButton_Click(object sender, RoutedEventArgs e) => Half(FindHalf.Blocks);
+        private void SignsButton_Click(object sender, RoutedEventArgs e) => Half(FindHalf.Signs);
+        private void PetsButton_Click(object sender, RoutedEventArgs e) => Half(FindHalf.Pets);
+
+        private void RefreshPets()
+        {
+            if (Pets is null || PetsHalf.Visibility != Visibility.Visible) return;
+            _refreshing = true;
+            try
+            {
+                IReadOnlyList<PetRow> rows = Pets.Rows();
+                if (!ReferenceEquals(rows, _petRows))
+                {
+                    _petRows = rows;
+                    PetList.ItemsSource = rows;
+                }
+                PetStatusText.Text = Pets.Status();
+                PetProgress.Visibility = Pets.Pets.Reading ? Visibility.Visible : Visibility.Hidden;
+                PetSortedText.Text = Pets.SortedText();
+                PetSortButton.Visibility = rows.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+                bool chosen = PetList.SelectedItem is PetRow;
+                ShowListedPetsButton.IsEnabled = rows.Count > 0 && Pets.Pets.CanShow;
+                HideAllPetsButton.IsEnabled = Pets.Pets.ShownHere > 0;
+                PetGoButton.IsEnabled = chosen;
+                PetPinButton.IsEnabled = chosen && Tool.CanPin;
+            }
+            finally
+            {
+                _refreshing = false;
+            }
+        }
+
+        private void PetSearchBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (Pets is null) return;
+            Pets.Filter(PetSearchBox.Text);
+            RefreshPets();
+        }
+
+        private void PetList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_refreshing) return;
+            if (PetList.SelectedItem is PetRow row) Tool.GoTo(row.Pet);
+            RefreshPets();
+        }
+
+        private void PetList_MouseDoubleClick(object sender, MouseButtonEventArgs e) => PetGoButton_Click(sender, e);
+
+        private void PetSortButton_Click(object sender, RoutedEventArgs e)
+        {
+            Pets?.SortFromHere();
+            RefreshPets();
+        }
+
+        private void ShowListedPetsButton_Click(object sender, RoutedEventArgs e) => Pets?.ShowListed();
+
+        private void HideAllPetsButton_Click(object sender, RoutedEventArgs e) => Pets?.HideAll();
+
+        private void PetGoButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (PetList.SelectedItem is PetRow row) Tool.GoTo(row.Pet);
+        }
+
+        private void PetPinButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (PetList.SelectedItem is not PetRow row || Tool.Pets is null) return;
+            Tool.Pets.Pin(row.Pet);
+            PetPinnedText.Text = "Pinned";
+            _pinned.Stop();
+            _pinned.Start();
+        }
 
         private void RefreshSigns()
         {

@@ -4,7 +4,7 @@ using System.Text;
 namespace Mapee.Tests.Fixtures
 {
     // Writes NBT, little-endian as Bedrock stores it or big-endian as Java does, enough of it for test worlds.
-    // Values: byte, short, int, long, double, string, int[], long[], List<object> (all one type), Dictionary<string, object>
+    // Values: byte, short, int, long, float, double, string, int[], long[], List<object> (all one type), Dictionary<string, object>
     public static class Nbt
     {
         public static byte[] Compound(Dictionary<string, object> values, bool littleEndian = true)
@@ -32,6 +32,7 @@ namespace Mapee.Tests.Fixtures
             short => 2,
             int => 3,
             long => 4,
+            float => 5,
             double => 6,
             string => 8,
             List<object> => 9,
@@ -59,6 +60,9 @@ namespace Mapee.Tests.Fixtures
                         break;
                     case long l:
                         Long(l);
+                        break;
+                    case float f:
+                        Int(BitConverter.SingleToInt32Bits(f));
                         break;
                     case double d:
                         Long(BitConverter.DoubleToInt64Bits(d));

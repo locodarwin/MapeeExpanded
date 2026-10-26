@@ -122,6 +122,18 @@ namespace Mapper.Gui
                     $"{markup.Signs.Count} shown, markup {(toolbar.MarkupTool.ShowMarkup ? "shown" : "hidden")}");
                 await Shoot("find-signs");
                 if (row is not null) row.Shown = false;
+
+                // And one named wolf, in the entities folder
+                await Click((Button)window.FindName("PetsButton"));
+                await Until(() => toolbar.Pets.Current is not null && !toolbar.Pets.Reading && window.Pets?.Listed.Count > 0, 60);
+                PetRow? pet = window.Pets?.Listed.FirstOrDefault();
+                Check("Find > Pets", pet?.Title == "Biscuit" && pet.More == "Tamed wolf" && window.Pets!.Listed.Count == 1,
+                    string.Join(", ", window.Pets?.Listed.Select(r => $"{r.Title} {r.More} at {r.Place}") ?? []));
+                if (pet is not null) pet.Shown = true;
+                await Wait(300);
+                Check("Find > Pets: show one on the map", markup.Pets.Count == 1, $"{markup.Pets.Count} shown");
+                await Shoot("find-pets");
+                if (pet is not null) pet.Shown = false;
             });
             await Press("Mark", () => toolbar.MarkupTool.IsTurnedOn && _controller.MarkupBar.IsVisible, turnOff: true);
             await Press("Measure", () => toolbar.MeasureLengthTool.IsTurnedOn, Measure, turnOff: true);

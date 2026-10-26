@@ -123,6 +123,14 @@ namespace Mapper
                 sign.Front = [.. (sign.Front ?? []).Select(l => l ?? string.Empty)];
                 sign.Back = [.. (sign.Back ?? []).Select(l => l ?? string.Empty)];
             }
+            // From a Mapee before pets, there are none
+            document.Pets = [.. (document.Pets ?? []).Where(p => p is not null && !string.IsNullOrEmpty(p.Id)).DistinctBy(p => p.Id)];
+            foreach (MapPet pet in document.Pets)
+            {
+                pet.Dimension ??= Dimension.Overworld.Namespace;
+                pet.Type ??= string.Empty;
+                pet.Name ??= string.Empty;
+            }
             return document;
         }
 

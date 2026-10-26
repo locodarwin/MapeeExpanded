@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace Mapper
 {
     // What a user has marked on a world's map: labelled pins and labelled zones, each in one dimension, and the
-    // world's signs picked to show. Kept apart from the world itself (see MarkupStore), so the game's save folder is
+    // world's signs and named mobs picked to show. Kept apart from the world itself (see MarkupStore), so the game's save folder is
     // never written to
     public class MarkupDocument
     {
@@ -19,13 +19,17 @@ namespace Mapper
         public List<MapPin> Pins { get; set; } = [];
         public List<MapZone> Zones { get; set; } = [];
         public List<MapSign> Signs { get; set; } = [];
+        public List<MapPet> Pets { get; set; } = [];
 
         [JsonIgnore]
-        public bool IsEmpty => Pins.Count == 0 && Zones.Count == 0 && Signs.Count == 0;
+        public bool IsEmpty => Pins.Count == 0 && Zones.Count == 0 && Signs.Count == 0 && Pets.Count == 0;
 
         public IEnumerable<MapPin> PinsIn(string dimension) => Pins.Where(p => p.Dimension == dimension);
         public IEnumerable<MapZone> ZonesIn(string dimension) => Zones.Where(z => z.Dimension == dimension);
         public IEnumerable<MapSign> SignsIn(string dimension) => Signs.Where(s => s.Dimension == dimension);
+        public IEnumerable<MapPet> PetsIn(string dimension) => Pets.Where(p => p.Dimension == dimension);
+
+        public MapPet? PetById(string id) => Pets.FirstOrDefault(p => p.Id == id);
 
         public MapSign? SignAt(string dimension, int x, int y, int z) => Signs.FirstOrDefault(s => s.Dimension == dimension && s.X == x && s.Y == y && s.Z == z);
 
@@ -36,7 +40,8 @@ namespace Mapper
             Name = Name,
             Pins = [.. Pins.Select(p => p.Clone())],
             Zones = [.. Zones.Select(z => z.Clone())],
-            Signs = [.. Signs.Select(s => s.Clone())]
+            Signs = [.. Signs.Select(s => s.Clone())],
+            Pets = [.. Pets.Select(p => p.Clone())]
         };
 
         // Brings in what another document has and this one doesn't, by id; returns how many pins and zones came in
@@ -58,6 +63,14 @@ namespace Mapper
             List<MapSign> signs = [.. other.Signs.Where(s => SignAt(s.Dimension, s.X, s.Y, s.Z) is null).DistinctBy(s => (s.Dimension, s.X, s.Y, s.Z)).Select(s => s.Clone())];
             Signs.AddRange(signs);
             return signs.Count;
+        }
+
+        // Brings in the shown mobs another document has and this one doesn't, by the game's id; returns how many came in
+        public int MergePets(MarkupDocument other)
+        {
+            List<MapPet> pets = [.. other.Pets.Where(p => PetById(p.Id) is null).DistinctBy(p => p.Id).Select(p => p.Clone())];
+            Pets.AddRange(pets);
+            return pets.Count;
         }
     }
 
@@ -173,6 +186,44 @@ namespace Mapper
         public bool Matches(Sign sign) => sign.Hanging == Hanging && sign.Front.SequenceEqual(Front) && sign.Back.SequenceEqual(Back);
 
         public MapSign Clone() => new() { Dimension = Dimension, X = X, Y = Y, Z = Z, Hanging = Hanging, Front = [.. Front], Back = [.. Back] };
+    }
+
+    // A named mob picked in the Pets list to show on the map. Known by the game's id for it; where it is and what
+    // it's called are kept as last read, and brought up to date whenever the world is read
+    public class MapPet
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Dimension { get; set; } = "minecraft:overworld";
+        public string Type { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public int X { get; set; }
+        public int Y { get; set; }
+        public int Z { get; set; }
+        public bool Tamed { get; set; }
+
+        public static MapPet Of(Pet pet) => new()
+        {
+            Id = pet.Id,
+            Dimension = pet.Dimension.Namespace,
+            Type = pet.Type,
+            Name = pet.Name,
+            X = pet.BlockX,
+            Y = pet.BlockY,
+            Z = pet.BlockZ,
+            Tamed = pet.Tamed
+        };
+
+        // "Wolf", "Iron golem"
+        [JsonIgnore]
+        public string Kind => PetMap.KindOf(Type);
+
+        // What it is, for the line under its name: "Tamed wolf", "Horse"
+        [JsonIgnore]
+        public string Description => Tamed ? $"Tamed {Kind.ToLowerInvariant()}" : Kind;
+
+        public bool Matches(Pet pet) => pet.Name == Name && pet.Type == Type && pet.Tamed == Tamed && pet.BlockX == X && pet.BlockY == Y && pet.BlockZ == Z && pet.Dimension.Namespace == Dimension;
+
+        public MapPet Clone() => new() { Id = Id, Dimension = Dimension, Type = Type, Name = Name, X = X, Y = Y, Z = Z, Tamed = Tamed };
     }
 
     // The colours markup can be drawn in, as "#rrggbb"; anything else read from a file falls back to the default

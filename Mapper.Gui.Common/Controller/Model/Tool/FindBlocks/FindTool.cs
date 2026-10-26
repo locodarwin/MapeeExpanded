@@ -15,10 +15,12 @@ using System.Windows;
 
 namespace Mapper.Gui.Controller
 {
+    public enum FindHalf { Blocks, Signs, Pets }
+
     // The Find blocks button: opens the find window, searches the whole dimension on show in the background and
     // marks what it finds on the map (FindPainter). While Live is on, regions the game saves are searched again.
     // Switching dimension or world clears the results; closing the window takes the marks away. The window's other
-    // half lists the signs (WorldSigns), whose ticks stay with the world's markup
+    // halves list the signs (WorldSigns) and named mobs (WorldPets), whose ticks stay with the world's markup
     public class FindTool : ToggleableTool
     {
         public Scene Scene { get; }
@@ -26,9 +28,10 @@ namespace Mapper.Gui.Controller
         public MarkupTool Markup { get; }
         public SceneMarkupView View { get; }
         public WorldSigns? Signs { get; init; }
+        public WorldPets? Pets { get; init; }
 
         // The window opens on the half it was on when it was closed
-        public bool OnSigns { get; set; }
+        public FindHalf Half { get; set; }
 
         // The search on show, or null; read by the painter on the UI thread
         public FindResults? Results { get; private set; }
@@ -240,6 +243,9 @@ namespace Mapper.Gui.Controller
 
         // Centres the map on a sign
         public void GoTo(Sign sign) => Scene.Map.SetCenterPoint(new XzPoint(sign.X + 0.5, sign.Z + 0.5));
+
+        // Centres the map on where a mob was last saved
+        public void GoTo(Pet pet) => Scene.Map.SetCenterPoint(new XzPoint(pet.X, pet.Z));
 
         public bool CanPin => Markup.Enabled;
 

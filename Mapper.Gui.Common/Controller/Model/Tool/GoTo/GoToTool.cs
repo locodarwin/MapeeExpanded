@@ -67,6 +67,10 @@ namespace Mapper.Gui.Controller
                 goToWindow.AddPlaces(Markup.Editor.Document.SignsIn(Markup.View.Dimension)
                     .OrderBy(s => s.Text, StringComparer.CurrentCultureIgnoreCase)
                     .Select(s => ($"Sign: {(s.Text.Length > 0 ? s.Text : "blank")}", new XzPoint(s.X + 0.5, s.Z + 0.5))));
+                // And the named mobs shown, by name and kind
+                goToWindow.AddPlaces(Markup.Editor.Document.PetsIn(Markup.View.Dimension)
+                    .OrderBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase)
+                    .Select(p => ($"{p.Name} ({p.Kind.ToLowerInvariant()})", new XzPoint(p.X + 0.5, p.Z + 0.5))));
             }
             if (Structures is { Shown: true })
             {

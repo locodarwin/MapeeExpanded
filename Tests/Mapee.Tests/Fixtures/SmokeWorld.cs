@@ -2,7 +2,7 @@ namespace Mapee.Tests.Fixtures
 {
     // A small Java world with something to look at and something to find: 12 by 12 chunks of stone under grass,
     // a sea along one side, diamond ore deep down, a spawner and a chest, a village saved as starting in the chunk
-    // at 2, 2 (though none is built) and a sign that says something. Made up rather than played, so it can
+    // at 2, 2 (though none is built), a sign that says something and a tame wolf with a name. Made up rather than played, so it can
     // go into CI, where the Windows smoke test opens it (the sample worlds are private)
     public static class SmokeWorld
     {
@@ -16,6 +16,7 @@ namespace Mapee.Tests.Fixtures
             {
                 for (int z = -Radius; z < Radius; z++) world.Chunk(x, z, Chunk(x, z));
             }
+            world.Entities((int)Math.Floor(PetAt.X) >> 4, (int)Math.Floor(PetAt.Z) >> 4, [Pet]);
             return world.Save(Name);
         }
 
@@ -74,6 +75,21 @@ namespace Mapee.Tests.Fixtures
                 ["color"] = "black",
                 ["has_glowing_text"] = (byte)0
             }
+        };
+
+        // A tame wolf with a name tag, as 1.21 saves one: JSON text for its name, an Owner UUID
+        public static readonly (double X, double Y, double Z) PetAt = (-12.5, 65, 18.3);
+        public const string PetName = "Biscuit";
+        private static Dictionary<string, object> Pet => new()
+        {
+            ["id"] = "minecraft:wolf",
+            ["Pos"] = new List<object> { PetAt.X, PetAt.Y, PetAt.Z },
+            ["Rotation"] = new List<object> { 0f, 0f },
+            ["Health"] = 40f,
+            ["CustomName"] = $"{{\"text\":\"{PetName}\"}}",
+            ["UUID"] = new[] { 1, 2, 3, 4 },
+            ["Owner"] = JavaTestWorld.PlayerUuid,
+            ["Sitting"] = (byte)1
         };
 
         private static Dictionary<string, object> Chunk(int x, int z)

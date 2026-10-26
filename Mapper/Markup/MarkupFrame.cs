@@ -1,13 +1,14 @@
 namespace Mapper
 {
     // What to draw for a world's markup on one frame, in screen units, worked out once for both GUIs' painters and
-    // the image export: the zones, pins and shown signs in view, largest zones first, and whatever the editor has half
+    // the image export: the zones, pins and shown signs and mobs in view, largest zones first, and whatever the editor has half
     // drawn
     public sealed class MarkupFrame
     {
         public List<ZoneShape> Zones { get; } = [];
         public List<PinShape> Pins { get; } = [];
         public List<SignShape> Signs { get; } = [];
+        public List<PetShape> Pets { get; } = [];
 
         // Corners of the zone picked in Select mode, with the one under the mouse
         public List<(double X, double Y)> Handles { get; } = [];
@@ -22,7 +23,7 @@ namespace Mapper
         public (double Left, double Top, double Right, double Bottom)? Rectangle { get; private set; }
         public string? RectangleText { get; private set; }
 
-        public bool IsEmpty => Zones.Count == 0 && Pins.Count == 0 && Signs.Count == 0 && Draft.Count == 0 && Rectangle is null;
+        public bool IsEmpty => Zones.Count == 0 && Pins.Count == 0 && Signs.Count == 0 && Pets.Count == 0 && Draft.Count == 0 && Rectangle is null;
 
         // Pins and zone labels stay readable however far out the map is zoomed; zones too small to see are left out
         private const double MinZoneSize = 2, Margin = 64;
@@ -84,6 +85,21 @@ namespace Mapper
             // The hovered one last, on top
             frame.Signs.Reverse();
 
+            // Mobs' names the same way, around the signs' labels
+            foreach (MapPet pet in document.PetsIn(dimension).OrderByDescending(p => editor?.HoveredPet == p))
+            {
+                var (x, y) = view.ToScreen(pet.X + 0.5, pet.Z + 0.5);
+                bool hovered = editor?.HoveredPet == pet;
+                double left = x + MarkupEditor.PetRadius + 4, right = left + pet.Name.Length * CharacterWidth + 10;
+                double top = y - LabelHeight / 2, bottom = top + LabelHeight;
+                bool labelled = hovered || !labels.Any(l => left < l.Right && right > l.Left && top < l.Bottom && bottom > l.Top);
+                if (labelled) labels.Add((left, top, right, bottom));
+
+                if (x < -Margin * 4 || y < -Margin || x > width + Margin || y > height + Margin) continue;
+                frame.Pets.Add(new PetShape(pet, x, y, hovered, labelled));
+            }
+            frame.Pets.Reverse();
+
             if (editor is null) return frame;
 
             frame.Draft.AddRange(editor.Draft.Select(p => view.ToScreen(p.X, p.Z)));
@@ -120,5 +136,19 @@ namespace Mapper
 
         public const double BoardWidth = 14, BoardHeight = 10;
         public const string Wood = "#c8a165";
+    }
+
+    // A shown named mob's mark where it was last saved: a paw on a pale disc; Labelled when there's room for its name.
+    // Hovered shows what it is and where
+    public record PetShape(MapPet Pet, double X, double Y, bool Hovered, bool Labelled)
+    {
+        public const string Fur = "#f3e3c3", PawColor = "#6d4c41";
+        // In a 16 box, as the pin symbols are: the pad and four toes
+        public const string Paw = "M8 8.3 C10.7 8.3 12.6 10.7 12.6 12.6 C12.6 14.3 11.2 14.9 10 14.5 C9.2 14.2 8.6 14 8 14 C7.4 14 6.8 14.2 6 14.5 C4.8 14.9 3.4 14.3 3.4 12.6 C3.4 10.7 5.3 8.3 8 8.3 Z " +
+            "M1 7.4 A1.6 2.1 0 1 0 4.2 7.4 A1.6 2.1 0 1 0 1 7.4 Z M4.1 3.5 A1.6 2.1 0 1 0 7.3 3.5 A1.6 2.1 0 1 0 4.1 3.5 Z " +
+            "M8.7 3.5 A1.6 2.1 0 1 0 11.9 3.5 A1.6 2.1 0 1 0 8.7 3.5 Z M11.8 7.4 A1.6 2.1 0 1 0 15 7.4 A1.6 2.1 0 1 0 11.8 7.4 Z";
+
+        // While the mouse is over it: its name, what it is, and the block it was on
+        public IReadOnlyList<string> Lines => [Pet.Name, Pet.Description, $"{Pet.X}, {Pet.Y}, {Pet.Z}"];
     }
 }

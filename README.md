@@ -9,7 +9,7 @@ Upstream website: [mapee.net](https://www.mapee.net/home)
 ![Mapee Expanded with a Bedrock world open: an island base with pins and a zone](docs/images/app-main.webp)
 
 # What's New?
-**Unreleased**
+**Version 1.8.1**
 - Signs: the Find window's new **Signs** half lists every sign in the dimension and what it says, nearest first, with a box to search them by their words. Nothing is drawn until you tick a sign; ticked signs show on the map with their first line, everything they say when the mouse is over them, and are kept with the world's pins and zones (see "Signs" below). `mapee-cli signs` lists them
 - Clicking a pin or zone opens the Mark bar with it picked, ready to drag or double-click to change, and a double-click anywhere on the map opens the bar to drop pins (not while Measure is on)
 
@@ -65,8 +65,8 @@ Upstream website: [mapee.net](https://www.mapee.net/home)
 
 The Linux build is a single AppImage, self-contained (no .NET needed). Make it executable and run it:
 
-    chmod +x MapeeExpanded-1.8.0-x86_64.AppImage
-    ./MapeeExpanded-1.8.0-x86_64.AppImage [world]
+    chmod +x MapeeExpanded-1.8.1-x86_64.AppImage
+    ./MapeeExpanded-1.8.1-x86_64.AppImage [world]
 
 If it complains about FUSE, run it with `--appimage-extract-and-run`. It runs as a native Wayland app (following the monitor's scale, fractional ones too) and falls back to X11, where it takes the scale from `GDK_SCALE` or `AVALONIA_GLOBAL_SCALE_FACTOR`. The world browser looks in `~/.minecraft/saves` (Java) and `~/.local/share/mcpelauncher/games/com.mojang/minecraftWorlds` (Bedrock through mcpelauncher); anything else opens with Browse, or by dropping it on the window. Differences from Windows: the system's own window frame, and Go to, Add block and the custom-dimension list open as pop-ups under their buttons rather than as small windows. Given a command as its first argument (`render`, `webmap`, `watch`, `find`, `portals`, `structures`, `signs`, `worlds`, `styles`), the AppImage runs `mapee-cli` instead (see "Command line" below).
 

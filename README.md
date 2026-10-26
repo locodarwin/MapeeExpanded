@@ -9,7 +9,7 @@ Upstream website: [mapee.net](https://www.mapee.net/home)
 ![Mapee Expanded with a Bedrock world open: an island base with pins and a zone](docs/images/app-main.webp)
 
 # What's New?
-**Unreleased**
+**Version 1.9.0**
 - Pets: the Find window's new **Pets** list has every mob given a name (a pet, a horse, a name-tagged villager), what it is and where the game last saved it, nearest first. As with signs, nothing is drawn until you tick one; ticked mobs show on the map with a paw and their name, and follow their mob each time the world is read (see "Pets" below). `mapee-cli pets` lists them
 - Web map search: a box on the web map (F or /) finds pins, zones, ticked signs and pets, and the spawn and player, by name in every dimension; Enter or a click goes there and shows its card
 
@@ -69,8 +69,8 @@ Upstream website: [mapee.net](https://www.mapee.net/home)
 
 The Linux build is a single AppImage, self-contained (no .NET needed). Make it executable and run it:
 
-    chmod +x MapeeExpanded-1.8.1-x86_64.AppImage
-    ./MapeeExpanded-1.8.1-x86_64.AppImage [world]
+    chmod +x MapeeExpanded-1.9.0-x86_64.AppImage
+    ./MapeeExpanded-1.9.0-x86_64.AppImage [world]
 
 If it complains about FUSE, run it with `--appimage-extract-and-run`. It runs as a native Wayland app (following the monitor's scale, fractional ones too) and falls back to X11, where it takes the scale from `GDK_SCALE` or `AVALONIA_GLOBAL_SCALE_FACTOR`. The world browser looks in `~/.minecraft/saves` (Java) and `~/.local/share/mcpelauncher/games/com.mojang/minecraftWorlds` (Bedrock through mcpelauncher); anything else opens with Browse, or by dropping it on the window. Differences from Windows: the system's own window frame, and Go to, Add block and the custom-dimension list open as pop-ups under their buttons rather than as small windows. Given a command as its first argument (`render`, `webmap`, `watch`, `find`, `portals`, `structures`, `signs`, `pets`, `worlds`, `styles`), the AppImage runs `mapee-cli` instead (see "Command line" below).
 
